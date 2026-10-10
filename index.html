@@ -1040,31 +1040,6 @@ body.reading-mode .reading-content {
 .screen { display: none; }
 .screen.active { display: block; }
 
-/* ============ کاور آهنگ ============ */
-.cover-picker {
-  display: flex; gap: 14px; align-items: center;
-  padding: 12px 14px;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 14px;
-  margin-bottom: 14px;
-}
-.cover-box {
-  width: 72px; height: 72px; flex-shrink: 0;
-  border-radius: 14px;
-  border: 2px dashed rgba(212,165,255,0.35);
-  background: rgba(212,165,255,0.06);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.8rem;
-  cursor: pointer; overflow: hidden; position: relative;
-  transition: .25s;
-}
-.cover-box:hover { border-color: var(--accent); background: rgba(212,165,255,0.12); }
-.cover-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.cover-picker .cp-text { flex: 1; min-width: 0; }
-.cover-picker .cp-text strong { color: var(--accent); display: block; margin-bottom: 2px; font-size: 0.9rem; }
-.cover-picker .cp-text span { font-size: 0.72rem; color: var(--muted); line-height: 1.7; display: block; }
-
 .pl-icon .pl-glyph { position: relative; z-index: 1; }
 .pl-icon.has-cover {
   position: relative; overflow: hidden;
@@ -1262,7 +1237,6 @@ body.reading-mode .reading-content {
   .cal-week, .cal-grid { gap: 4px; }
   .cal-day { min-height: 40px; border-radius: 10px; }
   .cal-day .cd-num { font-size: 0.85rem; }
-  .cover-picker { flex-wrap: wrap; }
   .notif-panel { left: 12px; right: 12px; width: auto; top: 58px; }
   .toolbar { gap: 4px; padding: 8px; }
   .tool { width: 30px; height: 30px; font-size: 0.85rem; }
@@ -1512,19 +1486,6 @@ body.reading-mode .reading-content {
         <button class="btn ghost" onclick="togglePlayPause()" id="pcPlayBtn">⏸ توقف</button>
         <button class="btn ghost" onclick="toggleLoop()" id="pcLoopBtn">🔁 لوپ</button>
       </div>
-    </div>
-
-    <div class="cover-picker">
-      <label class="cover-box" title="انتخاب کاور">
-        <span id="coverPlaceholder">🖼️</span>
-        <img id="coverPreview" alt="" style="display:none" />
-        <input type="file" accept="image/*" hidden onchange="onCoverPicked(event)" />
-      </label>
-      <div class="cp-text">
-        <strong>کاور آهنگ (اختیاری)</strong>
-        <span>قبل از اضافه کردن آهنگ، یه عکس برای کاورش انتخاب کن. اگه انتخاب نکنی و خود فایل آهنگ کاور داشته باشه، خودکار برداشته می‌شه.</span>
-      </div>
-      <button class="btn ghost" id="coverClear" style="display:none" onclick="clearPendingCover()">✕ حذف</button>
     </div>
 
     <label class="playlist-upload">
@@ -2387,6 +2348,35 @@ let customAudio = new Audio();
 async function loadPlaylist() {
   playlist = await songsGetAll();
   renderPlaylist();
+  backfillCovers();
+}
+
+/* آهنگ‌هایی که قبلاً آپلود شدن و cover_url ندارن: کاورِ داخل فایلشون رو یک بار درمیاریم */
+const COVER_TRIED_KEY = 'diary_cover_tried';
+let backfilling = false;
+async function backfillCovers() {
+  if (backfilling || !playlist.length) return;
+  if (!('cover_url' in playlist[0])) return; // ستون هنوز ساخته نشده (فایل SQL اجرا نشده)
+  backfilling = true;
+  try {
+    let tried = [];
+    try { tried = JSON.parse(localStorage.getItem(COVER_TRIED_KEY) || '[]'); } catch (e) {}
+    for (const s of playlist.slice()) {
+      if (s.cover_url || !s.storage_url || tried.includes(s.id)) continue;
+      const file = remoteFile(s.storage_url);
+      const img = await extractCover(file);
+      if (file.failed) continue; // مشکل شبکه بود، دفعهٔ بعد دوباره امتحان می‌کنیم
+      if (img) {
+        try {
+          const url = await uploadCoverImage(s.id, img);
+          if (await songUpdate(s.id, { cover_url: url })) { s.cover_url = url; renderPlaylist(); }
+          else { removeCoverFile(url); continue; }
+        } catch (e) { console.warn('backfill failed', e); continue; }
+      }
+      tried.push(s.id);
+      try { localStorage.setItem(COVER_TRIED_KEY, JSON.stringify(tried)); } catch (e) {}
+    }
+  } finally { backfilling = false; }
 }
 
 function renderPlaylist() {
@@ -2420,7 +2410,7 @@ function renderPlaylist() {
           <div class="pl-title">${escapeHtml(s.title || 'بی‌نام')}</div>
           <div class="pl-sub">${s.artist ? escapeHtml(s.artist) : 'آهنگ ما'}</div>
         </div>
-        <button class="pl-loop" onclick="pickCover('${s.id}')" title="تغییر کاور">🖼️</button>
+        ${s.cover_url ? '' : `<button class="pl-loop" onclick="pickCover('${s.id}')" title="این آهنگ کاور نداره؛ یه عکس بذار">🖼️</button>`}
         <button class="pl-loop ${s.loop ? 'on' : ''}" onclick="toggleSongLoop('${s.id}')" title="لوپ">🔁</button>
         <button class="pl-del" onclick="removeSong('${s.id}')" title="حذف">✕</button>
       </div>
@@ -2478,7 +2468,7 @@ async function uploadSong(ev) {
     // 3) کاور: انتخاب دستی، وگرنه کاورِ داخل خود فایل
     let coverUrl = null;
     try {
-      const coverSrc = pendingCover || await extractMp3Cover(file);
+      const coverSrc = await extractCover(file); // کاورِ داخل خود فایل آهنگ
       if (coverSrc) coverUrl = await uploadCoverImage(songId, coverSrc);
     } catch (e) { console.warn('cover skipped:', e); }
 
@@ -2496,9 +2486,8 @@ async function uploadSong(ev) {
 
     const ok = await songAdd(song);
     if (ok) {
-      toast(coverUrl ? '🎵 آهنگ با کاور اضافه شد ✨' : '🎵 آهنگ اضافه شد ✨');
+      toast(coverUrl ? '🎵 آهنگ با کاورش اضافه شد ✨' : '🎵 آهنگ اضافه شد ✨');
       notify('song', song.title, songId);
-      clearPendingCover();
       loadPlaylist();
     } else {
       // اگه توی دیتابیس ذخیره نشد، فایل‌ها رو پاک کن
@@ -2870,7 +2859,13 @@ function blobToDataUrl(blob) {
   });
 }
 
-/* کاورِ داخل فایل mp3 (ID3v2) رو خودکار درمیاره */
+/* ---------- کاورِ داخل خود فایل آهنگ (mp3 / m4a / flac) ---------- */
+function imageBlob(u8) {
+  if (!u8 || u8.length < 200) return null;
+  const png = u8[0] === 0x89 && u8[1] === 0x50, jpg = u8[0] === 0xFF && u8[1] === 0xD8;
+  return (png || jpg) ? new Blob([u8], { type: png ? 'image/png' : 'image/jpeg' }) : null;
+}
+
 async function extractMp3Cover(file) {
   try {
     const head = new Uint8Array(await file.slice(0, 10).arrayBuffer());
@@ -2914,16 +2909,106 @@ async function extractMp3Cover(file) {
         if (enc === 1 || enc === 2) { while (i + 1 < p.length && !(p[i] === 0 && p[i + 1] === 0)) i += 2; i += 2; }
         else { while (i < p.length && p[i] !== 0) i++; i++; }
         const data = p.subarray(i);
-        const isPng = data[0] === 0x89 && data[1] === 0x50;
-        const isJpg = data[0] === 0xFF && data[1] === 0xD8;
-        if (data.length > 200 && (isPng || isJpg)) {
-          return new Blob([data], { type: isPng ? 'image/png' : 'image/jpeg' });
-        }
+        const blob = imageBlob(data);
+        if (blob) return blob;
       }
       pos = end;
     }
   } catch (e) { console.warn('cover extract failed', e); }
   return null;
+}
+
+async function extractFlacCover(file) {
+  try {
+    let off = 4;
+    for (let n = 0; n < 64; n++) {
+      const h = new Uint8Array(await file.slice(off, off + 4).arrayBuffer());
+      if (h.length < 4) return null;
+      const last = h[0] & 0x80, type = h[0] & 0x7f, len = (h[1] << 16) | (h[2] << 8) | h[3];
+      off += 4;
+      if (type === 6 && len < 30 * 1024 * 1024) { // METADATA_BLOCK_PICTURE
+        const b = new Uint8Array(await file.slice(off, off + len).arrayBuffer());
+        const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+        let p = 4;
+        p += 4 + dv.getUint32(p);        // mime
+        p += 4 + dv.getUint32(p);        // description
+        p += 16;                         // width, height, depth, colors
+        const dataLen = dv.getUint32(p); p += 4;
+        const blob = imageBlob(b.subarray(p, p + dataLen));
+        if (blob) return blob;
+      }
+      off += len;
+      if (last) return null;
+    }
+  } catch (e) { console.warn('flac cover failed', e); }
+  return null;
+}
+
+async function extractMp4Cover(file) {
+  try {
+    const u32 = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
+    const str = (b, o) => String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+    const readBox = async off => {
+      const h = new Uint8Array(await file.slice(off, off + 16).arrayBuffer());
+      if (h.length < 8) return null;
+      let size = u32(h, 0), hdr = 8;
+      if (size === 1) { size = u32(h, 8) * 4294967296 + u32(h, 12); hdr = 16; }
+      return { off, size, hdr, type: str(h, 4) };
+    };
+    const find = async (start, end, type) => {
+      let off = start;
+      for (let n = 0; n < 200 && off + 8 <= end; n++) {
+        const b = await readBox(off);
+        if (!b || b.size < 8) return null;
+        if (b.type === type) return b;
+        off += b.size;
+      }
+      return null;
+    };
+    await file.slice(0, 16).arrayBuffer(); // برای فایل راه دور، اندازهٔ کل فایل همین‌جا معلوم می‌شه
+    const total = file.size;
+    if (!total) return null;
+    const moov = await find(0, total, 'moov');
+    const udta = moov && await find(moov.off + moov.hdr, moov.off + moov.size, 'udta');
+    const meta = udta && await find(udta.off + udta.hdr, udta.off + udta.size, 'meta');
+    const ilst = meta && await find(meta.off + meta.hdr + 4, meta.off + meta.size, 'ilst');
+    const covr = ilst && await find(ilst.off + ilst.hdr, ilst.off + ilst.size, 'covr');
+    const data = covr && await find(covr.off + covr.hdr, covr.off + covr.size, 'data');
+    if (!data || data.size > 30 * 1024 * 1024) return null;
+    return imageBlob(new Uint8Array(await file.slice(data.off + data.hdr + 8, data.off + data.size).arrayBuffer()));
+  } catch (e) { console.warn('mp4 cover failed', e); }
+  return null;
+}
+
+/* از روی چند بایت اول، نوع فایل رو تشخیص می‌ده */
+async function extractCover(file) {
+  try {
+    const h = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+    const tag = i => String.fromCharCode(h[i], h[i + 1], h[i + 2], h[i + 3]);
+    if (tag(0).startsWith('ID3')) return await extractMp3Cover(file);
+    if (tag(0) === 'fLaC') return await extractFlacCover(file);
+    if (tag(4) === 'ftyp') return await extractMp4Cover(file);
+  } catch (e) { console.warn('cover extract failed', e); }
+  return null;
+}
+
+/* فایلِ آهنگ روی Storage رو بدون دانلود کامل می‌خونه (Range request) */
+function remoteFile(url) {
+  const obj = { size: 0, failed: false };
+  obj.slice = (a, b) => ({
+    arrayBuffer: async () => {
+      try {
+        const r = await fetch(url, { headers: { Range: 'bytes=' + a + '-' + (b - 1) } });
+        if (r.status !== 200 && r.status !== 206) throw new Error('HTTP ' + r.status);
+        const m = /\/(\d+)\s*$/.exec(r.headers.get('Content-Range') || '');
+        if (m) obj.size = Number(m[1]);
+        const buf = await r.arrayBuffer();
+        if (r.status === 200) { obj.size = buf.byteLength; return buf.slice(a, b); }
+        return buf;
+      } catch (e) { obj.failed = true; throw e; }
+    }
+  });
+  return obj;
 }
 
 function coverPathFromUrl(url) {
@@ -2944,30 +3029,6 @@ async function uploadCoverImage(songId, src) {
   // اگه Storage قبول نکرد، نسخهٔ کوچیک رو مستقیم توی دیتابیس نگه می‌داریم
   console.warn('cover storage upload failed, using inline fallback:', error.message);
   return blobToDataUrl(await resizeToBlob(src, 300, 0.8));
-}
-
-let pendingCover = null, pendingCoverPreview = null;
-function onCoverPicked(ev) {
-  const f = ev.target.files[0];
-  ev.target.value = '';
-  if (!f) return;
-  if (!f.type.startsWith('image/')) { toast('⚠️ فقط فایل عکس'); return; }
-  if (f.size > 15 * 1024 * 1024) { toast('⚠️ عکس خیلی بزرگه'); return; }
-  clearPendingCover(true);
-  pendingCover = f;
-  pendingCoverPreview = URL.createObjectURL(f);
-  const img = document.getElementById('coverPreview');
-  img.src = pendingCoverPreview; img.style.display = 'block';
-  document.getElementById('coverPlaceholder').style.display = 'none';
-  document.getElementById('coverClear').style.display = 'inline-flex';
-}
-function clearPendingCover(silent) {
-  pendingCover = null;
-  if (pendingCoverPreview) { URL.revokeObjectURL(pendingCoverPreview); pendingCoverPreview = null; }
-  const img = document.getElementById('coverPreview');
-  if (img) { img.removeAttribute('src'); img.style.display = 'none'; }
-  const ph = document.getElementById('coverPlaceholder'); if (ph) ph.style.display = '';
-  const cl = document.getElementById('coverClear'); if (cl) cl.style.display = 'none';
 }
 
 let coverTargetId = null;
