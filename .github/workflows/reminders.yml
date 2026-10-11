@@ -1,0 +1,29 @@
+name: reminders
+
+# هر ۵ دقیقه: یادآوری‌های سررسید شده رو می‌سازه و اعلان‌های جدید رو به گوشی‌ها (Web Push) می‌فرسته.
+# فقط یک Secret لازمه: VAPID_PRIVATE_KEY  (Settings → Secrets and variables → Actions)
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: reminders
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --omit=dev --no-audit --no-fund
+      - run: node scripts/push-tick.js
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
