@@ -1329,6 +1329,7 @@ body.reading-mode .reading-content {
     <button class="nav-btn" data-screen="chapters" onclick="showScreen('chapters')">📖 دفترچه</button>
     <button class="nav-btn" data-screen="playlist" onclick="showScreen('playlist')">🎵 پلی‌لیست</button>
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
+    <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
     <button class="nav-btn" data-screen="notes" onclick="showScreen('notes')">📝 یادداشت‌ها</button>
     <button class="nav-btn" data-screen="calendar" onclick="showScreen('calendar')">📅 تقویم</button>
     <button class="nav-btn" data-screen="profile" onclick="showScreen('profile')">👤 پروفایل</button>
@@ -1400,6 +1401,7 @@ body.reading-mode .reading-content {
               ☀️ <b id="pageDateJalali">—</b> &nbsp;|&nbsp; 🌙 <b id="pageDateGregorian">—</b>
             </div>
             <div class="page-actions">
+              <button class="btn" id="backBtn" onclick="backToChapters()">↩ برگشت به دفترچه</button>
               <button class="btn ghost" id="readingBtn" onclick="toggleReadingMode()">📖 حالت خواندن</button>
               <button class="btn ghost" id="editBtn" onclick="toggleEditMode()" style="display:none;">✏️ ویرایش</button>
               <button class="btn ghost" onclick="saveChapter()" id="saveBtn">💾 ذخیره</button>
@@ -1557,6 +1559,17 @@ body.reading-mode .reading-content {
       <input type="file" accept="image/*,video/*" multiple hidden onchange="uploadGallery(event)" />
     </label>
     <div class="gallery-grid" id="galleryGrid"></div>
+  </div>
+
+  <!-- ============ فایل‌ها ============ -->
+  <div class="container screen" id="screen-files">
+    <div class="chapters-header"><h2>📁 فایل‌های ما</h2></div>
+    <label class="playlist-upload">
+      <span class="pu-icon">➕</span>
+      <div class="pu-text"><strong>آپلود فایل (هر نوعی)</strong><span>PDF، ورد، زیپ، عکس، هر چیزی؛ حداکثر ۵۰ مگابایت</span></div>
+      <input type="file" multiple hidden onchange="uploadFiles(event)" />
+    </label>
+    <div id="filesList"></div>
   </div>
 
   <!-- ============ صفحه یادداشت‌ها ============ -->
@@ -1791,6 +1804,7 @@ function showScreen(name) {
   if (name === 'chapters') loadChapters();
   if (name === 'playlist') loadPlaylist();
   if (name === 'gallery') loadGallery();
+  if (name === 'files') loadFiles();
   if (name === 'notes') loadNotes();
   if (name === 'calendar') loadCalendar();
   if (name === 'profile') loadProfileStats();
@@ -1836,7 +1850,7 @@ async function loadHomeStats() {
 }
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-11';
+const SITE_VERSION = '2026-10-11b';
 const SITE_CHANGES = [
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
   '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
@@ -1844,6 +1858,9 @@ const SITE_CHANGES = [
   '🔔 اعلان برای کامنت، یادداشت، فصل جدید و آپدیت فصل‌ها (حتی وقتی سایت بسته‌ست، از توی پنل 🔔 فعالش کن)',
   '🖼️ گالری عکس و ویدیو (کنار پلی‌لیست)',
   '✍️ توی فصل‌ها جای عکس/ویدیو/آهنگ و اندازه‌اش رو انتخاب کن (روش بزن)، نوار ابزار هم موقع اسکرول همراهت می‌مونه',
+  '✏️ اسم آهنگ‌های پلی‌لیست قابل ویرایشه',
+  '↩ توی هر فصل دکمهٔ «برگشت به دفترچه» هست',
+  '📁 بخش فایل‌ها برای آپلود هر نوع فایل',
   '⚡ سایت سبک‌تر و سریع‌تر شد'
 ];
 function showWhatsNew() {
@@ -2240,6 +2257,12 @@ async function removeChapter(id) {
   loadChapters();
 }
 
+async function backToChapters() {
+  if (!readingMode && editorDirty) { try { await saveChapter(); } catch (e) {} }
+  closeChapter();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function closeChapter() {
   if (currentChapterId && (chapterNotifyPending || chapterUpdatePending)) {
     maybeNotifyChapter(currentChapterId, document.getElementById('chapterTitle').value, document.getElementById('editor').innerHTML);
@@ -2615,6 +2638,7 @@ function renderPlaylist() {
           <div class="pl-title">${escapeHtml(s.title || 'بی‌نام')}</div>
           <div class="pl-sub">${s.artist ? escapeHtml(s.artist) : 'آهنگ ما'}</div>
         </div>
+        <button class="pl-loop" onclick="renameSong('${s.id}')" title="ویرایش اسم آهنگ">✏️</button>
         ${s.cover_url ? '' : `<button class="pl-loop" onclick="pickCover('${s.id}')" title="این آهنگ کاور نداره؛ یه عکس بذار">🖼️</button>`}
         <button class="pl-del" onclick="removeSong('${s.id}')" title="حذف">✕</button>
       </div>`).join('');
@@ -2734,6 +2758,19 @@ async function uploadSong(ev) {
   }
 
   ev.target.value = '';
+}
+
+async function renameSong(id) {
+  const s = playlist.find(x => x.id === id); if (!s) return;
+  const t = prompt('اسم آهنگ:', s.title || '');
+  if (t === null) return;
+  const title = t.trim().slice(0, 120);
+  if (!title) { toast('⚠️ اسم نمی‌تونه خالی باشه'); return; }
+  if (await songUpdate(id, { title })) {
+    s.title = title;
+    if (currentSong && currentSong.id === id) { currentSong = s; updateMediaSession(s); }
+    renderPlaylist(); toast('✏️ اسم آهنگ عوض شد');
+  } else toast('⚠️ ذخیره نشد');
 }
 
 async function removeSong(id) {
@@ -2918,6 +2955,56 @@ async function uploadGallery(ev) {
   }
   if (ok) { renderGallery(); toast('🖼️ ' + ok + ' مورد اضافه شد ✨'); notify('gallery', ok + ' مورد', galleryList[0].id); }
 }
+/* ============================================================
+   📁 فایل‌ها (هر نوع فایلی)
+   ============================================================ */
+let filesList = [], filesLoaded = false, filesMissing = false;
+const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+const fileIcon = (n, m) => /^image\//.test(m || '') ? '🖼️' : /^video\//.test(m || '') ? '🎬' : /^audio\//.test(m || '') ? '🎵' : /pdf/i.test(m || n) ? '📕' : /zip|rar|7z|tar|gz/i.test(n) ? '🗜️' : /doc|docx|txt|rtf/i.test(n) ? '📄' : /xls|csv/i.test(n) ? '📊' : /ppt/i.test(n) ? '📽️' : '📎';
+async function loadFiles() {
+  if (filesLoaded) renderFiles();
+  const { data, error } = await dbClient.from('files').select('*').order('created_at', { ascending: false });
+  if (error) { filesMissing = /files|relation|schema cache/i.test(error.message || ''); renderFiles(); return; }
+  filesMissing = false; filesList = data || []; filesLoaded = true; renderFiles();
+}
+function renderFiles() {
+  const el = document.getElementById('filesList');
+  if (filesMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای بخش فایل‌ها باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
+  if (!filesList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📁</div><p>هنوز فایلی نذاشتیم...</p></div>'; return; }
+  el.innerHTML = filesList.map(f => `
+    <div class="playlist-item file-item">
+      <div class="pl-icon" style="cursor:default"><span class="pl-glyph">${fileIcon(f.name, f.mime)}</span></div>
+      <div class="pl-info"><div class="pl-title">${escapeHtml(f.name)}</div><div class="pl-sub">${fmtSize(f.size || 0)}${f.author ? ' · ' + escapeHtml(f.author) : ''}</div></div>
+      <a class="pl-loop" href="${escapeHtml(f.url)}" target="_blank" rel="noopener" download="${escapeHtml(f.name)}" title="دانلود" style="text-decoration:none">⬇️</a>
+      <button class="pl-del" onclick="removeFileItem('${f.id}')" title="حذف">✕</button>
+    </div>`).join('');
+}
+async function uploadFiles(ev) {
+  const files = Array.from(ev.target.files || []); ev.target.value = '';
+  let ok = 0;
+  for (const [i, file] of files.entries()) {
+    if (file.size > 50 * 1024 * 1024) { toast('⚠️ ' + file.name + ' بزرگه (حداکثر ۵۰ مگابایت)'); continue; }
+    toast(`⏳ آپلود ${i + 1} از ${files.length}...`);
+    try {
+      const up = await uploadMediaFile(file, extOf(file));
+      const row = { id: 'fl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: file.name, url: up.url, file_path: up.path,
+        size: file.size, mime: file.type || '', author: myName() || 'ناشناس', created_at: Date.now() };
+      const { error } = await dbClient.from('files').insert(row);
+      if (error) { await dbClient.storage.from('songs').remove([up.path]); throw error; }
+      filesList.unshift(row); ok++;
+    } catch (e) { console.error(e); toast('⚠️ آپلود نشد' + (/files/i.test(e.message || '') ? ' (فایل SQL اجرا نشده)' : '')); }
+  }
+  if (ok) { renderFiles(); toast('📁 ' + ok + ' فایل اضافه شد ✨'); notify('files', files.length === 1 ? files[0].name : ok + ' فایل', filesList[0].id); }
+}
+async function removeFileItem(id) {
+  if (!confirm('این فایل حذف بشه؟')) return;
+  const f = filesList.find(x => x.id === id); if (!f) return;
+  const { error } = await dbClient.from('files').delete().eq('id', id);
+  if (error) { toast('⚠️ حذف نشد'); return; }
+  if (f.file_path) dbClient.storage.from('songs').remove([f.file_path]);
+  filesList = filesList.filter(x => x.id !== id); renderFiles(); toast('🗑️ حذف شد');
+}
+
 async function removeGalleryItem(id) {
   if (!confirm('این مورد حذف بشه؟')) return;
   const g = galleryList.find(x => x.id === id); if (!g) return;
@@ -3754,7 +3841,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} }
 
-const NOTIF_SCREEN = { gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar' };
+const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {
