@@ -1896,7 +1896,7 @@ function enterApp() {
   updateHomeGreeting();
   updateCommentAvatar();
   loadHomeStats();
-  loadChapters();
+  (window.requestIdleCallback || (f => setTimeout(f, 600)))(() => loadChapters());
   playAmbient();
   initNotifications();
   showWelcomeMessage();
@@ -2188,36 +2188,24 @@ function highlightText(text, query) {
   } catch { return safeText; }
 }
 function stripHtml(html) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html || '';
-  return tmp.textContent || tmp.innerText || '';
+  return (html || '').replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ').trim();
 }
 
 let searchTimer;
 let loadChaptersSeq = 0;
-async function loadChapters() {
-  const seq = ++loadChaptersSeq;
-  const needContent = !!searchQuery.trim();
-  const [list, commentCounts] = await Promise.all([dbGetAll(needContent), commentsCountAll()]);
-  if (seq !== loadChaptersSeq) return; // نتیجه‌ی قدیمی، نادیده بگیر
+let chaptersCache = (() => { try { return JSON.parse(localStorage.getItem('diary_ch_cache') || 'null'); } catch (e) { return null; } })();
+let searchIndex = null, searchIndexAt = 0;
+const invalidateSearchIndex = () => { searchIndex = null; };
+
+function paintChapters(filtered, commentCounts, query) {
   const grid = document.getElementById('chaptersGrid');
   const infoEl = document.getElementById('searchInfo');
-
-  let filtered = list;
-  const query = searchQuery.trim();
-
   if (query) {
-    const q = query.toLowerCase();
-    filtered = list.filter(c => {
-      const title = (c.title || '').toLowerCase();
-      const content = stripHtml(c.content).toLowerCase();
-      return title.includes(q) || content.includes(q);
-    });
     infoEl.style.display = 'block';
     infoEl.innerHTML = `🔍 <b>${filtered.length}</b> نتیجه برای «${escapeHtml(query)}»`;
-  } else {
-    infoEl.style.display = 'none';
-  }
+  } else infoEl.style.display = 'none';
 
   if (!filtered.length) {
     grid.innerHTML = `
@@ -2227,8 +2215,7 @@ async function loadChapters() {
       </div>`;
     return;
   }
-
-  filtered.sort((a,b) => (b.created_at||0) - (a.created_at||0));
+  filtered = filtered.slice().sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
   grid.innerHTML = filtered.map(c => {
     const cnt = commentCounts[c.id] || 0;
     const titleHtml = query ? highlightText(c.title || 'بی‌عنوان', query) : escapeHtml(c.title || 'بی‌عنوان');
@@ -2244,6 +2231,38 @@ async function loadChapters() {
       </div>
     `;
   }).join('');
+}
+
+/* لیست فصل‌ها: اول از کش (فوری)، بعد از سرور تازه می‌شه؛ جستجو هم روی یک فهرست متنیِ ساخته‌شده کار می‌کنه */
+let chaptersPaintSig = '';
+async function loadChapters() {
+  const seq = ++loadChaptersSeq;
+  const query = searchQuery.trim();
+  if (!query && chaptersCache && !chaptersPaintSig) {
+    paintChapters(chaptersCache.list, chaptersCache.counts, '');
+    chaptersPaintSig = 'cache';
+  }
+  const [list, commentCounts] = await Promise.all([dbGetAll(false), commentsCountAll()]);
+  if (seq !== loadChaptersSeq) return; // نتیجه‌ی قدیمی، نادیده بگیر
+  const sig = JSON.stringify([list, commentCounts]);
+  chaptersCache = { list, counts: commentCounts };
+  try { localStorage.setItem('diary_ch_cache', JSON.stringify(chaptersCache)); } catch (e) {}
+
+  if (!query) {
+    if (sig !== chaptersPaintSig) paintChapters(list, commentCounts, '');
+    chaptersPaintSig = sig;
+    return;
+  }
+  chaptersPaintSig = '';
+  if (!searchIndex || Date.now() - searchIndexAt > 5 * 60000) {
+    const full = await dbGetAll(true);
+    if (seq !== loadChaptersSeq) return;
+    searchIndex = {};
+    full.forEach(c => { searchIndex[c.id] = stripHtml(c.content).toLowerCase(); });
+    searchIndexAt = Date.now();
+  }
+  const q = query.toLowerCase();
+  paintChapters(list.filter(c => (c.title || '').toLowerCase().includes(q) || (searchIndex[c.id] || '').includes(q)), commentCounts, query);
 }
 
 async function createChapter() {
@@ -2304,6 +2323,26 @@ async function openChapter(id) {
   setReadingMode(false);
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(migrateInlineMedia, 1500);
+}
+
+/* عکس/ویدیوهای قدیمیِ داخل متن (base64 سنگین) رو یک‌بار به Storage منتقل می‌کنه تا فصل سبک بشه */
+async function migrateInlineMedia() {
+  const id = currentChapterId, ed = document.getElementById('editor');
+  if (!id) return;
+  const els = [...ed.querySelectorAll('img[src^="data:"],video[src^="data:"],audio[src^="data:"]')].filter(e => (e.getAttribute('src') || '').length > 20000);
+  for (const el of els) {
+    if (currentChapterId !== id) return;
+    try {
+      const blob = dataUrlToBlob(el.getAttribute('src'));
+      const ext = (blob.type.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 5) || 'bin';
+      const up = await uploadMediaFile(blob, ext);
+      const ok = await fetch(up.url, { method: 'HEAD' }).then(r => r.ok).catch(() => false);   // مطمئن شو فایل واقعاً در دسترسه
+      if (!ok) { dbClient.storage.from('songs').remove([up.path]); break; }
+      if (currentChapterId !== id || !ed.contains(el)) continue;
+      el.setAttribute('src', up.url); markEditorDirty();
+    } catch (e) { console.warn('migrate media', e); break; }
+  }
 }
 
 async function saveChapter() {
@@ -2313,6 +2352,7 @@ async function saveChapter() {
   const content = document.getElementById('editor').innerHTML;
   const ok = await dbUpdateContent(id, title, content);
   if (!ok) return;
+  invalidateSearchIndex();
   const changed = lastSavedHash !== title + '|' + content;
   lastSavedHash = title + '|' + content; editorDirty = false;
   if (changed && !chapterNotifyPending) chapterUpdatePending = true;
@@ -3496,7 +3536,7 @@ setInterval(async () => {
       autosaving = true;
       try {
         if (await dbUpdateContent(id, title, content)) {
-          lastSavedHash = hash;
+          lastSavedHash = hash; invalidateSearchIndex();
           if (!chapterNotifyPending) chapterUpdatePending = true;
         } else editorDirty = true;
       } catch (e) { editorDirty = true; } finally { autosaving = false; }
