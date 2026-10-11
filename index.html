@@ -1290,6 +1290,9 @@ body.reading-mode .reading-content {
 .welcome-msg.show { opacity: 1; transform: translate(-50%, 0); }
 .welcome-msg small { display: block; font-weight: 400; opacity: 0.85; margin-top: 2px; }
 @media (max-width: 700px) { .playlist-current { flex-wrap: wrap; } .playlist-current .pc-info { flex-basis: 60%; } .playlist-current .pc-actions { width: 100%; justify-content: center; } }
+.whats-new { max-width: 420px; width: 100%; max-height: 85vh; overflow: auto; padding: 20px; border-radius: 20px; background: #17101f; border: 1px solid rgba(212,165,255,0.35); }
+.whats-new h3 { margin-bottom: 10px; color: var(--accent); }
+.whats-new ul { list-style: none; display: grid; gap: 8px; margin-bottom: 14px; font-size: 0.9rem; line-height: 1.7; }
 </style>
 </head>
 <body>
@@ -1806,6 +1809,7 @@ function enterApp() {
   playAmbient();
   initNotifications();
   showWelcomeMessage();
+  setTimeout(showWhatsNew, 1200);
 }
 
 function backToWelcome() {
@@ -1829,6 +1833,29 @@ async function loadHomeStats() {
     document.getElementById('homeNoteCount').textContent = (notes.count || 0) + ' یادداشت';
     document.getElementById('homeEventCount').textContent = (evs.count || 0) + ' رویداد';
   } catch (e) { console.error(e); homeStatsAt = 0; }
+}
+
+/* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
+const SITE_VERSION = '2026-10-11';
+const SITE_CHANGES = [
+  '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
+  '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
+  '📅 رویدادهای تکرارشونده: سالانه، ماهانه، هفتگی، روزانه و حتی هر چند ساعت یک‌بار + یادآوری',
+  '🔔 اعلان برای کامنت، یادداشت، فصل جدید و آپدیت فصل‌ها (حتی وقتی سایت بسته‌ست، از توی پنل 🔔 فعالش کن)',
+  '🖼️ گالری عکس و ویدیو (کنار پلی‌لیست)',
+  '✍️ توی فصل‌ها جای عکس/ویدیو/آهنگ و اندازه‌اش رو انتخاب کن (روش بزن)، نوار ابزار هم موقع اسکرول همراهت می‌مونه',
+  '⚡ سایت سبک‌تر و سریع‌تر شد'
+];
+function showWhatsNew() {
+  let seen = null; try { seen = localStorage.getItem('diary_site_version'); } catch (e) {}
+  if (seen === SITE_VERSION) return;
+  try { localStorage.setItem('diary_site_version', SITE_VERSION); } catch (e) {}
+  if (seen === null && !userProfile.name) return;
+  const box = document.createElement('div');
+  box.className = 'lightbox'; box.style.display = 'flex';
+  box.innerHTML = '<div class="whats-new"><h3>✨ سایت آپدیت شد!</h3><ul>' + SITE_CHANGES.map(c => '<li>' + escapeHtml(c) + '</li>').join('') + '</ul><button class="btn" type="button">باشه 💜</button></div>';
+  box.addEventListener('click', e => { if (e.target === box || e.target.tagName === 'BUTTON') box.remove(); });
+  document.body.appendChild(box);
 }
 
 /* پیام خوش‌آمدگویی موقع ورود */
@@ -1931,10 +1958,19 @@ async function dbDelete(id) {
 /* ============================================================
    دیتابیس - Comments
    ============================================================ */
+const avatarCache = {};
 async function commentsGetByChapter(chapterId) {
-  const { data, error } = await dbClient.from('comments').select('*').eq('chapter_id', chapterId).order('created_at', { ascending: true });
+  // آواتار (base64 سنگین) برای هر کامنت جدا نمی‌آد؛ برای هر اسم فقط یک بار گرفته می‌شه
+  const { data, error } = await dbClient.from('comments').select('id,chapter_id,name,text,created_at').eq('chapter_id', chapterId).order('created_at', { ascending: true });
   if (error) { console.error(error); return []; }
-  return data || [];
+  const rows = data || [];
+  const names = [...new Set(rows.map(r => r.name))].filter(n => !(n in avatarCache));
+  await Promise.all(names.map(async n => {
+    const r = await dbClient.from('comments').select('avatar').eq('name', n).order('created_at', { ascending: false }).limit(1);
+    avatarCache[n] = (r.data && r.data[0] && r.data[0].avatar) || null;
+  }));
+  rows.forEach(r => { r.avatar = avatarCache[r.name] || null; });
+  return rows;
 }
 async function commentAdd(chapterId, name, text, avatar) {
   const row = {
@@ -1945,6 +1981,7 @@ async function commentAdd(chapterId, name, text, avatar) {
     avatar: avatar || null,
     created_at: Date.now()
   };
+  if (avatar) avatarCache[name] = avatar;
   const { error } = await dbClient.from('comments').insert(row);
   if (error) { console.error(error); toast('⚠️ خطا در ذخیره کامنت'); return false; }
   return true;
