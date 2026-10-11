@@ -114,3 +114,18 @@ alter table public.files enable row level security;
 drop policy if exists "files_public_all" on public.files;
 create policy "files_public_all" on public.files
   for all to anon, authenticated using (true) with check (true);
+
+-- 11) سرگرمی: لینک گیم / فیلم / سریال
+create table if not exists public.links (
+  id         text primary key,
+  category   text not null,        -- game | movie | series
+  title      text not null,
+  url        text not null,
+  author     text,
+  created_at bigint not null
+);
+create index if not exists links_category_idx on public.links (category, created_at);
+alter table public.links enable row level security;
+drop policy if exists "links_public_all" on public.links;
+create policy "links_public_all" on public.links
+  for all to anon, authenticated using (true) with check (true);
