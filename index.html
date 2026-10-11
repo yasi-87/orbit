@@ -2502,6 +2502,15 @@ async function uploadMediaFile(blobOrFile, ext) {
   if (error) throw error;
   return { path, url: dbClient.storage.from('songs').getPublicUrl(path).data.publicUrl };
 }
+/* دلیل واقعیِ خطای آپلود رو به زبان ساده نشون می‌ده */
+function uploadErrorHint(e, table) {
+  const m = String((e && (e.message || e.error)) || e || '');
+  if (new RegExp(table + '|relation|schema cache', 'i').test(m) && /relation|schema cache|does not exist|find the table/i.test(m)) return 'جدول ' + table + ' ساخته نشده؛ فایل SQL رو توی Supabase اجرا کن';
+  if (/mime|not supported|invalid.*type/i.test(m)) return 'نوع این فایل توی تنظیمات bucket «songs» مجاز نیست (Supabase → Storage → songs → Edit → Allowed MIME types رو خالی کن)';
+  if (/exceeded|too large|maximum allowed|payload|413/i.test(m)) return 'حجم فایل از سقف Storage بیشتره (Supabase → Storage → Settings → Global file size limit)';
+  if (/row-level|policy|unauthorized|403|not allowed/i.test(m)) return 'دسترسی آپلود به bucket «songs» بسته‌ست (policy)';
+  return 'آپلود نشد: ' + m.slice(0, 90);
+}
 const extOf = f => ((f.name || '').split('.').pop() || (f.type || '').split('/')[1] || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin';
 
 function addMedia(ev, type) {
@@ -3009,7 +3018,7 @@ async function uploadGallery(ev) {
       const { error } = await dbClient.from('gallery').insert(row);
       if (error) { await dbClient.storage.from('songs').remove([up.path]); throw error; }
       galleryList.unshift(row); ok++;
-    } catch (e) { console.error(e); toast('⚠️ آپلود نشد' + (/gallery/i.test(e.message || '') ? ' (فایل SQL اجرا نشده)' : '')); }
+    } catch (e) { console.error(e); toast('⚠️ ' + uploadErrorHint(e, 'gallery')); }
   }
   if (ok) { renderGallery(); toast('🖼️ ' + ok + ' مورد اضافه شد ✨'); notify('gallery', ok + ' مورد', galleryList[0].id); }
 }
@@ -3050,7 +3059,7 @@ async function uploadFiles(ev) {
       const { error } = await dbClient.from('files').insert(row);
       if (error) { await dbClient.storage.from('songs').remove([up.path]); throw error; }
       filesList.unshift(row); ok++;
-    } catch (e) { console.error(e); toast('⚠️ آپلود نشد' + (/files/i.test(e.message || '') ? ' (فایل SQL اجرا نشده)' : '')); }
+    } catch (e) { console.error(e); toast('⚠️ ' + uploadErrorHint(e, 'files')); }
   }
   if (ok) { renderFiles(); toast('📁 ' + ok + ' فایل اضافه شد ✨'); notify('files', files.length === 1 ? files[0].name : ok + ' فایل', filesList[0].id); }
 }
