@@ -3787,7 +3787,7 @@ async function showSystemNotification(n) {
 }
 
 /* ---------- Web Push: اعلان وقتی سایت بسته‌ست ---------- */
-const VAPID_PUBLIC_KEY = 'BA-3v7ZgkCnBE3duPI4Roaj5jaWUoh7gjBCs3YPTgg94CWgvS0ZAXakp3jMmM6vJuJMWdRb4XEAl9SxbUAcJlJg';
+const VAPID_PUBLIC_KEY = 'BLLAxqJFbG3kIwZwUYdM7qJrvaKGMWQ9TwEY17o_wE_USXG5wiPNvf3KUTmPrrcS4VSlF0INcV4mTcqnuq1qULA';
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
 const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
