@@ -369,12 +369,12 @@ mark.hl {
   background: linear-gradient(145deg, var(--paper-2), var(--paper));
   border: 1px solid rgba(212,165,255,0.12);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 18px 18px 46px;
   cursor: pointer;
   transition: .3s;
   position: relative;
   overflow: hidden;
-  min-height: 140px;
+  min-height: 150px;
   display: flex; flex-direction: column; justify-content: space-between;
 }
 .chapter-card::before {
@@ -397,7 +397,7 @@ mark.hl {
 .chapter-card:hover .del { opacity: 1; }
 .chapter-card .del:hover { background: #ff4d6d; color: white; }
 .chapter-card .comment-count {
-  position: absolute; top: 10px; right: 12px;
+  position: absolute; bottom: 12px; left: 12px;
   font-size: 0.72rem;
   color: var(--accent);
   background: rgba(212,165,255,0.12);
