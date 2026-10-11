@@ -97,3 +97,20 @@ alter table public.gallery enable row level security;
 drop policy if exists "gallery_public_all" on public.gallery;
 create policy "gallery_public_all" on public.gallery
   for all to anon, authenticated using (true) with check (true);
+
+-- 10) فایل‌ها (آپلود هر نوع فایل)
+create table if not exists public.files (
+  id         text primary key,
+  name       text not null,
+  url        text not null,
+  file_path  text,
+  size       bigint,
+  mime       text,
+  author     text,
+  created_at bigint not null
+);
+create index if not exists files_created_at_idx on public.files (created_at desc);
+alter table public.files enable row level security;
+drop policy if exists "files_public_all" on public.files;
+create policy "files_public_all" on public.files
+  for all to anon, authenticated using (true) with check (true);

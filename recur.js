@@ -235,6 +235,7 @@
     song: { icon: '🎵', text: 'یه آهنگ اضافه کرد' },
     note: { icon: '📝', text: 'یه یادداشت اضافه کرد' },
     event: { icon: '📅', text: 'یه رویداد توی تقویم ثبت کرد' },
+    files: { icon: '📁', text: 'یه فایل آپلود کرد' },
     gallery: { icon: '🖼️', text: 'یه عکس/ویدیو به گالری اضافه کرد' },
     reminder: { icon: '⏰', text: null }
   };
