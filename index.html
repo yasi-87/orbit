@@ -1293,6 +1293,24 @@ body.reading-mode .reading-content {
 .whats-new { max-width: 420px; width: 100%; max-height: 85vh; overflow: auto; padding: 20px; border-radius: 20px; background: #17101f; border: 1px solid rgba(212,165,255,0.35); }
 .whats-new h3 { margin-bottom: 10px; color: var(--accent); }
 .whats-new ul { list-style: none; display: grid; gap: 8px; margin-bottom: 14px; font-size: 0.9rem; line-height: 1.7; }
+#printArea { display: none; }
+@page { size: A4; margin: 14mm; }
+@media print {
+  body > *:not(#printArea) { display: none !important; }
+  html, body { background: #fff !important; overflow: visible !important; height: auto !important; }
+  html:has(#printArea.pa-dark), html:has(#printArea.pa-dark) body { background: #14101c !important; }
+  #printArea { display: block !important; direction: rtl; font-family: 'Vazirmatn', Tahoma, sans-serif; line-height: 2; font-size: 12.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #printArea.pa-light { background: #fff; color: #111; }
+  #printArea.pa-light * { color: #111 !important; background: transparent !important; }
+  #printArea.pa-light a { color: #5b2a9c !important; }
+  #printArea.pa-dark { background: #14101c; color: #f0e9ff; padding: 10mm; border-radius: 0; }
+  #printArea .pa-title { font-size: 22pt; font-weight: 700; margin-bottom: 4px; }
+  #printArea .pa-dates { font-size: 9.5pt; opacity: .7; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid rgba(128,128,128,.4); }
+  #printArea img, #printArea video { max-width: 100%; height: auto; border-radius: 8px; break-inside: avoid; }
+  #printArea p, #printArea div { orphans: 3; widows: 3; }
+  #printArea .pa-media { display: inline-block; padding: 4px 10px; border: 1px dashed rgba(128,128,128,.6); border-radius: 8px; margin: 6px 0; font-size: 10pt; }
+  #printArea .pa-foot { margin-top: 18px; font-size: 8.5pt; opacity: .55; text-align: center; }
+}
 </style>
 </head>
 <body>
@@ -1402,6 +1420,7 @@ body.reading-mode .reading-content {
             </div>
             <div class="page-actions">
               <button class="btn" id="backBtn" onclick="backToChapters()">↩ برگشت به دفترچه</button>
+              <button class="btn ghost" onclick="exportChapterPdf()" title="ذخیره این فصل به صورت PDF">📄 خروجی PDF</button>
               <button class="btn ghost" id="readingBtn" onclick="toggleReadingMode()">📖 حالت خواندن</button>
               <button class="btn ghost" id="editBtn" onclick="toggleEditMode()" style="display:none;">✏️ ویرایش</button>
               <button class="btn ghost" onclick="saveChapter()" id="saveBtn">💾 ذخیره</button>
@@ -1652,6 +1671,7 @@ body.reading-mode .reading-content {
 
 <div class="notif-panel" id="notifPanel"></div>
 <div class="lightbox" id="lightbox"></div>
+<div id="printArea"></div>
 <div class="welcome-msg" id="welcomeMsg"></div>
 <input type="file" accept="image/*" hidden id="coverChangeInput" onchange="onCoverChange(event)" />
 <div class="toast" id="toast"></div>
@@ -1850,7 +1870,7 @@ async function loadHomeStats() {
 }
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-11b';
+const SITE_VERSION = '2026-10-11c';
 const SITE_CHANGES = [
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
   '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
@@ -1861,6 +1881,7 @@ const SITE_CHANGES = [
   '✏️ اسم آهنگ‌های پلی‌لیست قابل ویرایشه',
   '↩ توی هر فصل دکمهٔ «برگشت به دفترچه» هست',
   '📁 بخش فایل‌ها برای آپلود هر نوع فایل',
+  '📄 از هر فصل می‌تونی خروجی PDF بگیری (دکمهٔ «خروجی PDF» بالای فصل)',
   '⚡ سایت سبک‌تر و سریع‌تر شد'
 ];
 function showWhatsNew() {
@@ -2255,6 +2276,43 @@ async function removeChapter(id) {
   await dbDelete(id);
   toast('🗑️ فصل حذف شد');
   loadChapters();
+}
+
+/* خروجی PDF از فصل باز: با چاپِ خودِ مرورگر (حروف فارسی و راست‌به‌چپ بی‌نقص درمیاد) */
+function buildPrintArea(dark) {
+  const pa = document.getElementById('printArea');
+  const title = (document.getElementById('chapterTitle').value || '').trim() || 'بدون عنوان';
+  const src = document.getElementById('editor').cloneNode(true);
+  src.querySelectorAll('video, audio').forEach(m => {
+    const s = document.createElement('div'); s.className = 'pa-media';
+    const url = m.getAttribute('src') || '';
+    s.innerHTML = (m.tagName === 'VIDEO' ? '🎬 ویدیو' : '🎵 صدا') + (/^https?:/.test(url) ? ': <a href="' + escapeHtml(url) + '">' + (m.tagName === 'VIDEO' ? 'باز کردن ویدیو' : 'گوش دادن') + '</a>' : '');
+    m.replaceWith(s);
+  });
+  src.querySelectorAll('img').forEach(i => { i.removeAttribute('loading'); i.style.cursor = ''; i.classList.remove('media-sel'); });
+  src.removeAttribute('id'); src.removeAttribute('contenteditable'); src.removeAttribute('class');
+  pa.className = dark ? 'pa-dark' : 'pa-light';
+  pa.innerHTML = '<div class="pa-title">' + escapeHtml(title) + '</div><div class="pa-dates">' +
+    escapeHtml(document.getElementById('pageDateJalali').textContent) + ' · ' + escapeHtml(document.getElementById('pageDateGregorian').textContent) +
+    '</div>';
+  pa.appendChild(src);
+  const foot = document.createElement('div'); foot.className = 'pa-foot'; foot.textContent = 'Our Memories 💜'; pa.appendChild(foot);
+  return { pa, title };
+}
+async function exportChapterPdf() {
+  if (!currentChapterId) return;
+  const dark = confirm('PDF با ظاهر تیره (مثل خود سایت) ساخته بشه؟\n\nOK = تیره   |   Cancel = سفید (مناسب پرینت)');
+  const { pa, title } = buildPrintArea(dark);
+  toast('⏳ آماده‌سازی PDF...');
+  // صبر کن عکس‌ها لود بشن
+  await Promise.all([...pa.querySelectorAll('img')].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; setTimeout(r, 8000); })));
+  if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
+  const prevTitle = document.title;
+  document.title = title.replace(/[\\/:*?"<>|]/g, ' ').slice(0, 80);   // اسم پیش‌فرض فایل
+  const done = () => { document.title = prevTitle; pa.innerHTML = ''; window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  toast('📄 توی پنجرهٔ باز شده «ذخیره به‌صورت PDF» رو بزن');
+  setTimeout(() => window.print(), 150);
 }
 
 async function backToChapters() {
