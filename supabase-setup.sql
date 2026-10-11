@@ -49,3 +49,51 @@ begin
 exception
   when duplicate_object then null;
 end $$;
+
+-- ============================================================
+-- نسخهٔ جدید: یادآوری‌های تکرارشونده + اعلان پس‌زمینه + گالری
+-- (می‌شه چندبار اجراش کرد؛ مشکلی پیش نمیاد)
+-- ============================================================
+
+-- 6) رویدادهای تکرارشونده
+alter table public.events add column if not exists repeat       text    default 'none';  -- none|hours|daily|weekly|monthly|yearly
+alter table public.events add column if not exists repeat_every int     default 1;
+alter table public.events add column if not exists remind       boolean default false;
+alter table public.events add column if not exists remind_time  text    default '09:00';
+alter table public.events add column if not exists audience     text    default 'both';  -- both|me
+alter table public.events add column if not exists until_date   text;
+alter table public.events add column if not exists last_fired   bigint;
+alter table public.events add column if not exists start_at     bigint;
+
+-- 7) اعلان‌ها: مخاطب مشخص + وضعیت ارسال push
+alter table public.notifications add column if not exists target text;
+alter table public.notifications add column if not exists pushed boolean default false;
+update public.notifications set pushed = true where pushed is null;
+
+-- 8) دستگاه‌هایی که اعلان پس‌زمینه رو فعال کردن
+create table if not exists public.push_subscriptions (
+  endpoint   text primary key,
+  p256dh     text not null,
+  auth       text not null,
+  name       text,
+  updated_at bigint
+);
+alter table public.push_subscriptions enable row level security;
+drop policy if exists "push_subscriptions_public_all" on public.push_subscriptions;
+create policy "push_subscriptions_public_all" on public.push_subscriptions
+  for all to anon, authenticated using (true) with check (true);
+
+-- 9) گالری عکس و ویدیو
+create table if not exists public.gallery (
+  id         text primary key,
+  kind       text not null,        -- image | video
+  url        text not null,
+  file_path  text,
+  author     text,
+  created_at bigint not null
+);
+create index if not exists gallery_created_at_idx on public.gallery (created_at desc);
+alter table public.gallery enable row level security;
+drop policy if exists "gallery_public_all" on public.gallery;
+create policy "gallery_public_all" on public.gallery
+  for all to anon, authenticated using (true) with check (true);

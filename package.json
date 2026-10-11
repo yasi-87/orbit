@@ -1,0 +1,8 @@
+{
+  "name": "our-memories-push",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Reminder + Web Push worker (runs on GitHub Actions)",
+  "scripts": { "tick": "node scripts/push-tick.js", "test": "node scripts/push-tick.test.js" },
+  "dependencies": { "web-push": "3.6.7" }
+}
