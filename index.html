@@ -1434,7 +1434,7 @@ body.reading-mode .reading-content {
 <!-- ============ اپ اصلی ============ -->
 <div id="app">
   <div class="topbar">
-    <div class="logo" onclick="showScreen('home')">💜 Our Memories</div>
+    <div class="logo" onclick="showScreen('chapters')">💜 Our Memories</div>
     <div class="dates">
       <span>☀️ <b id="dateJalali">—</b></span>
       <span>🌙 <b id="dateGregorian">—</b></span>
@@ -1447,8 +1447,7 @@ body.reading-mode .reading-content {
 
   <!-- نوار ناوبری -->
   <div class="nav-bar">
-    <button class="nav-btn active" data-screen="home" onclick="showScreen('home')">🏠 خانه</button>
-    <button class="nav-btn" data-screen="chapters" onclick="showScreen('chapters')">📖 دفترچه</button>
+    <button class="nav-btn active" data-screen="chapters" onclick="showScreen('chapters')">📖 دفترچه</button>
     <button class="nav-btn" data-screen="playlist" onclick="showScreen('playlist')">🎵 پلی‌لیست</button>
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
     <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
@@ -1458,45 +1457,7 @@ body.reading-mode .reading-content {
     <button class="nav-btn" data-screen="profile" onclick="showScreen('profile')">👤 پروفایل</button>
   </div>
 
-  <!-- ============ صفحه خانه ============ -->
-  <div class="container screen active" id="screen-home">
-
-    <div class="home-hero">
-      <h1>📔 یادداشت‌های ما</h1>
-      <p>هر چیزی که میخوایم همیشه یادمون بمونه</p>
-    </div>
-
-    <div class="home-grid">
-      <div class="home-card" onclick="showScreen('chapters')">
-        <div class="hc-icon">📖</div>
-        <div class="hc-title">دفترچه</div>
-        <div class="hc-sub" id="homeChapCount">— فصل</div>
-      </div>
-      <div class="home-card" onclick="showScreen('playlist')">
-        <div class="hc-icon">🎵</div>
-        <div class="hc-title">پلی‌لیست</div>
-        <div class="hc-sub" id="homeSongCount">— آهنگ</div>
-      </div>
-      <div class="home-card" onclick="showScreen('notes')">
-        <div class="hc-icon">📝</div>
-        <div class="hc-title">یادداشت‌ها</div>
-        <div class="hc-sub" id="homeNoteCount">— یادداشت</div>
-      </div>
-      <div class="home-card" onclick="showScreen('calendar')">
-        <div class="hc-icon">📅</div>
-        <div class="hc-title">تقویم</div>
-        <div class="hc-sub" id="homeEventCount">— رویداد</div>
-      </div>
-      <div class="home-card" onclick="showScreen('profile')">
-        <div class="hc-icon">👤</div>
-        <div class="hc-title">پروفایل</div>
-        <div class="hc-sub">اسم و عکست</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ صفحه فصل‌ها ============ -->
-  <div class="container screen" id="screen-chapters">
+  <div class="container screen active" id="screen-chapters">
     <div id="chaptersListView">
       <div class="chapters-header">
         <h2>فصل‌های خاطرات</h2>
@@ -1932,7 +1893,7 @@ function uploadAvatar(ev) {
 /* ============================================================
    تغییر صفحه‌ها
    ============================================================ */
-let currentScreen = 'home';
+let currentScreen = 'chapters';
 
 function showScreen(name) {
   currentScreen = name;
@@ -1954,7 +1915,6 @@ function showScreen(name) {
   }
 
   // بارگذاری دیتای صفحه
-  if (name === 'home') loadHomeStats();
   if (name === 'chapters') loadChapters();
   if (name === 'playlist') loadPlaylist();
   if (name === 'gallery') loadGallery();
@@ -1973,8 +1933,7 @@ function enterApp() {
   updateProfileUI();
   updateHomeGreeting();
   updateCommentAvatar();
-  loadHomeStats();
-  (window.requestIdleCallback || (f => setTimeout(f, 600)))(() => loadChapters());
+  showScreen('chapters');
   playAmbient();
   initNotifications();
   showWelcomeMessage();
@@ -1990,22 +1949,10 @@ function backToWelcome() {
 /* ============================================================
    آمار خانه و پروفایل
    ============================================================ */
-let homeStatsAt = 0;
-async function loadHomeStats() {
-  if (Date.now() - homeStatsAt < 20000) return;
-  homeStatsAt = Date.now();
-  try {
-    const cnt = t => dbClient.from(t).select('id', { count: 'exact', head: true });
-    const [chaps, songs, notes, evs] = await Promise.all([cnt('chapters'), cnt('songs'), cnt('notes'), cnt('events')]);
-    document.getElementById('homeChapCount').textContent = (chaps.count || 0) + ' فصل';
-    document.getElementById('homeSongCount').textContent = (songs.count || 0) + ' آهنگ';
-    document.getElementById('homeNoteCount').textContent = (notes.count || 0) + ' یادداشت';
-    document.getElementById('homeEventCount').textContent = (evs.count || 0) + ' رویداد';
-  } catch (e) { console.error(e); homeStatsAt = 0; }
-}
+let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-12c';
+const SITE_VERSION = '2026-10-12d';
 const SITE_CHANGES = [
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
   '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
@@ -2016,6 +1963,7 @@ const SITE_CHANGES = [
   '✏️ اسم آهنگ‌های پلی‌لیست قابل ویرایشه',
   '↩ توی هر فصل دکمهٔ «برگشت به دفترچه» هست',
   '📁 بخش فایل‌ها برای آپلود هر نوع فایل',
+  '🏠 بخش «خانه» برداشته شد؛ سایت مستقیم از دفترچه شروع می‌شه',
   '💜 موس مخصوص سایت (قلب بنفش و جرقه)، و کامنت‌های خودت قابل ویرایشه ✏️',
   '🖼️ توی گالری دکمهٔ قبلی/بعدی (و فلش کیبورد و کشیدن انگشت) برای رفتن به عکس و ویدیوی بعدی',
   '🔤 تغییر فونت و اندازهٔ متن درست شد (روی موبایل هم)، نوار ابزار فصل‌ها موقع اسکرول موبایل هم همراهت می‌مونه',
