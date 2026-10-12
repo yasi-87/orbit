@@ -1,0 +1,12 @@
+/* فونت‌های فارسی روی خود سایت (بدون وابستگی به CDN). فقط وقتی متنی با اون فونت نوشته شده باشه دانلود می‌شن. */
+@font-face { font-family: 'Sahel'; src: url('Sahel.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Sahel'; src: url('Sahel-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Shabnam'; src: url('Shabnam.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Shabnam'; src: url('Shabnam-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Parastoo'; src: url('Parastoo.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Parastoo'; src: url('Parastoo-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Gandom'; src: url('Gandom.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'Samim'; src: url('Samim.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Samim'; src: url('Samim-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Estedad'; src: url('Estedad-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Estedad'; src: url('Estedad-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
