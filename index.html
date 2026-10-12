@@ -1258,8 +1258,8 @@ body.reading-mode .reading-content {
 
 /* ====== نسخهٔ جدید: تولبار چسبان، مدیا، گالری، پلیر، یادآوری ====== */
 .page-inner { overflow: clip; }
-.page-inner > .toolbar, .toolbar { position: sticky; top: 112px; z-index: 28; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background: rgba(14,10,22,0.88); }
-@media (max-width: 700px) { .page-inner > .toolbar, .toolbar { top: 60px; } }
+.page-inner > .toolbar, .toolbar { position: sticky; top: var(--sticky-top, 112px); z-index: 28; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); background: rgba(14,10,22,0.88); }
+@media (max-width: 700px) { .page-inner > .toolbar, .toolbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; } .toolbar::-webkit-scrollbar { display: none; } .toolbar .tool-group { flex-shrink: 0; } }
 .pl-icon, .pc-disc, .mp-disc { animation-duration: 14s !important; }
 .playlist-item.playing .pl-icon, .playlist-current.playing .pc-disc, .music-player.playing .mp-disc { animation: spin 14s linear infinite; }
 .mp-disc { overflow: hidden; }
@@ -1540,6 +1540,7 @@ body.reading-mode .reading-content {
             </div>
             <div class="tool-group">
               <select class="font-select" id="fontSelect" title="فونت">
+                <option value="" selected>🔤 فونت</option>
                 <option value="Vazirmatn">وزیرمتن</option>
                 <option value="Sahel">ساحل</option>
                 <option value="Shabnam">شبنم</option>
@@ -1562,10 +1563,17 @@ body.reading-mode .reading-content {
             </div>
             <div class="tool-group">
               <select class="font-select" id="fontSize" title="اندازه">
-                <option value="1">کوچیک</option>
-                <option value="3" selected>معمولی</option>
-                <option value="5">بزرگ</option>
-                <option value="7">خیلی بزرگ</option>
+                <option value="" selected>🔠 اندازه</option>
+                <option value="12">۱۲ کوچیک</option>
+                <option value="14">۱۴</option>
+                <option value="16">۱۶ معمولی</option>
+                <option value="18">۱۸</option>
+                <option value="20">۲۰</option>
+                <option value="24">۲۴ بزرگ</option>
+                <option value="28">۲۸</option>
+                <option value="32">۳۲</option>
+                <option value="40">۴۰</option>
+                <option value="48">۴۸ خیلی بزرگ</option>
               </select>
             </div>
             <div class="tool-group">
@@ -1672,7 +1680,7 @@ body.reading-mode .reading-content {
     <div class="chapters-header"><h2>📁 فایل‌های ما</h2></div>
     <label class="playlist-upload">
       <span class="pu-icon">➕</span>
-      <div class="pu-text"><strong>آپلود فایل (هر نوعی)</strong><span>PDF، ورد، زیپ، عکس، هر چیزی؛ حداکثر ۵۰ مگابایت</span></div>
+      <div class="pu-text"><strong>آپلود فایل (هر نوعی)</strong><span>PDF، ورد، زیپ، عکس، هر چیزی؛ حداکثر ۵۰۰ مگابایت (به شرطی که Supabase اجازه بده)</span></div>
       <input type="file" multiple hidden onchange="uploadFiles(event)" />
     </label>
     <div id="filesList"></div>
@@ -1975,7 +1983,7 @@ async function loadHomeStats() {
 }
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-11e';
+const SITE_VERSION = '2026-10-12a';
 const SITE_CHANGES = [
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
   '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
@@ -1986,6 +1994,7 @@ const SITE_CHANGES = [
   '✏️ اسم آهنگ‌های پلی‌لیست قابل ویرایشه',
   '↩ توی هر فصل دکمهٔ «برگشت به دفترچه» هست',
   '📁 بخش فایل‌ها برای آپلود هر نوع فایل',
+  '🔤 تغییر فونت و اندازهٔ متن درست شد (روی موبایل هم)، نوار ابزار فصل‌ها موقع اسکرول موبایل هم همراهت می‌مونه',
   '🎬 بخش سرگرمی: لینک گیم، فیلم و سریال (توی تب جدا باز می‌شن)',
   '👁️ فایل‌ها (PDF، ورد، زیپ، عکس، متن، صدا و ویدیو) رو می‌تونی توی خود سایت باز کنی',
   '⏰ فرم یادآوری توی تقویم شکل و شمایل جدید گرفت',
@@ -2042,11 +2051,29 @@ function formatTime(ts) {
   catch { return ''; }
 }
 function updateDates() {
-  document.getElementById('dateJalali').textContent = getJalali();
-  document.getElementById('dateGregorian').textContent = getGregorian();
+  const small = window.matchMedia && matchMedia('(max-width: 700px)').matches;
+  let j, g;
+  if (small) {   // موبایل: کوتاه، مثل «۲۰ مهر» و «12 October»
+    try { j = new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long' }).format(new Date()); } catch (e) { j = getJalali(); }
+    try { g = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long' }).format(new Date()); } catch (e) { g = getGregorian(); }
+  } else { j = getJalali(); g = getGregorian(); }
+  document.getElementById('dateJalali').textContent = j;
+  document.getElementById('dateGregorian').textContent = g;
 }
 setInterval(updateDates, 60000);
 updateDates();
+
+/* فاصلهٔ چسبیدنِ تولبار = ارتفاع نوار بالا (+ نوار ناوبری وقتی اونم چسبیده) */
+function updateStickyTop() {
+  const top = document.querySelector('.topbar'), nav = document.querySelector('.nav-bar');
+  if (!top) return;
+  let v = top.getBoundingClientRect().height;
+  if (nav && getComputedStyle(nav).position === 'sticky') v += nav.getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--sticky-top', Math.round(v) + 'px');
+}
+window.addEventListener('resize', () => { updateStickyTop(); updateDates(); });
+if (window.ResizeObserver) { const t = document.querySelector('.topbar'); if (t) new ResizeObserver(updateStickyTop).observe(t); }
+setTimeout(updateStickyTop, 300);
 
 /* ---------- Toast ---------- */
 let toastTimer;
@@ -2604,23 +2631,64 @@ async function removeComment(id) {
 /* ============================================================
    ویرایشگر
    ============================================================ */
+/* انتخاب متن موقع کلیک روی تولبار/منوها از دست نره (روی موبایل مخصوصاً) */
+function restoreEditorSelection() {
+  const ed = document.getElementById('editor');
+  ed.focus({ preventScroll: true });
+  if (typeof editorRange !== 'undefined' && editorRange && ed.contains(editorRange.startContainer)) {
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(editorRange);
+  }
+}
+document.getElementById('toolbar').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
 document.querySelectorAll('[data-cmd]').forEach(btn => {
   btn.addEventListener('click', () => {
+    restoreEditorSelection();
+    document.execCommand('styleWithCSS', false, true);
     document.execCommand(btn.dataset.cmd, false, null);
-    document.getElementById('editor').focus();
+    markEditorDirty();
   });
 });
-document.getElementById('textColor').addEventListener('input', e => {
-  document.execCommand('foreColor', false, e.target.value);
-});
-document.getElementById('hiliteBtn').addEventListener('click', () => {
-  document.execCommand('hiliteColor', false, document.getElementById('bgColor').value);
-});
+
+/* فونت / اندازه / رنگ: روی متن انتخاب‌شده، یا (اگه چیزی انتخاب نشده) روی چیزی که بعد از این تایپ می‌شه */
+function applyInlineStyle(prop, value) {
+  restoreEditorSelection();
+  const ed = document.getElementById('editor');
+  const sel = window.getSelection();
+  if (!sel.rangeCount || !ed.contains(sel.anchorNode)) { toast('⚠️ اول توی متن کلیک کن یا یه متن رو انتخاب کن'); return; }
+  const r = sel.getRangeAt(0);
+  if (r.collapsed) {
+    const span = document.createElement('span');
+    span.style[prop] = value; span.textContent = '\u200b';
+    r.insertNode(span);
+    const nr = document.createRange(); nr.setStart(span.firstChild, 1); nr.collapse(true);
+    sel.removeAllRanges(); sel.addRange(nr); editorRange = nr.cloneRange();
+    markEditorDirty(); return;
+  }
+  document.execCommand('styleWithCSS', false, true);
+  if (prop === 'fontFamily') document.execCommand('fontName', false, value);
+  else if (prop === 'color') document.execCommand('foreColor', false, value);
+  else if (prop === 'backgroundColor') document.execCommand('hiliteColor', false, value);
+  else if (prop === 'fontSize') {
+    document.execCommand('fontSize', false, '7');
+    ed.querySelectorAll('span[style*="xxx-large"], font[size="7"]').forEach(n => {
+      let s = n;
+      if (n.tagName === 'FONT') { s = document.createElement('span'); s.innerHTML = n.innerHTML; n.replaceWith(s); }
+      s.style.fontSize = value;
+      s.querySelectorAll('[style*="font-size"]').forEach(c => { c.style.fontSize = ''; });
+    });
+  }
+  if (sel.rangeCount) editorRange = sel.getRangeAt(0).cloneRange();
+  markEditorDirty();
+}
+document.getElementById('textColor').addEventListener('input', e => applyInlineStyle('color', e.target.value));
+document.getElementById('hiliteBtn').addEventListener('click', () => applyInlineStyle('backgroundColor', document.getElementById('bgColor').value));
 document.getElementById('fontSelect').addEventListener('change', e => {
-  document.execCommand('fontName', false, e.target.value);
+  if (!e.target.value) return;
+  applyInlineStyle('fontFamily', e.target.value); e.target.value = '';
 });
 document.getElementById('fontSize').addEventListener('change', e => {
-  document.execCommand('fontSize', false, e.target.value);
+  if (!e.target.value) return;
+  applyInlineStyle('fontSize', e.target.value + 'px'); e.target.value = '';
 });
 function insertEmoji(emoji) {
   document.execCommand('insertText', false, emoji);
@@ -2664,7 +2732,7 @@ const extOf = f => ((f.name || '').split('.').pop() || (f.type || '').split('/')
 function addMedia(ev, type) {
   const file = ev.target.files[0];
   if (!file) return;
-  if (file.size > 50 * 1024 * 1024) { toast('⚠️ فایل بزرگه! حداکثر ۵۰ مگابایت'); return; }
+  if (file.size > 200 * 1024 * 1024) { toast('⚠️ فایل بزرگه! حداکثر ۲۰۰ مگابایت'); return; }
   const input = ev.target;
   toast('⏳ در حال افزودن...');
   (async () => {
@@ -2897,9 +2965,9 @@ async function uploadSong(ev) {
   if (!file) return;
 
   // ✅ محدودیت جدید: ۱۰۰ مگابایت
-  const MAX_SIZE = 100 * 1024 * 1024;
+  const MAX_SIZE = 300 * 1024 * 1024;
   if (file.size > MAX_SIZE) {
-    toast('⚠️ فایل بزرگه! حداکثر ۱۰۰ مگابایت');
+    toast('⚠️ فایل بزرگه! حداکثر ۳۰۰ مگابایت');
     return;
   }
 
@@ -3155,7 +3223,7 @@ async function uploadGallery(ev) {
   let ok = 0;
   for (const [i, file] of files.entries()) {
     const isVid = file.type.startsWith('video/');
-    if (file.size > 100 * 1024 * 1024) { toast('⚠️ ' + file.name + ' بزرگه (حداکثر ۱۰۰ مگابایت)'); continue; }
+    if (file.size > 300 * 1024 * 1024) { toast('⚠️ ' + file.name + ' بزرگه (حداکثر ۳۰۰ مگابایت)'); continue; }
     toast(`⏳ آپلود ${i + 1} از ${files.length}...`);
     try {
       let blob = file, ext = extOf(file);
@@ -3173,6 +3241,7 @@ async function uploadGallery(ev) {
 /* ============================================================
    📁 فایل‌ها (هر نوع فایلی)
    ============================================================ */
+const MAX_FILE_MB = 500;   // سقف سمت سایت؛ سقف واقعی رو تنظیمات Storage توی Supabase تعیین می‌کنه
 let filesList = [], filesLoaded = false, filesMissing = false;
 const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
 const fileIcon = (n, m) => /^image\//.test(m || '') ? '🖼️' : /^video\//.test(m || '') ? '🎬' : /^audio\//.test(m || '') ? '🎵' : /pdf/i.test(m || n) ? '📕' : /zip|rar|7z|tar|gz/i.test(n) ? '🗜️' : /doc|docx|txt|rtf/i.test(n) ? '📄' : /xls|csv/i.test(n) ? '📊' : /ppt/i.test(n) ? '📽️' : '📎';
@@ -3199,7 +3268,7 @@ async function uploadFiles(ev) {
   const files = Array.from(ev.target.files || []); ev.target.value = '';
   let ok = 0;
   for (const [i, file] of files.entries()) {
-    if (file.size > 50 * 1024 * 1024) { toast('⚠️ ' + file.name + ' بزرگه (حداکثر ۵۰ مگابایت)'); continue; }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) { toast('⚠️ ' + file.name + ' بزرگه (حداکثر ' + MAX_FILE_MB + ' مگابایت)'); continue; }
     toast(`⏳ آپلود ${i + 1} از ${files.length}...`);
     try {
       const up = await uploadMediaFile(file, extOf(file));
