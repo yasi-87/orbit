@@ -1393,6 +1393,11 @@ body.reading-mode .reading-content {
 @media (hover: none) { .fc-btn { opacity: .8; } }
 @media (max-width: 520px) { .fun-tab { padding: 14px 4px 10px; } .fun-tab .ft-ico { font-size: 2rem; } .fun-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .fun-tab .ft-ico, .fun-tab.on::after, .fun-card { animation: none !important; } }
+.lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.16); color: #fff; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); transition: .2s; }
+.lb-nav:hover { background: rgba(212,165,255,0.5); transform: translateY(-50%) scale(1.08); }
+.lb-prev { right: 12px; } .lb-next { left: 12px; }
+.lb-count { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 5px 14px; border-radius: 999px; background: rgba(0,0,0,0.55); color: #fff; font-size: 0.8rem; }
+@media (max-width: 520px) { .lb-nav { width: 40px; height: 40px; opacity: .85; } }
 </style>
 </head>
 <body>
@@ -1983,7 +1988,7 @@ async function loadHomeStats() {
 }
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-12a';
+const SITE_VERSION = '2026-10-12b';
 const SITE_CHANGES = [
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
   '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
@@ -1994,6 +1999,7 @@ const SITE_CHANGES = [
   '✏️ اسم آهنگ‌های پلی‌لیست قابل ویرایشه',
   '↩ توی هر فصل دکمهٔ «برگشت به دفترچه» هست',
   '📁 بخش فایل‌ها برای آپلود هر نوع فایل',
+  '🖼️ توی گالری دکمهٔ قبلی/بعدی (و فلش کیبورد و کشیدن انگشت) برای رفتن به عکس و ویدیوی بعدی',
   '🔤 تغییر فونت و اندازهٔ متن درست شد (روی موبایل هم)، نوار ابزار فصل‌ها موقع اسکرول موبایل هم همراهت می‌مونه',
   '🎬 بخش سرگرمی: لینک گیم، فیلم و سریال (توی تب جدا باز می‌شن)',
   '👁️ فایل‌ها (PDF، ورد، زیپ، عکس، متن، صدا و ویدیو) رو می‌تونی توی خود سایت باز کنی',
@@ -3207,14 +3213,43 @@ document.getElementById('galleryGrid').addEventListener('click', e => {
   const it = e.target.closest('.g-item'); if (!it) return;
   const g = galleryList.find(x => x.id === it.dataset.id); if (g) openLightbox(g);
 });
+let lbIndex = -1;
 function openLightbox(g) {
-  const lb = document.getElementById('lightbox');
-  lb.innerHTML = (g.kind === 'video' ? `<video src="${escapeHtml(g.url)}" controls autoplay playsinline></video>` : `<img src="${escapeHtml(g.url)}" alt="">`)
-    + `<button class="lb-x" onclick="closeLightbox()">✕</button>`;
-  lb.style.display = 'flex';
+  lbIndex = galleryList.findIndex(x => x.id === g.id);
+  showLightboxItem(0);
+  document.getElementById('lightbox').style.display = 'flex';
 }
-function closeLightbox() { const lb = document.getElementById('lightbox'); lb.style.display = 'none'; lb.innerHTML = ''; }
+/* dir: ‎-1 قبلی، 1 بعدی، 0 همین (بعد از آخری برمی‌گرده اول) */
+function showLightboxItem(dir) {
+  const n = galleryList.length; if (!n || lbIndex < 0) return;
+  lbIndex = (lbIndex + dir + n) % n;
+  const g = galleryList[lbIndex], lb = document.getElementById('lightbox');
+  const old = lb.querySelector('video'); if (old) old.pause();
+  lb.innerHTML = (g.kind === 'video' ? `<video src="${escapeHtml(g.url)}" controls autoplay playsinline></video>` : `<img src="${escapeHtml(g.url)}" alt="">`)
+    + `<button class="lb-x" onclick="closeLightbox()" title="بستن">✕</button>`
+    + (n > 1 ? `<button class="lb-nav lb-prev" onclick="showLightboxItem(-1)" title="قبلی">❯</button><button class="lb-nav lb-next" onclick="showLightboxItem(1)" title="بعدی">❮</button>` : '')
+    + `<div class="lb-count">${lbIndex + 1} / ${n}${g.author ? ' · ' + escapeHtml(g.author) : ''}</div>`;
+  if (n > 1) { const nx = galleryList[(lbIndex + 1) % n]; if (nx.kind !== 'video') { const i = new Image(); i.src = nx.url; } }
+}
+function closeLightbox() { const lb = document.getElementById('lightbox'); lb.style.display = 'none'; lb.innerHTML = ''; lbIndex = -1; }
 document.getElementById('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') closeLightbox(); });
+/* کیبورد (چون سایت راست‌به‌چپه: فلش چپ = بعدی) و کشیدن انگشت روی موبایل */
+document.addEventListener('keydown', e => {
+  if (lbIndex < 0 || document.getElementById('lightbox').style.display !== 'flex') return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); showLightboxItem(1); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); showLightboxItem(-1); }
+  else if (e.key === 'Escape') { e.stopImmediatePropagation(); closeLightbox(); }
+}, true);
+(() => {
+  let sx = null, sy = 0;
+  const lb = document.getElementById('lightbox');
+  lb.addEventListener('touchstart', e => { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
+  lb.addEventListener('touchend', e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) showLightboxItem(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
 
 async function uploadGallery(ev) {
   const files = Array.from(ev.target.files || []);
