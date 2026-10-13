@@ -380,5 +380,5 @@ body.reading-mode .catpal:hover{opacity:1}`;
     setTimeout(() => { if (fresh.length) announce(fresh); else say(greeting(), 6500); save(); }, 3200);
     scheduleMove();
   }
-  window.CatPal = { start, act, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  window.CatPal = { start, act, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();

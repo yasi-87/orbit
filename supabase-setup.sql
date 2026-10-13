@@ -129,3 +129,20 @@ alter table public.links enable row level security;
 drop policy if exists "links_public_all" on public.links;
 create policy "links_public_all" on public.links
   for all to anon, authenticated using (true) with check (true);
+
+-- 12) سؤال روز (هر روز یه سؤال مشترک؛ هر نفر جداگانه جواب می‌ده)
+create table if not exists public.daily_answers (
+  id         text primary key,
+  day        text not null,        -- مثلاً 2026-10-13
+  q_idx      int,
+  question   text,
+  author     text,
+  text       text not null,
+  created_at bigint not null,
+  updated_at bigint
+);
+create index if not exists daily_answers_day_idx on public.daily_answers (day);
+alter table public.daily_answers enable row level security;
+drop policy if exists "daily_answers_public_all" on public.daily_answers;
+create policy "daily_answers_public_all" on public.daily_answers
+  for all to anon, authenticated using (true) with check (true);
