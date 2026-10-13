@@ -112,9 +112,10 @@
   /* ---------- خاطرهٔ تصادفی ---------- */
   const strip = h => { try { return stripHtml(h); } catch (e) { return String(h || '').replace(/<[^>]*>/g, ' '); } };
   async function pickMemory() {
-    const kinds = ['chapter', 'chapter', 'chapter', 'gallery', 'gallery', 'note'];
-    for (let t = 0; t < 4; t++) {
+    let kinds = ['chapter', 'chapter', 'chapter', 'gallery', 'gallery', 'note'];
+    for (let t = 0; t < 8 && kinds.length; t++) {
       const kind = rnd(kinds);
+      if (t >= 3) kinds = kinds.filter(k => k !== kind);   // نوعی که چند بار خالی در اومد رو کنار بذار
       try {
         if (kind === 'chapter') {
           let list = (typeof chaptersCache !== 'undefined' && chaptersCache && chaptersCache.list) || [];
@@ -295,8 +296,8 @@ body.reading-mode .catpal:hover{opacity:1}`;
     const memHtml = m
       ? `<div class="cp-mem">${m.kind === 'gallery' && m.g && m.g.kind !== 'video' ? `<img src="${esc(m.g.url)}" alt="">` : ''}<b>${esc(m.title)}</b>${m.text ? esc(m.text) : ''}${m.date ? `<small>📅 ${esc(m.date)}</small>` : ''}</div>`
       : '<div class="cp-mem">هنوز خاطره‌ای نداریم… بیا اولین رو بسازیم 💜</div>';
-    openBubble(`<div class="cp-say">${esc(line)}</div>${memHtml}<div class="cp-row">${m ? '<button class="cp-btn main" data-a="open">📖 بازش کن</button><button class="cp-btn" data-a="more">🎲 یکی دیگه</button>' : '<button class="cp-btn main" data-a="new">✍️ فصل جدید</button>'}<button class="cp-btn" data-a="wardrobe">👗 کمد من</button></div>`, 15000);
-    wire(); if (fresh.length) announce(fresh);
+    openBubble(`<div class="cp-say">${esc(line)}</div>${memHtml}${fresh.length ? `<div class="cp-mem"><b>🎁 آیتم جدید باز شد!</b>${esc(fresh.map(i => ITEMS[i].ico + ' ' + ITEMS[i].name).join('، '))}</div>` : ''}<div class="cp-row">${m ? '<button class="cp-btn main" data-a="open">📖 بازش کن</button><button class="cp-btn" data-a="more">🎲 یکی دیگه</button>' : '<button class="cp-btn main" data-a="new">✍️ فصل جدید</button>'}<button class="cp-btn" data-a="wardrobe">👗 کمد من</button></div>`, 15000);
+    wire(); if (fresh.length) sparkle(['🎉', '✨', '⭐', '💛'], 12);
   }
   function wire() {
     bubble.querySelectorAll('[data-a]').forEach(b => b.onclick = async e => {
@@ -380,5 +381,5 @@ body.reading-mode .catpal:hover{opacity:1}`;
     setTimeout(() => { if (fresh.length) announce(fresh); else say(greeting(), 6500); save(); }, 3200);
     scheduleMove();
   }
-  window.CatPal = { start, act, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  window.CatPal = { start, act, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();

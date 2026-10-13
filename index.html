@@ -1499,6 +1499,7 @@ body.reading-mode .reading-content {
             <div class="page-actions">
               <button class="btn" id="backBtn" onclick="backToChapters()">↩ برگشت به دفترچه</button>
               <button class="btn ghost" onclick="exportChapterPdf()" title="ذخیره این فصل به صورت PDF">📄 خروجی PDF</button>
+              <button class="btn ghost" onclick="makeChapterPoster()" title="این خاطره رو به یه پوستر هنری تبدیل کن">🎨 پوستر</button>
               <button class="btn ghost" id="readingBtn" onclick="toggleReadingMode()">📖 حالت خواندن</button>
               <button class="btn ghost" id="editBtn" onclick="toggleEditMode()" style="display:none;">✏️ ویرایش</button>
               <button class="btn ghost" onclick="saveChapter()" id="saveBtn">💾 ذخیره</button>
@@ -1792,6 +1793,7 @@ body.reading-mode .reading-content {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./recur.js"></script>
 <script src="./cat.js" defer></script>
+<script src="./poster.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -1974,8 +1976,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-13d';
+const SITE_VERSION = '2026-10-13e';
 const SITE_CHANGES = [
+  '🎨 هر خاطره رو می‌شه به یه پوستر هنری تبدیل کرد (رنگ و نقش از روی تاریخ و فصل) و به‌صورت عکس ذخیره یا چاپ کرد؛ دکمهٔ «🎨 پوستر» بالای هر فصل',
   '❓ بخش جدید «سؤال روز»: هر روز یه سؤال مشترک، هر کدوم جدا جواب می‌دیم و بعد از جواب دادن جواب همدیگه رو می‌بینیم + آرشیو جواب‌های قبلی',
   '🐱 گربهٔ تعاملی اومد! روش کلیک کن، حرف می‌زنه و یه خاطرهٔ تصادفی نشونت می‌ده. با فعالیت‌هات لباس و رنگ و حالت جدید باز می‌شه و گاهی جاش رو عوض می‌کنه',
   '🗑️ توی فایل‌ها می‌تونی چندتا فایل رو با هم انتخاب و یک‌جا حذف کنی',
@@ -2471,6 +2474,16 @@ function buildPrintArea(dark) {
   pa.appendChild(src);
   const foot = document.createElement('div'); foot.className = 'pa-foot'; foot.textContent = 'Our Memories 💜'; pa.appendChild(foot);
   return { pa, title };
+}
+function makeChapterPoster() {
+  if (!currentChapterId || !window.Poster) return;
+  const ts = currentChapterMeta && currentChapterMeta.created_at;
+  Poster.open({
+    id: currentChapterId,
+    title: document.getElementById('chapterTitle').value,
+    text: document.getElementById('editor').textContent,
+    iso: ts ? Recur.epochToWall(Number(ts)).iso : Recur.todayIso()
+  });
 }
 async function exportChapterPdf() {
   if (!currentChapterId) return;
