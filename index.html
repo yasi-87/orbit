@@ -99,30 +99,6 @@ button { cursor: pointer; border: none; background: none; }
 }
 .w-btn.ghost:hover { background: rgba(212,165,255,0.1); }
 
-/* 🐱 گربه */
-.cat {
-  position: fixed;
-  bottom: 20px; right: 20px;
-  font-size: 60px;
-  z-index: 50;
-  animation: catIdle 4s ease-in-out infinite;
-  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
-  cursor: pointer;
-  user-select: none;
-  transition: transform .3s;
-}
-.cat:hover { animation: catPlay 0.6s ease-in-out; }
-@keyframes catIdle {
-  0%,100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-8px) rotate(-3deg); }
-  50% { transform: translateY(0) rotate(0deg); }
-  75% { transform: translateY(-6px) rotate(3deg); }
-}
-@keyframes catPlay {
-  0%,100% { transform: scale(1); }
-  50% { transform: scale(1.25) rotate(15deg); }
-}
-
 /* ============ اپ اصلی ============ */
 #app { display: none; min-height: 100vh; }
 #app.active { display: block; }
@@ -1230,7 +1206,6 @@ body.reading-mode .reading-content {
   .topbar { padding: 10px 12px; }
   .logo { font-size: 1.2rem; }
   .dates { font-size: 0.68rem; padding: 4px 8px; }
-  .cat { font-size: 44px; bottom: 100px; right: 12px; }
   .music-player { left: 12px; right: 12px; bottom: 12px; max-width: none; }
   .mp-vol { display: none; }
   .chapters-grid { grid-template-columns: 1fr; }
@@ -1436,7 +1411,6 @@ body.reading-mode .reading-content {
 <body>
 
 <!-- گربه -->
-<div class="cat" id="cat" title="میو! 🐱">🐱</div>
 
 <!-- ============ صفحه خوش‌آمد ============ -->
 <div id="welcome">
@@ -1789,6 +1763,7 @@ body.reading-mode .reading-content {
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./recur.js"></script>
+<script src="./cat.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -1954,6 +1929,7 @@ function enterApp() {
   initNotifications();
   showWelcomeMessage();
   setTimeout(showWhatsNew, 1200);
+  try { CatPal.start(); } catch (e) { console.warn(e); }
 }
 
 function backToWelcome() {
@@ -1968,8 +1944,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-13b';
+const SITE_VERSION = '2026-10-13c';
 const SITE_CHANGES = [
+  '🐱 گربهٔ تعاملی اومد! روش کلیک کن، حرف می‌زنه و یه خاطرهٔ تصادفی نشونت می‌ده. با فعالیت‌هات لباس و رنگ و حالت جدید باز می‌شه و گاهی جاش رو عوض می‌کنه',
   '🗑️ توی فایل‌ها می‌تونی چندتا فایل رو با هم انتخاب و یک‌جا حذف کنی',
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
   '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
@@ -3566,7 +3543,7 @@ async function addFunLink(ev) {
   const row = { id: 'ln_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), category: funCat, title: title.slice(0, 80), url, author: myName() || 'ناشناس', created_at: Date.now() };
   const { error } = await dbClient.from('links').insert(row);
   if (error) { funMissing = /links|relation|schema cache/i.test(error.message || ''); renderFun(); toast('⚠️ ذخیره نشد' + (funMissing ? ' (فایل SQL اجرا نشده)' : '')); return; }
-  funList.push(row); t.value = ''; u.value = ''; renderFun(); toast('✅ اضافه شد');
+  funList.push(row); t.value = ''; u.value = ''; renderFun(); toast('✅ اضافه شد'); try { window.CatPal && CatPal.act('link'); } catch (e) {}
 }
 async function renameFunLink(id) {
   const x = funList.find(l => l.id === id); if (!x) return;
@@ -3788,14 +3765,6 @@ document.getElementById('muteBtn').addEventListener('click', function() {
   }
 });
 
-
-/* ---------- گربه ---------- */
-document.getElementById('cat').addEventListener('click', () => {
-  const cat = document.getElementById('cat');
-  const emojis = ['🐱','🐈','😺','😸','😻'];
-  const current = emojis.indexOf(cat.textContent);
-  cat.textContent = emojis[(current + 1) % emojis.length];
-});
 
 /* ---------- Escape HTML ---------- */
 function escapeHtml(s) {
@@ -4470,6 +4439,7 @@ async function notify(type, title, refId, opts) {
     };
     if (opts.target) row.target = opts.target;       // فقط وقتی لازمه؛ برای سازگاری با دیتابیسِ بدون این ستون
     notifIds.add(row.id);
+    try { window.CatPal && CatPal.act(type); } catch (e) {}
     const { error } = await dbClient.from('notifications').insert(row);
     if (error) console.warn('notify failed:', error.message);
   } catch (e) { console.warn(e); }
