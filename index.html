@@ -99,6 +99,27 @@ button { cursor: pointer; border: none; background: none; }
 }
 .w-btn.ghost:hover { background: rgba(212,165,255,0.1); }
 
+
+/* ❓ سؤال روز */
+.daily-card { background: linear-gradient(145deg, rgba(212,165,255,0.16), rgba(255,158,199,0.1)); border: 1px solid rgba(212,165,255,0.35); border-radius: 22px; padding: 22px 20px; margin-bottom: 18px; box-shadow: 0 10px 34px rgba(0,0,0,0.3); }
+.daily-date { font-size: .82rem; color: var(--muted); margin-bottom: 8px; }
+.daily-q { font-size: 1.28rem; font-weight: 700; line-height: 1.9; color: #fff; margin-bottom: 14px; }
+.daily-q::before { content: '❝ '; color: var(--accent-2); }
+.daily-card textarea { width: 100%; min-height: 96px; resize: vertical; border-radius: 14px; padding: 12px 14px; border: 1px solid rgba(212,165,255,0.3); background: rgba(10,10,15,0.55); color: inherit; font: inherit; line-height: 1.8; box-sizing: border-box; }
+.daily-card textarea:focus { outline: none; border-color: var(--accent); }
+.daily-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.daily-row small { color: var(--muted); }
+.daily-ans { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,165,255,0.18); margin-top: 10px; }
+.daily-ans.me { border-color: rgba(255,158,199,0.45); }
+.daily-ans b { display: block; color: var(--accent); font-size: .85rem; margin-bottom: 4px; }
+.daily-ans p { margin: 0; white-space: pre-wrap; line-height: 1.85; }
+.daily-lock { text-align: center; padding: 16px; border-radius: 14px; border: 1px dashed rgba(212,165,255,0.4); color: var(--muted); margin-top: 10px; }
+.daily-sub { margin: 24px 4px 10px; font-weight: 700; color: var(--accent); }
+.daily-past { background: rgba(255,255,255,0.03); border: 1px solid rgba(212,165,255,0.15); border-radius: 18px; padding: 14px 16px; margin-bottom: 12px; }
+.daily-past .dq { font-weight: 700; line-height: 1.8; }
+.daily-past .dd { font-size: .78rem; color: var(--muted); margin-bottom: 4px; }
+.daily-stat { text-align: center; color: var(--muted); font-size: .9rem; margin: 14px 0 0; }
+
 /* ============ اپ اصلی ============ */
 #app { display: none; min-height: 100vh; }
 #app.active { display: block; }
@@ -1442,6 +1463,7 @@ body.reading-mode .reading-content {
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
     <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
     <button class="nav-btn" data-screen="fun" onclick="showScreen('fun')">🎬 سرگرمی</button>
+    <button class="nav-btn" data-screen="daily" onclick="showScreen('daily')">❓ سؤال روز</button>
     <button class="nav-btn" data-screen="notes" onclick="showScreen('notes')">📝 یادداشت‌ها</button>
     <button class="nav-btn" data-screen="calendar" onclick="showScreen('calendar')">📅 تقویم</button>
     <button class="nav-btn" data-screen="profile" onclick="showScreen('profile')">👤 پروفایل</button>
@@ -1674,6 +1696,12 @@ body.reading-mode .reading-content {
     </form>
     <div class="fun-hint">لینک‌ها توی یک تب جدا باز می‌شن، پس خود این سایت سبک می‌مونه ✨</div>
     <div class="fun-grid" id="funGrid"></div>
+  </div>
+
+  <!-- ============ سؤال روز ============ -->
+  <div class="container screen" id="screen-daily">
+    <div class="chapters-header"><h2>❓ سؤال امروز</h2></div>
+    <div id="dailyBox"></div>
   </div>
 
   <!-- ============ صفحه یادداشت‌ها ============ -->
@@ -1912,6 +1940,7 @@ function showScreen(name) {
   if (name === 'files') loadFiles();
   if (name === 'fun') loadFun();
   if (name === 'notes') loadNotes();
+  if (name === 'daily') loadDaily();
   if (name === 'calendar') loadCalendar();
   if (name === 'profile') loadProfileStats();
 
@@ -1930,6 +1959,7 @@ function enterApp() {
   showWelcomeMessage();
   setTimeout(showWhatsNew, 1200);
   try { CatPal.start(); } catch (e) { console.warn(e); }
+  setTimeout(checkDailyNudge, 10000);
 }
 
 function backToWelcome() {
@@ -1944,8 +1974,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-13c';
+const SITE_VERSION = '2026-10-13d';
 const SITE_CHANGES = [
+  '❓ بخش جدید «سؤال روز»: هر روز یه سؤال مشترک، هر کدوم جدا جواب می‌دیم و بعد از جواب دادن جواب همدیگه رو می‌بینیم + آرشیو جواب‌های قبلی',
   '🐱 گربهٔ تعاملی اومد! روش کلیک کن، حرف می‌زنه و یه خاطرهٔ تصادفی نشونت می‌ده. با فعالیت‌هات لباس و رنگ و حالت جدید باز می‌شه و گاهی جاش رو عوض می‌کنه',
   '🗑️ توی فایل‌ها می‌تونی چندتا فایل رو با هم انتخاب و یک‌جا حذف کنی',
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
@@ -3766,6 +3797,74 @@ document.getElementById('muteBtn').addEventListener('click', function() {
 });
 
 
+
+/* ============================================================
+   ❓ سؤال روز: هر روز یه سؤال مشترک؛ هر نفر جدا جواب می‌ده و بعد از جواب دادن، جواب‌های همدیگه رو می‌بینیم
+   ============================================================ */
+const DAILY_QS = ["بهترین خاطره‌ای که از ما دوتا داری چیه؟", "اولین چیزی که از من یادت می‌آد چی بود؟", "اگه فردا یه روز تعطیل کامل داشتیم، دوست داشتی چیکار کنیم؟", "چه آهنگی منو یاد تو می‌ندازه؟", "یه چیز کوچیک که حالت رو خوب می‌کنه چیه؟", "بزرگ‌ترین آرزوت برای ۵ سال آینده چیه؟", "کدوم لحظهٔ امروز بهترین بود؟", "اگه می‌تونستی با من به یه جای دنیا سفر کنی، کجا؟", "یه چیزی که ازم یاد گرفتی چیه؟", "غذای مورد علاقه‌ای که دوست داری باهم درست کنیم؟", "چه فیلم یا سریالی رو دوست داری دوباره باهم ببینیم؟", "یه عادت من که دوستش داری چیه؟", "وقتی ناراحتی، چی بیشتر کمکت می‌کنه؟", "اگه یه ابرقدرت داشتی، چی بود؟", "یه خاطرهٔ خنده‌دار از ما که هنوزم می‌خندی بهش؟", "دوست داری ۱۰ سال دیگه کجا زندگی کنیم؟", "یه کاری که همیشه می‌خواستی بکنی ولی نکردی؟", "چی باعث می‌شه احساس امنیت کنی؟", "بهترین هدیه‌ای که تا حالا گرفتی چی بوده؟", "امروز به چی فکر می‌کردی که لبخند بزنی؟", "یه ویژگی از خودت که دوست داری و یه ویژگی که دوست داری بهتر بشه؟", "اگه فقط یه آهنگ برای همیشه می‌تونستی گوش بدی، کدوم؟", "چه چیزی از دوران بچگی‌ت رو بیشتر از همه دوست داشتی؟", "یه جملهٔ قشنگ که دوست داری از من بشنوی؟", "فصل مورد علاقه‌ات چیه و چرا؟", "اگه می‌تونستی به خودِ ۱۰ سال پیشت یه نصیحت بکنی، چی می‌گفتی؟", "یه کار عاشقانهٔ ساده که دوست داری برات انجام بدم؟", "کدوم مکان دنیا بیشتر از همه آرومت می‌کنه؟", "بهترین روز زندگیت تا الان کدوم بوده؟", "یه چیزی که ازش می‌ترسی و دوست داری بهش غلبه کنی؟", "اگه یه روز می‌تونستی جای من باشی، اول چیکار می‌کردی؟", "یه کتاب یا فیلمی که زندگیت رو عوض کرد؟", "چه چیز ما دوتا رو خاص می‌کنه؟", "دوست داری چه چیزی رو بیشتر باهم تجربه کنیم؟", "یه رازِ کوچیک و بامزه از خودت بگو.", "صبح‌ها رو دوست داری یا شب‌ها رو؟ چرا؟", "چه بو یا مزه‌ای تو رو یاد بهترین خاطره‌ها می‌ندازه؟", "اگه می‌تونستی یه چیز رو توی دنیا عوض کنی چی بود؟", "یه لحظه‌ای که حس کردی واقعاً دوستت دارم؟", "بزرگ‌ترین درسی که از یه اشتباه گرفتی؟", "یه ماجراجویی که دوست داری باهم داشته باشیم؟", "اگه یه کافه یا رستوران مال خودت بود، چه شکلی بود؟", "چه چیزی هست که دوست داری بیشتر ازش تشکر کنی؟", "یه شعر، جمله یا دیالوگ که دوستش داری؟", "چه کاری رو می‌تونی ساعت‌ها انجام بدی بدون اینکه خسته بشی؟", "اگه امشب می‌تونستیم هر شام دلخواهی بخوریم، چی سفارش می‌دادی؟", "یه چیز از من که هنوز نمی‌دونی و دوست داری بپرسی؟", "چه چیزی باعث می‌شه خودت باشی؟", "بهترین توصیه‌ای که تا حالا شنیدی؟", "یه جای قشنگ توی شهر که دوست داری باهم بریم؟", "اگه می‌تونستی یه ساز رو فوری یاد بگیری، کدوم؟", "چه چیزی توی من آرومت می‌کنه؟", "یه رویای عجیب یا قشنگ که یادته؟", "یه کار بامزه که دوست داری باهم انجام بدیم؟", "اگه می‌تونستی یه روز رو دوباره زندگی کنی، کدوم روز؟", "چه چیزی بیشتر از همه دلت رو گرم می‌کنه؟", "یه قولی که دوست داری بهم بدی؟", "اگه یه حیوون بودی، کدوم بودی و چرا؟", "چه چیزی از امروز می‌خوای یادت بمونه؟", "دوست داری سال بعد چه چیزی رو در مورد ما جشن بگیریم؟", "یه لحظه‌ای که از خودت خیلی خوشحال شدی؟", "بهترین قسمت یه روز معمولی کنار هم چیه؟", "اگه می‌تونستی یه نامه برای ۵ سال بعدمون بنویسی، اولین جمله‌اش چی بود؟", "چی باعث شد با من احساس راحتی کنی؟", "یه چیزی که این روزا ازش خیلی ممنونی؟", "اگه فقط ۳ چیز می‌تونستی با خودت به یه جزیرهٔ دور ببری، چی بود؟", "یه کلمه که ما دوتا رو توصیف کنه؟"];
+let dailyList = [], dailyMissing = false, dailyLoaded = false;
+const dailyToday = () => Recur.todayIso();
+function dailyQuestion(iso) { const [y, m, d] = iso.split('-').map(Number); const n = Math.floor(Date.UTC(y, m - 1, d) / 864e5); const i = ((n % DAILY_QS.length) + DAILY_QS.length) % DAILY_QS.length; return { idx: i, text: DAILY_QS[i] }; }
+const dailyMe = () => myName() || 'ناشناس';
+const dailyMine = day => dailyList.find(r => r.day === day && sameName(r.author, dailyMe()));
+async function loadDaily() {
+  if (dailyLoaded) renderDaily();
+  const { data, error } = await dbClient.from('daily_answers').select('*').order('created_at', { ascending: false });
+  if (error) { dailyMissing = /daily_answers|relation|schema cache/i.test(error.message || ''); renderDaily(); return; }
+  dailyMissing = false; dailyList = data || []; dailyLoaded = true; renderDaily();
+}
+function renderDaily() {
+  const el = document.getElementById('dailyBox'); if (!el) return;
+  if (dailyMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای «سؤال روز» باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
+  const today = dailyToday(), q = dailyQuestion(today), mine = dailyMine(today);
+  const others = dailyList.filter(r => r.day === today && r !== mine && !sameName(r.author, dailyMe()));
+  const ans = (r, me) => `<div class="daily-ans${me ? ' me' : ''}"><b>${me ? '💜 جواب تو' : '💗 ' + escapeHtml(r.author || 'ناشناس')}</b><p>${escapeHtml(r.text)}</p></div>`;
+  let h = `<div class="daily-card"><div class="daily-date">📅 ${Recur.fmtJalaliLong(today)}</div><div class="daily-q">${escapeHtml(q.text)}</div>
+    <textarea id="dailyInput" maxlength="1000" placeholder="جوابت رو بنویس...">${mine ? escapeHtml(mine.text) : ''}</textarea>
+    <div class="daily-row"><button class="btn" type="button" onclick="saveDaily()">${mine ? '✏️ ذخیرهٔ ویرایش' : '💌 ثبت جواب'}</button>${myName() ? '' : '<small>⚠️ اسمت رو توی «پروفایل» بنویس تا جواب‌ها قاطی نشن</small>'}</div></div>`;
+  if (mine) {
+    h += '<div class="daily-sub">💞 جواب‌های امروز</div>' + ans(mine, true) + others.map(r => ans(r, false)).join('');
+    if (!others.length) h += '<div class="daily-lock">⏳ هنوز طرف مقابل جواب نداده... خبرش می‌کنم 💜</div>';
+  } else {
+    h += `<div class="daily-lock">🔒 ${others.length ? 'طرف مقابل جواب داده! ' : ''}اول خودت جواب بده تا جواب‌ها رو ببینی</div>`;
+  }
+  const days = {}; dailyList.forEach(r => { if (r.day !== today) (days[r.day] = days[r.day] || []).push(r); });
+  const keys = Object.keys(days).sort().reverse();
+  const both = new Set(dailyList.filter(r => r.day !== today).map(r => r.day)).size;
+  const bothDays = Object.keys(days).filter(k => new Set(days[k].map(r => (r.author || '').trim().toLowerCase())).size >= 2).length + (mine && others.length ? 1 : 0);
+  if (bothDays) h += `<div class="daily-stat">💞 ${Recur.toFa(bothDays)} روز هر دومون جواب دادیم</div>`;
+  if (keys.length) {
+    h += '<div class="daily-sub">📚 سؤال‌ها و جواب‌های قبلی</div>' + keys.map(k => {
+      const rs = days[k].slice().sort((a, b) => (a.created_at || 0) - (b.created_at || 0));
+      return `<div class="daily-past"><div class="dd">${Recur.fmtJalaliShort(k)}</div><div class="dq">${escapeHtml(rs[0].question || dailyQuestion(k).text)}</div>${rs.map(r => ans(r, sameName(r.author, dailyMe()))).join('')}</div>`;
+    }).join('');
+  }
+  const keep = document.getElementById('dailyInput'), hadFocus = keep && document.activeElement === keep, draft = keep ? keep.value : null;
+  el.innerHTML = h;
+  const ta = document.getElementById('dailyInput');
+  if (ta && draft !== null && draft !== (mine ? mine.text : '')) ta.value = draft;
+  if (ta && hadFocus) ta.focus();
+}
+async function saveDaily() {
+  const ta = document.getElementById('dailyInput'); const text = (ta.value || '').trim();
+  if (!text) { toast('اول جوابت رو بنویس 💜'); return; }
+  const today = dailyToday(), q = dailyQuestion(today), old = dailyMine(today), me = dailyMe();
+  const row = { id: 'da_' + today + '_' + me.toLowerCase().replace(/\s+/g, '_'), day: today, q_idx: q.idx, question: q.text, author: me, text: text.slice(0, 1000), created_at: old ? old.created_at : Date.now(), updated_at: Date.now() };
+  const { error } = await dbClient.from('daily_answers').upsert(row);
+  if (error) { dailyMissing = /daily_answers|relation|schema cache/i.test(error.message || ''); toast('⚠️ ذخیره نشد' + (dailyMissing ? ' (فایل SQL اجرا نشده)' : '')); if (dailyMissing) renderDaily(); return; }
+  dailyList = dailyList.filter(r => r.id !== row.id); dailyList.unshift(row); renderDaily();
+  toast(old ? '✅ جوابت ویرایش شد' : '💌 جوابت ثبت شد'); if (!old) notify('daily', q.text, today);
+}
+async function checkDailyNudge() {
+  try {
+    const today = dailyToday(); if (!myName()) return;
+    const { data, error } = await dbClient.from('daily_answers').select('*').eq('day', today);
+    if (error) return;
+    const mine = (data || []).some(r => sameName(r.author, myName())), other = (data || []).some(r => !sameName(r.author, myName()));
+    if (!mine && window.CatPal) CatPal.say(other ? '❓ طرف مقابل به سؤال امروز جواب داده! تو هم جواب بده تا ببینی 💜' : '❓ سؤال امروز منتظر جوابته!', 7000);
+  } catch (e) {}
+}
+
 /* ---------- Escape HTML ---------- */
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({
@@ -4423,7 +4522,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} }
 
-const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar' };
+const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {

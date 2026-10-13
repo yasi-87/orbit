@@ -237,6 +237,7 @@
     event: { icon: '📅', text: 'یه رویداد توی تقویم ثبت کرد' },
     files: { icon: '📁', text: 'یه فایل آپلود کرد' },
     gallery: { icon: '🖼️', text: 'یه عکس/ویدیو به گالری اضافه کرد' },
+    daily: { icon: '❓', text: 'به سؤال امروز جواب داد' },
     reminder: { icon: '⏰', text: null }
   };
   function notifLine(n) {
