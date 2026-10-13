@@ -624,6 +624,12 @@ body.reading-mode .reading-content {
   flex-shrink: 0;
 }
 .pl-del:hover { background: #ff4d6d; color: white; }
+.files-selbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
+.files-selbar .fs-count { flex:1; opacity:.8; font-size:.9rem; }
+.files-selbar .fs-del:not(:disabled) { background:#ff4d6d; color:#fff; }
+.files-selbar .btn:disabled { opacity:.5; }
+.file-chk { width:20px; height:20px; accent-color:#a78bfa; flex-shrink:0; }
+.file-item.selected { outline:2px solid #a78bfa; }
 
 .playlist-upload {
   display: flex; gap: 10px; align-items: center;
@@ -1962,8 +1968,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-13a';
+const SITE_VERSION = '2026-10-13b';
 const SITE_CHANGES = [
+  '🗑️ توی فایل‌ها می‌تونی چندتا فایل رو با هم انتخاب و یک‌جا حذف کنی',
   '🎵 آهنگ پلی‌لیست با کاور توی پلیر پایین پخش می‌شه و بعد از تموم شدن خودکار آهنگ بعدی میاد',
   '🔗 آهنگ رو می‌شه با لینک هم اضافه کرد',
   '📅 رویدادهای تکرارشونده: سالانه، ماهانه، هفتگی، روزانه و حتی هر چند ساعت یک‌بار + یادآوری',
@@ -3331,14 +3338,33 @@ function renderFiles() {
   const el = document.getElementById('filesList');
   if (filesMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای بخش فایل‌ها باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
   if (!filesList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📁</div><p>هنوز فایلی نذاشتیم...</p></div>'; return; }
-  el.innerHTML = filesList.map(f => `
-    <div class="playlist-item file-item">
-      <div class="pl-icon" style="cursor:pointer" onclick="openFile('${f.id}')"><span class="pl-glyph">${fileIcon(f.name, f.mime)}</span></div>
-      <div class="pl-info" style="cursor:pointer" onclick="openFile('${f.id}')"><div class="pl-title">${escapeHtml(f.name)}</div><div class="pl-sub">${fmtSize(f.size || 0)}${f.author ? ' · ' + escapeHtml(f.author) : ''}</div></div>
-      <button class="pl-loop" onclick="openFile('${f.id}')" title="باز کردن توی سایت">👁️</button>
+  const n = fileSel.size;
+  const bar = filesSelMode
+    ? `<div class="files-selbar"><button class="btn" type="button" onclick="toggleFilesAll()">${n === filesList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn fs-del" type="button" onclick="removeSelectedFiles()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setFilesSelMode(false)">انصراف</button></div>`
+    : `<div class="files-selbar"><button class="btn" type="button" onclick="setFilesSelMode(true)">☑️ انتخاب چندتایی</button></div>`;
+  el.innerHTML = bar + filesList.map(f => `
+    <div class="playlist-item file-item${fileSel.has(f.id) ? ' selected' : ''}">
+      ${filesSelMode ? `<input type="checkbox" class="file-chk" ${fileSel.has(f.id) ? 'checked' : ''} onchange="toggleFileSel('${f.id}')" />` : ''}
+      <div class="pl-icon" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><span class="pl-glyph">${fileIcon(f.name, f.mime)}</span></div>
+      <div class="pl-info" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><div class="pl-title">${escapeHtml(f.name)}</div><div class="pl-sub">${fmtSize(f.size || 0)}${f.author ? ' · ' + escapeHtml(f.author) : ''}</div></div>
+      ${filesSelMode ? '' : `<button class="pl-loop" onclick="openFile('${f.id}')" title="باز کردن توی سایت">👁️</button>
       <a class="pl-loop" href="${escapeHtml(f.url)}" target="_blank" rel="noopener" download="${escapeHtml(f.name)}" title="دانلود" style="text-decoration:none">⬇️</a>
-      <button class="pl-del" onclick="removeFileItem('${f.id}')" title="حذف">✕</button>
+      <button class="pl-del" onclick="removeFileItem('${f.id}')" title="حذف">✕</button>`}
     </div>`).join('');
+}
+let filesSelMode = false; const fileSel = new Set();
+function setFilesSelMode(on) { filesSelMode = on; fileSel.clear(); renderFiles(); }
+function toggleFileSel(id) { fileSel.has(id) ? fileSel.delete(id) : fileSel.add(id); renderFiles(); }
+function toggleFilesAll() { if (fileSel.size === filesList.length) fileSel.clear(); else filesList.forEach(f => fileSel.add(f.id)); renderFiles(); }
+async function removeSelectedFiles() {
+  const ids = [...fileSel]; if (!ids.length) return;
+  if (!confirm(ids.length + ' فایل حذف بشن؟')) return;
+  const { error } = await dbClient.from('files').delete().in('id', ids);
+  if (error) { toast('⚠️ حذف نشد'); return; }
+  const paths = filesList.filter(f => fileSel.has(f.id) && f.file_path).map(f => f.file_path);
+  if (paths.length) dbClient.storage.from('songs').remove(paths);
+  filesList = filesList.filter(f => !fileSel.has(f.id));
+  filesSelMode = false; fileSel.clear(); renderFiles(); toast('🗑️ ' + ids.length + ' فایل حذف شد');
 }
 async function uploadFiles(ev) {
   const files = Array.from(ev.target.files || []); ev.target.value = '';
