@@ -159,3 +159,21 @@ alter table public.constellations enable row level security;
 drop policy if exists "constellations_public_all" on public.constellations;
 create policy "constellations_public_all" on public.constellations
   for all to anon, authenticated using (true) with check (true);
+
+-- 14) گربه‌ها (دیدن گربهٔ همدیگه توی پروفایل)
+create table if not exists public.cats (
+  id         text primary key,
+  name       text,
+  worn       text,          -- لباس‌ها و رنگ (JSON)
+  mood       text,
+  pets       int,
+  items      int,
+  streak     int,
+  visits     int,
+  avatar     text,
+  updated_at bigint
+);
+alter table public.cats enable row level security;
+drop policy if exists "cats_public_all" on public.cats;
+create policy "cats_public_all" on public.cats
+  for all to anon, authenticated using (true) with check (true);
