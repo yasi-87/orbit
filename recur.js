@@ -238,6 +238,7 @@
     files: { icon: '📁', text: 'یه فایل آپلود کرد' },
     gallery: { icon: '🖼️', text: 'یه عکس/ویدیو به گالری اضافه کرد' },
     daily: { icon: '❓', text: 'به سؤال امروز جواب داد' },
+    constellation: { icon: '🌌', text: 'یه صورت فلکی ساخت' },
     reminder: { icon: '⏰', text: null }
   };
   function notifLine(n) {
