@@ -1804,6 +1804,9 @@ body.reading-mode .reading-content {
         </div>
       </div>
     </div>
+
+    <div class="chapters-header" style="margin-top:26px"><h2>🐾 گربه‌های ما</h2></div>
+    <div id="catFamily"></div>
   </div>
 </div>
 
@@ -1982,7 +1985,7 @@ function showScreen(name) {
   if (name === 'daily') loadDaily();
   if (name === 'sky' && window.Sky) Sky.load();
   if (name === 'calendar') loadCalendar();
-  if (name === 'profile') loadProfileStats();
+  if (name === 'profile') { loadProfileStats(); if (window.CatPal) CatPal.family(); }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2014,8 +2017,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-14a';
+const SITE_VERSION = '2026-10-14b';
 const SITE_CHANGES = [
+  '🐾 توی «پروفایل» گربهٔ خودت و گربهٔ طرف مقابل رو می‌بینی (با لباس، رنگ و حالتشون) و می‌تونی نوازششون کنی',
   '🌌 بخش جدید «آسمان»: هر روزِ ثبت‌شده یه ستاره‌ست (خاطره = درخشان، عکس = صورتی، آهنگ = آبی). روی ستاره بزن تا اتفاق‌های اون روز رو ببینی و از خاطره‌های مهم صورت فلکی بساز',
   '🎨 هر خاطره رو می‌شه به یه پوستر هنری تبدیل کرد (رنگ و نقش از روی تاریخ و فصل) و به‌صورت عکس ذخیره یا چاپ کرد؛ دکمهٔ «🎨 پوستر» بالای هر فصل',
   '❓ بخش جدید «سؤال روز»: هر روز یه سؤال مشترک، هر کدوم جدا جواب می‌دیم و بعد از جواب دادن جواب همدیگه رو می‌بینیم + آرشیو جواب‌های قبلی',

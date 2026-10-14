@@ -16,7 +16,7 @@
   let S = { pets: 0, visits: 0, streak: 0, lastDay: '', acts: {}, unlocked: [], worn: { acc: [], fur: 'cream' }, mood: 'normal', lastGreet: -1, lastMem: '' };
   try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') S = Object.assign(S, v); } catch (e) {}
   S.worn = S.worn || { acc: [], fur: 'cream' }; S.acts = S.acts || {}; S.unlocked = S.unlocked || [];
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} scheduleSync(); };
   const totalActs = () => Object.values(S.acts).reduce((a, b) => a + b, 0);
   const actN = (...t) => t.reduce((a, k) => a + (S.acts[k] || 0), 0);
 
@@ -46,8 +46,8 @@
   const isOpen = id => S.unlocked.includes(id);
 
   /* ---------- شکل گربه (طرح اختصاصی) ---------- */
-  function svg() {
-    const f = FUR[S.worn.fur] || FUR.cream, w = S.worn.acc, mood = S.mood;
+  function svg(st) {
+    st = st || S; const f = FUR[(st.worn || {}).fur] || FUR.cream, w = (st.worn || {}).acc || [], mood = st.mood || 'normal';
     const eyes = mood === 'love' ? '<path class="heart" d="M40 52 C33 46 34 41 38 41 C40 41 40 43 40 43 C40 43 40 41 42 41 C46 41 47 46 40 52Z" fill="#ff4f7b"/><path class="heart" d="M60 52 C53 46 54 41 58 41 C60 41 60 43 60 43 C60 43 60 41 62 41 C66 41 67 46 60 52Z" fill="#ff4f7b"/>'
       : mood === 'sleepy' ? '<path d="M35 49 q5 4 10 0 M55 49 q5 4 10 0" stroke="#2a1a35" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
       : mood === 'star' ? '<path class="spin" d="M40 42 l2 4.5 5 .6 -3.7 3.3 1 4.8 -4.3 -2.5 -4.3 2.5 1 -4.8 -3.7 -3.3 5 -.6z M60 42 l2 4.5 5 .6 -3.7 3.3 1 4.8 -4.3 -2.5 -4.3 2.5 1 -4.8 -3.7 -3.3 5 -.6z" fill="#ffd54f"/>'
@@ -213,6 +213,24 @@
 @media (prefers-reduced-motion:reduce){.catpal,.catpal *{animation:none !important}.catpal{transition:opacity .2s}}
 @media (max-width:640px){.catpal{width:64px;height:68px}}
 body.reading-mode .catpal{opacity:.55}
+.catfam-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.catfam-card{background:rgba(255,255,255,.05);border:1px solid rgba(212,165,255,.25);border-radius:20px;padding:16px;text-align:center}
+.catfam-card.me{border-color:rgba(255,158,199,.5)}
+.cf-top{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:6px}
+.cf-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#d4a5ff,#ff9ec7);color:#1a0a20;display:grid;place-items:center;font-weight:700;overflow:hidden}
+.cf-av img{width:100%;height:100%;object-fit:cover}
+.catview{width:120px;height:127px;margin:6px auto 0;cursor:pointer;transform-origin:50% 90%;outline:none;filter:drop-shadow(0 6px 12px rgba(0,0,0,.45))}
+.catview .tail{transform-origin:70px 82px;animation:cpTail 2.4s ease-in-out infinite}
+.catview .eyes{transform-origin:50px 48px;animation:cpBlink 4.6s infinite}
+.catview .head{transform-origin:50px 62px;animation:cpHead 6s ease-in-out infinite}
+.catview .spin{transform-origin:50px 46px;animation:cpTwinkle 1.2s ease-in-out infinite}
+.catview .heart{transform-origin:50px 46px;animation:cpBeat .9s ease-in-out infinite}
+.catview.poke{animation:cpJump .6s cubic-bezier(.3,1.5,.5,1)}
+.cf-line{min-height:1.6em;font-weight:700;color:var(--accent,#d4a5ff);font-size:.9rem}
+.cf-stats{display:flex;flex-direction:column;gap:2px;font-size:.82rem;color:var(--muted,#aaa)}
+.cf-wear{margin-top:6px;font-size:1.1rem}
+.catfam-note{text-align:center;padding:14px;color:var(--muted,#aaa);border:1px dashed rgba(212,165,255,.3);border-radius:14px}
+@media (prefers-reduced-motion:reduce){.catview,.catview *{animation:none !important}}
 body.reading-mode .catpal:hover{opacity:1}`;
     document.head.appendChild(st);
   }
@@ -355,6 +373,55 @@ body.reading-mode .catpal:hover{opacity:1}`;
     save(); redraw(); sparkle(['✨', '💜'], 4); wardrobe();
   }
 
+
+  /* ---------- دیدن گربه‌های همدیگه (توی پروفایل) ---------- */
+  const catId = n => 'cat_' + String(n || '').trim().toLowerCase().replace(/\s+/g, '_');
+  let syncT = 0, lastSynced = '';
+  function myRow() {
+    const nm = (typeof myName === 'function' ? myName() : '') || '';
+    if (!nm) return null;
+    let av = ''; try { const a = (typeof userProfile !== 'undefined' && userProfile.avatar) || ''; if (a && a.length < 60000) av = a; } catch (e) {}
+    return { id: catId(nm), name: nm, worn: JSON.stringify(S.worn), mood: S.mood || 'normal', pets: S.pets || 0, items: S.unlocked.length, streak: S.streak || 0, visits: S.visits || 0, avatar: av, updated_at: Date.now() };
+  }
+  function scheduleSync() { if (!started) return; clearTimeout(syncT); syncT = setTimeout(sync, 1800); }
+  async function sync() {
+    try {
+      const r = myRow(); if (!r) return;
+      const sig = JSON.stringify([r.name, r.worn, r.mood, r.pets, r.items, r.streak, r.visits, r.avatar.length]);
+      if (sig === lastSynced) return;
+      const { error } = await dbClient.from('cats').upsert(r);
+      if (!error) lastSynced = sig;
+    } catch (e) { console.warn('cat sync', e); }
+  }
+  async function family(el) {
+    if (!el) el = document.getElementById('catFamily'); if (!el) return;
+    css();
+    const mine = myRow(); let rows = [], missing = false;
+    try { const r = await dbClient.from('cats').select('*'); if (r.error) missing = /cats|relation|schema cache/i.test(r.error.message || ''); else rows = r.data || []; } catch (e) {}
+    if (mine) { rows = rows.filter(x => x.id !== mine.id); rows.unshift(mine); }
+    const pr = x => { let w = { acc: [], fur: 'cream' }; try { w = JSON.parse(x.worn) || w; } catch (e) {} return { worn: w, mood: x.mood || 'normal' }; };
+    const total = Object.keys(ITEMS).length;
+    const card = (x, me) => {
+      const st = pr(x), av = x.avatar ? `<img src="${esc(x.avatar)}" alt="">` : esc((x.name || '?').trim().charAt(0).toUpperCase());
+      const wear = (st.worn.acc || []).map(k => ITEMS[k] ? ITEMS[k].ico : '').join(' ');
+      return `<div class="catfam-card${me ? ' me' : ''}"><div class="cf-top"><span class="cf-av">${av}</span><b>${esc(x.name || 'ناشناس')}${me ? ' <small>(تو)</small>' : ''}</b></div>
+        <div class="catview" data-name="${esc(x.name || '')}" role="button" tabindex="0" aria-label="گربهٔ ${esc(x.name || '')}">${svg(st)}</div>
+        <div class="cf-line" data-say></div>
+        <div class="cf-stats"><span>🐾 ${fa(x.pets || 0)} نوازش</span><span>🎁 ${fa(x.items || 0)} از ${fa(total)} آیتم</span>${x.streak > 1 ? `<span>🔥 ${fa(x.streak)} روز پشت‌سرهم</span>` : ''}</div>${wear ? `<div class="cf-wear">${wear}</div>` : ''}</div>`;
+    };
+    if (missing) { el.innerHTML = '<div class="catfam-note">برای دیدن گربه‌های همدیگه باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</div>'; return; }
+    if (!rows.length) { el.innerHTML = '<div class="catfam-note">اسمت رو بنویس تا گربه‌ات اینجا بیاد 🐱</div>'; return; }
+    el.innerHTML = '<div class="catfam-grid">' + rows.map(x => card(x, mine && x.id === mine.id)).join('') + '</div>';
+    const LINES = ['میو! 🐾', 'پرررر 💜', 'سلام! من گربهٔ %s‌ام 😺', 'نوازشم کن~ 😽', 'امروز چقدر خوشگلی!', 'یه خاطره بنویس برام ✍️'];
+    el.querySelectorAll('.catview').forEach(v => {
+      const go = () => {
+        v.classList.remove('poke'); void v.offsetWidth; v.classList.add('poke');
+        const say = v.parentNode.querySelector('[data-say]'); say.textContent = rnd(LINES).replace('%s', v.dataset.name); clearTimeout(v._t); v._t = setTimeout(() => { say.textContent = ''; }, 2600);
+      };
+      v.addEventListener('click', go); v.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
+  }
+
   /* ---------- API بیرونی ---------- */
   function act(type) {
     try {
@@ -381,5 +448,5 @@ body.reading-mode .catpal:hover{opacity:1}`;
     setTimeout(() => { if (fresh.length) announce(fresh); else say(greeting(), 6500); save(); }, 3200);
     scheduleMove();
   }
-  window.CatPal = { start, act, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  window.CatPal = { start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();
