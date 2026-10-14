@@ -121,33 +121,6 @@ button { cursor: pointer; border: none; background: none; }
 .daily-stat { text-align: center; color: var(--muted); font-size: .9rem; margin: 14px 0 0; }
 
 
-/* 🌌 آسمان شب */
-#skyWrap { width: 100%; border-radius: 22px; overflow: hidden; border: 1px solid rgba(212,165,255,0.3); box-shadow: 0 14px 44px rgba(0,0,0,0.45); background: #05030f; line-height: 0; }
-#skyCv { width: 100%; display: block; touch-action: manipulation; }
-#skyPanel { margin-top: 14px; }
-.sky-sum { font-weight: 700; color: var(--accent); margin-bottom: 8px; }
-.sky-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin-bottom: 12px; }
-.sky-legend i, .sky-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-left: 5px; box-shadow: 0 0 8px currentColor; }
-.sky-hint { text-align: center; padding: 14px; color: var(--muted); border: 1px dashed rgba(212,165,255,0.3); border-radius: 14px; margin: 8px 0; }
-.sky-day { background: rgba(255,255,255,0.05); border: 1px solid rgba(212,165,255,0.25); border-radius: 18px; padding: 14px 16px; margin: 8px 0; }
-.sky-dayh { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; }
-.sky-sec { margin-top: 10px; } .sky-sec b { display: block; font-size: .82rem; color: var(--accent); margin-bottom: 4px; }
-.sky-sec p { margin: 3px 0; white-space: pre-wrap; line-height: 1.8; } .sky-sec small { color: var(--muted); }
-.sky-link { display: block; width: 100%; text-align: right; background: rgba(212,165,255,0.12); border: 0; color: inherit; font: inherit; padding: 8px 12px; border-radius: 10px; margin: 4px 0; cursor: pointer; }
-.sky-link:hover { background: rgba(212,165,255,0.25); }
-.sky-thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
-.sky-th { width: 68px; height: 68px; padding: 0; border: 0; border-radius: 10px; overflow: hidden; cursor: pointer; background: rgba(255,255,255,0.08); font-size: 1.6rem; }
-.sky-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.sky-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-.sky-sub { margin: 20px 4px 8px; font-weight: 700; color: var(--accent); }
-.sky-cons { display: flex; flex-wrap: wrap; gap: 8px; }
-.sky-con { display: inline-flex; align-items: center; border-radius: 999px; background: rgba(255,224,138,0.12); border: 1px solid rgba(255,224,138,0.35); overflow: hidden; }
-.sky-con.on { background: rgba(255,224,138,0.3); }
-.sky-con button { background: none; border: 0; color: inherit; font: inherit; padding: 6px 12px; cursor: pointer; }
-.sky-con .x { padding: 6px 10px; opacity: .6; border-right: 1px solid rgba(255,224,138,0.25); }
-.sky-build { background: rgba(160,230,255,0.08); border: 1px solid rgba(160,230,255,0.4); border-radius: 18px; padding: 14px 16px; }
-.sky-build p { color: var(--muted); font-size: .9rem; margin: 6px 0 10px; }
-.sky-build input { width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(212,165,255,0.35); background: rgba(10,10,15,0.6); color: inherit; font: inherit; }
 
 
 /* 🌳 باغ خاطره‌ها */
@@ -1600,7 +1573,6 @@ body.reading-mode .reading-content {
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
     <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
     <button class="nav-btn" data-screen="fun" onclick="showScreen('fun')">🎬 سرگرمی</button>
-    <button class="nav-btn" data-screen="sky" onclick="showScreen('sky')">🌌 آسمان</button>
     <button class="nav-btn" data-screen="garden" onclick="showScreen('garden')">🌳 باغ</button>
     <button class="nav-btn" data-screen="puzzle" onclick="showScreen('puzzle')">🧩 پازل</button>
     <button class="nav-btn" data-screen="daily" onclick="showScreen('daily')">❓ سؤال روز</button>
@@ -1852,12 +1824,6 @@ body.reading-mode .reading-content {
     <div id="gardenBox"></div>
   </div>
 
-  <!-- ============ آسمان شب ============ -->
-  <div class="container screen" id="screen-sky">
-    <div class="chapters-header"><h2>🌌 آسمان شبِ ما</h2></div>
-    <div id="skyBox"></div>
-  </div>
-
   <!-- ============ سؤال روز ============ -->
   <div class="container screen" id="screen-daily">
     <div class="chapters-header"><h2>❓ سؤال امروز</h2></div>
@@ -1963,7 +1929,6 @@ body.reading-mode .reading-content {
 <script src="./recur.js"></script>
 <script src="./cat.js" defer></script>
 <script src="./poster.js" defer></script>
-<script src="./sky.js" defer></script>
 <script src="./garden.js" defer></script>
 <script src="./puzzle.js" defer></script>
 <script src="./classes.js" defer></script>
@@ -2116,7 +2081,6 @@ function showScreen(name) {
   if (name === 'fun') loadFun();
   if (name === 'notes') loadNotes();
   if (name === 'daily') loadDaily();
-  if (name === 'sky' && window.Sky) Sky.load();
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
   if (name === 'calendar') loadCalendar();
@@ -2152,14 +2116,13 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-14g';
+const SITE_VERSION = '2026-10-14h';
 const SITE_CHANGES = [
   '🎓 توی تقویم یه تب «کلاس‌ها» اومد: کلاس‌های روزهای زوج و فرد با ساعت شروع و پایان، فیلتر زوج/فرد و هر نفر، افزودن، ویرایش و حذف',
   '☑️ توی گالری هم می‌تونی چندتا عکس/ویدیو رو با هم انتخاب و یک‌جا حذف کنی',
   '🧩 بازی پازل عکس: یه عکس از گالری انتخاب کن، سختی رو بگو (۳×۳ تا ۵×۵) و قطعه‌ها رو بکش و جابه‌جا کن. بهترین زمان هر پازل برای هر دو نفر ثبت می‌شه',
   '🌳 باغِ خاطره‌ها: فصل‌ها رز، عکس‌ها گل، صوتی‌ها زنگوله و آهنگ‌ها درخت نورانی می‌شن؛ هر گیاه به محتوای خودش وصله. فیلتر بر اساس سال، نوع و علاقه‌مندی‌ها',
   '🐾 توی «پروفایل» گربهٔ خودت و گربهٔ طرف مقابل رو می‌بینی (با لباس، رنگ و حالتشون) و می‌تونی نوازششون کنی',
-  '🌌 بخش جدید «آسمان»: هر روزِ ثبت‌شده یه ستاره‌ست (خاطره = درخشان، عکس = صورتی، آهنگ = آبی). روی ستاره بزن تا اتفاق‌های اون روز رو ببینی و از خاطره‌های مهم صورت فلکی بساز',
   '🎨 هر خاطره رو می‌شه به یه پوستر هنری تبدیل کرد (رنگ و نقش از روی تاریخ و فصل) و به‌صورت عکس ذخیره یا چاپ کرد؛ دکمهٔ «🎨 پوستر» بالای هر فصل',
   '❓ بخش جدید «سؤال روز»: هر روز یه سؤال مشترک، هر کدوم جدا جواب می‌دیم و بعد از جواب دادن جواب همدیگه رو می‌بینیم + آرشیو جواب‌های قبلی',
   '🐱 گربهٔ تعاملی اومد! روش کلیک کن، حرف می‌زنه و یه خاطرهٔ تصادفی نشونت می‌ده. با فعالیت‌هات لباس و رنگ و حالت جدید باز می‌شه و گاهی جاش رو عوض می‌کنه',
@@ -4737,7 +4700,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} }
 
-const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', constellation: 'sky', class: 'calendar' };
+const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {
