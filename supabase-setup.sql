@@ -190,3 +190,20 @@ alter table public.garden_favs enable row level security;
 drop policy if exists "garden_favs_public_all" on public.garden_favs;
 create policy "garden_favs_public_all" on public.garden_favs
   for all to anon, authenticated using (true) with check (true);
+
+-- 16) پازل عکس: بهترین زمان هر نفر برای هر پازل (عکس + سختی)
+create table if not exists public.puzzle_records (
+  id         text primary key,
+  photo_id   text not null,
+  size       int  not null,        -- 3 | 4 | 5
+  author     text,
+  time_ms    bigint not null,
+  moves      int,
+  url        text,
+  created_at bigint not null
+);
+create index if not exists puzzle_records_photo_idx on public.puzzle_records (photo_id, size);
+alter table public.puzzle_records enable row level security;
+drop policy if exists "puzzle_records_public_all" on public.puzzle_records;
+create policy "puzzle_records_public_all" on public.puzzle_records
+  for all to anon, authenticated using (true) with check (true);

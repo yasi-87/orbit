@@ -181,6 +181,42 @@ button { cursor: pointer; border: none; background: none; }
 .note-item.gd-flash { outline: 2px solid #ffe08a; box-shadow: 0 0 22px rgba(255,224,138,.5); }
 @media (prefers-reduced-motion: reduce) { #gardenSvg * { animation: none !important; } }
 
+
+/* 🧩 پازل عکس */
+.pz-sec { margin: 18px 2px 8px; color: var(--accent); }
+.pz-note { text-align: center; padding: 14px; color: var(--muted); border: 1px dashed rgba(212,165,255,0.3); border-radius: 14px; margin: 6px 0; line-height: 1.8; }
+.pz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; padding: 4px; }
+.pz-th { padding: 0; border: 2px solid transparent; border-radius: 12px; overflow: hidden; aspect-ratio: 1; cursor: pointer; background: rgba(255,255,255,0.06); }
+.pz-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pz-th.on { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(255,158,199,0.3); }
+.pz-levels { display: flex; gap: 8px; flex-wrap: wrap; }
+.pz-lv { border: 1px solid rgba(212,165,255,0.3); background: rgba(255,255,255,0.04); color: inherit; font: inherit; padding: 8px 18px; border-radius: 14px; cursor: pointer; }
+.pz-lv small { opacity: .65; margin-right: 4px; }
+.pz-lv.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1a0a20; font-weight: 700; border-color: transparent; }
+.pz-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 14px 0; }
+.pz-best { color: var(--muted); font-size: .9rem; }
+.pz-hud { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; font-size: .95rem; color: var(--muted); }
+.pz-hud b { color: #fff; font-variant-numeric: tabular-nums; }
+#pzStage { display: flex; justify-content: center; }
+.pz-board { direction: ltr; position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr); gap: 3px; width: min(100%, 560px, calc(68vh * var(--ar))); aspect-ratio: var(--ar); padding: 4px; border-radius: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(212,165,255,0.3); box-shadow: 0 14px 44px rgba(0,0,0,0.5); box-sizing: border-box; user-select: none; -webkit-user-select: none; transition: gap .5s, padding .5s; }
+.pz-piece { position: relative; border-radius: 6px; cursor: grab; touch-action: none; background-repeat: no-repeat; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); transition: box-shadow .2s, transform .15s; }
+.pz-piece.ok { box-shadow: inset 0 0 0 2px rgba(120,255,170,0.75); }
+.pz-piece.sel { box-shadow: inset 0 0 0 3px #ffe08a, 0 0 18px rgba(255,224,138,.6); transform: scale(.95); }
+.pz-piece.over { box-shadow: inset 0 0 0 3px #a0e6ff, 0 0 16px rgba(160,230,255,.7); }
+.pz-piece.drag { z-index: 20; cursor: grabbing; transition: none; box-shadow: 0 18px 40px rgba(0,0,0,0.7); opacity: .95; }
+.pz-board.done { gap: 0; padding: 0; border-color: #ffe08a; box-shadow: 0 0 40px rgba(255,224,138,.45); }
+.pz-board.done .pz-piece { border-radius: 0; box-shadow: none; cursor: default; }
+.pz-board.peek::after { content: ''; position: absolute; inset: 0; border-radius: 14px; background: var(--img) center / 100% 100% no-repeat; z-index: 30; pointer-events: none; }
+.pz-chk { display: block; text-align: center; margin: 10px 0 0; color: var(--muted); font-size: .85rem; cursor: pointer; }
+.pz-win { text-align: center; margin-top: 8px; padding: 16px; border-radius: 18px; background: rgba(255,224,138,0.1); border: 1px solid rgba(255,224,138,0.4); line-height: 2; }
+.pz-big { font-size: 1.3rem; font-weight: 700; color: #ffe08a; }
+.pz-rcd { color: var(--accent-2); font-weight: 700; }
+.pz-recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.pz-rec { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,165,255,0.2); }
+.pz-rec img, .pz-noimg { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex-shrink: 0; display: grid; place-items: center; background: rgba(255,255,255,0.08); font-size: 1.6rem; }
+.pz-rl { font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+.pz-rr { font-size: .85rem; color: var(--muted); } .pz-rr.me { color: #fff; }
+
 /* ============ اپ اصلی ============ */
 #app { display: none; min-height: 100vh; }
 #app.active { display: block; }
@@ -1531,6 +1567,7 @@ body.reading-mode .reading-content {
     <button class="nav-btn" data-screen="fun" onclick="showScreen('fun')">🎬 سرگرمی</button>
     <button class="nav-btn" data-screen="sky" onclick="showScreen('sky')">🌌 آسمان</button>
     <button class="nav-btn" data-screen="garden" onclick="showScreen('garden')">🌳 باغ</button>
+    <button class="nav-btn" data-screen="puzzle" onclick="showScreen('puzzle')">🧩 پازل</button>
     <button class="nav-btn" data-screen="daily" onclick="showScreen('daily')">❓ سؤال روز</button>
     <button class="nav-btn" data-screen="notes" onclick="showScreen('notes')">📝 یادداشت‌ها</button>
     <button class="nav-btn" data-screen="calendar" onclick="showScreen('calendar')">📅 تقویم</button>
@@ -1767,6 +1804,12 @@ body.reading-mode .reading-content {
     <div class="fun-grid" id="funGrid"></div>
   </div>
 
+  <!-- ============ پازل عکس ============ -->
+  <div class="container screen" id="screen-puzzle">
+    <div class="chapters-header"><h2>🧩 پازل عکس‌های ما</h2></div>
+    <div id="puzzleBox"></div>
+  </div>
+
   <!-- ============ باغ خاطره‌ها ============ -->
   <div class="container screen" id="screen-garden">
     <div class="chapters-header"><h2>🌳 باغِ خاطره‌های ما</h2></div>
@@ -1879,6 +1922,7 @@ body.reading-mode .reading-content {
 <script src="./poster.js" defer></script>
 <script src="./sky.js" defer></script>
 <script src="./garden.js" defer></script>
+<script src="./puzzle.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -2030,6 +2074,7 @@ function showScreen(name) {
   if (name === 'daily') loadDaily();
   if (name === 'sky' && window.Sky) Sky.load();
   if (name === 'garden' && window.Garden) Garden.load();
+  if (name === 'puzzle' && window.Puzzle) Puzzle.load();
   if (name === 'calendar') loadCalendar();
   if (name === 'profile') { loadProfileStats(); if (window.CatPal) CatPal.family(); }
 
@@ -2063,8 +2108,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-14c';
+const SITE_VERSION = '2026-10-14d';
 const SITE_CHANGES = [
+  '🧩 بازی پازل عکس: یه عکس از گالری انتخاب کن، سختی رو بگو (۳×۳ تا ۵×۵) و قطعه‌ها رو بکش و جابه‌جا کن. بهترین زمان هر پازل برای هر دو نفر ثبت می‌شه',
   '🌳 باغِ خاطره‌ها: فصل‌ها رز، عکس‌ها گل، صوتی‌ها زنگوله و آهنگ‌ها درخت نورانی می‌شن؛ هر گیاه به محتوای خودش وصله. فیلتر بر اساس سال، نوع و علاقه‌مندی‌ها',
   '🐾 توی «پروفایل» گربهٔ خودت و گربهٔ طرف مقابل رو می‌بینی (با لباس، رنگ و حالتشون) و می‌تونی نوازششون کنی',
   '🌌 بخش جدید «آسمان»: هر روزِ ثبت‌شده یه ستاره‌ست (خاطره = درخشان، عکس = صورتی، آهنگ = آبی). روی ستاره بزن تا اتفاق‌های اون روز رو ببینی و از خاطره‌های مهم صورت فلکی بساز',
