@@ -1381,6 +1381,10 @@ body.reading-mode .reading-content {
 .g-item .g-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #fff; text-shadow: 0 2px 8px #000; pointer-events: none; }
 .g-item .g-del { position: absolute; top: 6px; left: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; opacity: 0; transition: .2s; }
 .g-item:hover .g-del, .g-item:focus-within .g-del { opacity: 1; }
+.g-item .g-chk { position: absolute; top: 8px; left: 8px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,0.45); color: #1a0a20; font-weight: 700; display: grid; place-items: center; }
+.g-item.selected { outline: 3px solid var(--accent); }
+.g-item.selected .g-chk { background: var(--accent); border-color: var(--accent); }
+#galleryBar:empty { display: none; }
 @media (hover: none) { .g-item .g-del { opacity: 0.85; } }
 .g-item .g-by { position: absolute; bottom: 0; right: 0; left: 0; padding: 14px 8px 5px; font-size: 0.68rem; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.65)); }
 .lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; padding: 16px; }
@@ -1773,6 +1777,7 @@ body.reading-mode .reading-content {
       <div class="pu-text"><strong>اضافه کردن عکس یا ویدیو</strong><span>چند فایل رو هم‌زمان می‌شه انتخاب کرد</span></div>
       <input type="file" accept="image/*,video/*" multiple hidden onchange="uploadGallery(event)" />
     </label>
+    <div class="files-selbar" id="galleryBar"></div>
     <div class="gallery-grid" id="galleryGrid"></div>
   </div>
 
@@ -2108,8 +2113,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-14d';
+const SITE_VERSION = '2026-10-14e';
 const SITE_CHANGES = [
+  '☑️ توی گالری هم می‌تونی چندتا عکس/ویدیو رو با هم انتخاب و یک‌جا حذف کنی',
   '🧩 بازی پازل عکس: یه عکس از گالری انتخاب کن، سختی رو بگو (۳×۳ تا ۵×۵) و قطعه‌ها رو بکش و جابه‌جا کن. بهترین زمان هر پازل برای هر دو نفر ثبت می‌شه',
   '🌳 باغِ خاطره‌ها: فصل‌ها رز، عکس‌ها گل، صوتی‌ها زنگوله و آهنگ‌ها درخت نورانی می‌شن؛ هر گیاه به محتوای خودش وصله. فیلتر بر اساس سال، نوع و علاقه‌مندی‌ها',
   '🐾 توی «پروفایل» گربهٔ خودت و گربهٔ طرف مقابل رو می‌بینی (با لباس، رنگ و حالتشون) و می‌تونی نوازششون کنی',
@@ -3402,20 +3408,38 @@ async function loadGallery() {
   renderGallery();
 }
 function renderGallery() {
-  const el = document.getElementById('galleryGrid');
-  if (galleryMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای گالری باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  if (!galleryList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">🖼️</div><p>هنوز عکس یا ویدیویی نذاشتیم... اولین خاطره‌مون رو اضافه کن 💜</p></div>'; return; }
+  const el = document.getElementById('galleryGrid'), bar = document.getElementById('galleryBar');
+  if (galleryMissing) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای گالری باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
+  if (!galleryList.length) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🖼️</div><p>هنوز عکس یا ویدیویی نذاشتیم... اولین خاطره‌مون رو اضافه کن 💜</p></div>'; return; }
+  const n = gallerySel.size;
+  bar.innerHTML = gallerySelMode
+    ? `<button class="btn" type="button" onclick="toggleGalleryAll()">${n === galleryList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn fs-del" type="button" onclick="removeSelectedGallery()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setGallerySelMode(false)">انصراف</button>`
+    : '<button class="btn" type="button" onclick="setGallerySelMode(true)">☑️ انتخاب چندتایی</button>';
   el.innerHTML = galleryList.map(g => `
-    <div class="g-item" data-id="${escapeHtml(g.id)}">
+    <div class="g-item${gallerySel.has(g.id) ? ' selected' : ''}" data-id="${escapeHtml(g.id)}">
       ${g.kind === 'video'
         ? `<video src="${escapeHtml(g.url)}#t=0.1" preload="metadata" muted playsinline></video><span class="g-play">▶</span>`
         : `<img src="${escapeHtml(g.url)}" loading="lazy" decoding="async" alt="">`}
-      <button class="g-del" title="حذف" onclick="event.stopPropagation();removeGalleryItem('${g.id}')">✕</button>
+      ${gallerySelMode ? `<span class="g-chk">${gallerySel.has(g.id) ? '✓' : ''}</span>` : `<button class="g-del" title="حذف" onclick="event.stopPropagation();removeGalleryItem('${g.id}')">✕</button>`}
       <span class="g-by">${escapeHtml(g.author || '')}</span>
     </div>`).join('');
 }
+let gallerySelMode = false; const gallerySel = new Set();
+function setGallerySelMode(on) { gallerySelMode = on; gallerySel.clear(); renderGallery(); }
+function toggleGalleryAll() { if (gallerySel.size === galleryList.length) gallerySel.clear(); else galleryList.forEach(g => gallerySel.add(g.id)); renderGallery(); }
+async function removeSelectedGallery() {
+  const ids = [...gallerySel]; if (!ids.length) return;
+  if (!confirm(ids.length + ' مورد حذف بشن؟')) return;
+  const { error } = await dbClient.from('gallery').delete().in('id', ids);
+  if (error) { toast('⚠️ حذف نشد'); return; }
+  const paths = galleryList.filter(g => gallerySel.has(g.id) && g.file_path).map(g => g.file_path);
+  if (paths.length) dbClient.storage.from('songs').remove(paths);
+  galleryList = galleryList.filter(g => !gallerySel.has(g.id));
+  gallerySelMode = false; gallerySel.clear(); renderGallery(); toast('🗑️ ' + ids.length + ' مورد حذف شد');
+}
 document.getElementById('galleryGrid').addEventListener('click', e => {
   const it = e.target.closest('.g-item'); if (!it) return;
+  if (gallerySelMode) { const id = it.dataset.id; gallerySel.has(id) ? gallerySel.delete(id) : gallerySel.add(id); renderGallery(); return; }
   const g = galleryList.find(x => x.id === it.dataset.id); if (g) openLightbox(g);
 });
 let lbIndex = -1;
