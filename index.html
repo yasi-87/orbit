@@ -149,6 +149,38 @@ button { cursor: pointer; border: none; background: none; }
 .sky-build p { color: var(--muted); font-size: .9rem; margin: 6px 0 10px; }
 .sky-build input { width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(212,165,255,0.35); background: rgba(10,10,15,0.6); color: inherit; font: inherit; }
 
+
+/* 🌳 باغ خاطره‌ها */
+.gd-sum { font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+.gd-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.gd-lab { font-size: .8rem; color: var(--muted); min-width: 54px; }
+.gd-chip { border: 1px solid rgba(212,165,255,0.3); background: rgba(255,255,255,0.04); color: inherit; font: inherit; font-size: .85rem; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.gd-chip small { opacity: .65; }
+.gd-chip.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #1a0a20; border-color: transparent; font-weight: 700; }
+.gd-note { color: var(--muted); }
+#gardenWrap { position: relative; border-radius: 22px; overflow: hidden; border: 1px solid rgba(120,220,170,0.28); box-shadow: 0 14px 44px rgba(0,0,0,0.45); margin-top: 6px; background: #0c0720; line-height: 0; }
+#gardenSvg { width: 100%; height: auto; display: block; }
+#gardenSvg .pl { cursor: pointer; outline: none; transition: opacity .3s; }
+#gardenSvg .pl:hover use, #gardenSvg .pl:focus-visible use { filter: brightness(1.3) drop-shadow(0 0 6px rgba(255,255,255,.6)); }
+#gardenSvg .pl.dim { opacity: .1; pointer-events: none; }
+#gardenSvg .grow { transform-box: fill-box; transform-origin: 50% 100%; animation: gGrow .9s cubic-bezier(.3,1.4,.5,1) both; }
+@keyframes gGrow { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes gsway { 0%,100% { transform: rotate(-2.2deg); } 50% { transform: rotate(2.2deg); } }
+@keyframes gSwing { 0%,100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+#gardenSvg .swing { animation: gSwing 2.2s ease-in-out infinite; }
+#gardenSvg .swing2 { animation: gSwing 2.8s ease-in-out .4s infinite reverse; }
+#gardenSvg .tglow { animation: gPulse 3.4s ease-in-out infinite; }
+@keyframes gPulse { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
+#gardenSvg .gfly { animation: gFly 7s ease-in-out infinite; }
+@keyframes gFly { 0%,100% { transform: translate(0,0); opacity: .2; } 25% { transform: translate(22px,-18px); opacity: 1; } 50% { transform: translate(-14px,-34px); opacity: .4; } 75% { transform: translate(10px,-12px); opacity: 1; } }
+#gardenSvg .gheart { fill: #ff4f7b; }
+.gd-tip { position: absolute; z-index: 5; pointer-events: none; background: rgba(20,12,34,0.96); border: 1px solid rgba(212,165,255,0.45); border-radius: 12px; padding: 7px 12px; font-size: .85rem; line-height: 1.7; max-width: 240px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+.gd-tip small { display: block; opacity: .65; }
+.gd-empty { position: absolute; z-index: 4; inset: auto 16px 16px 16px; text-align: center; line-height: 1.8; padding: 12px; border-radius: 14px; background: rgba(10,6,24,.8); color: var(--muted); }
+.gd-help { margin-top: 10px; text-align: center; color: var(--muted); font-size: .85rem; }
+.note-item.gd-flash { outline: 2px solid #ffe08a; box-shadow: 0 0 22px rgba(255,224,138,.5); }
+@media (prefers-reduced-motion: reduce) { #gardenSvg * { animation: none !important; } }
+
 /* ============ اپ اصلی ============ */
 #app { display: none; min-height: 100vh; }
 #app.active { display: block; }
@@ -202,13 +234,18 @@ button { cursor: pointer; border: none; background: none; }
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(212,165,255,0.1);
   padding: 8px 20px;
-  display: flex; gap: 6px; justify-content: center;
+  display: flex; gap: 4px; justify-content: flex-start;
   z-index: 29;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   overflow-x: auto;
+  scrollbar-width: none;
 }
+.nav-bar::-webkit-scrollbar { display: none; }
+.nav-bar .nav-btn { flex-shrink: 0; }
+.nav-bar .nav-btn:first-child { margin-inline-start: auto; }
+.nav-bar .nav-btn:last-child { margin-inline-end: auto; }
 .nav-btn {
-  padding: 8px 16px;
+  padding: 8px 13px;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -1493,6 +1530,7 @@ body.reading-mode .reading-content {
     <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
     <button class="nav-btn" data-screen="fun" onclick="showScreen('fun')">🎬 سرگرمی</button>
     <button class="nav-btn" data-screen="sky" onclick="showScreen('sky')">🌌 آسمان</button>
+    <button class="nav-btn" data-screen="garden" onclick="showScreen('garden')">🌳 باغ</button>
     <button class="nav-btn" data-screen="daily" onclick="showScreen('daily')">❓ سؤال روز</button>
     <button class="nav-btn" data-screen="notes" onclick="showScreen('notes')">📝 یادداشت‌ها</button>
     <button class="nav-btn" data-screen="calendar" onclick="showScreen('calendar')">📅 تقویم</button>
@@ -1729,6 +1767,12 @@ body.reading-mode .reading-content {
     <div class="fun-grid" id="funGrid"></div>
   </div>
 
+  <!-- ============ باغ خاطره‌ها ============ -->
+  <div class="container screen" id="screen-garden">
+    <div class="chapters-header"><h2>🌳 باغِ خاطره‌های ما</h2></div>
+    <div id="gardenBox"></div>
+  </div>
+
   <!-- ============ آسمان شب ============ -->
   <div class="container screen" id="screen-sky">
     <div class="chapters-header"><h2>🌌 آسمان شبِ ما</h2></div>
@@ -1834,6 +1878,7 @@ body.reading-mode .reading-content {
 <script src="./cat.js" defer></script>
 <script src="./poster.js" defer></script>
 <script src="./sky.js" defer></script>
+<script src="./garden.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -1984,6 +2029,7 @@ function showScreen(name) {
   if (name === 'notes') loadNotes();
   if (name === 'daily') loadDaily();
   if (name === 'sky' && window.Sky) Sky.load();
+  if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'calendar') loadCalendar();
   if (name === 'profile') { loadProfileStats(); if (window.CatPal) CatPal.family(); }
 
@@ -2017,8 +2063,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-14b';
+const SITE_VERSION = '2026-10-14c';
 const SITE_CHANGES = [
+  '🌳 باغِ خاطره‌ها: فصل‌ها رز، عکس‌ها گل، صوتی‌ها زنگوله و آهنگ‌ها درخت نورانی می‌شن؛ هر گیاه به محتوای خودش وصله. فیلتر بر اساس سال، نوع و علاقه‌مندی‌ها',
   '🐾 توی «پروفایل» گربهٔ خودت و گربهٔ طرف مقابل رو می‌بینی (با لباس، رنگ و حالتشون) و می‌تونی نوازششون کنی',
   '🌌 بخش جدید «آسمان»: هر روزِ ثبت‌شده یه ستاره‌ست (خاطره = درخشان، عکس = صورتی، آهنگ = آبی). روی ستاره بزن تا اتفاق‌های اون روز رو ببینی و از خاطره‌های مهم صورت فلکی بساز',
   '🎨 هر خاطره رو می‌شه به یه پوستر هنری تبدیل کرد (رنگ و نقش از روی تاریخ و فصل) و به‌صورت عکس ذخیره یا چاپ کرد؛ دکمهٔ «🎨 پوستر» بالای هر فصل',
@@ -4594,7 +4641,7 @@ async function notify(type, title, refId, opts) {
     };
     if (opts.target) row.target = opts.target;       // فقط وقتی لازمه؛ برای سازگاری با دیتابیسِ بدون این ستون
     notifIds.add(row.id);
-    try { window.CatPal && CatPal.act(type); window.Sky && Sky.invalidate(); } catch (e) {}
+    try { window.CatPal && CatPal.act(type); } catch (e) {}
     const { error } = await dbClient.from('notifications').insert(row);
     if (error) console.warn('notify failed:', error.message);
   } catch (e) { console.warn(e); }
