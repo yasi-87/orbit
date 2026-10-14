@@ -146,3 +146,16 @@ alter table public.daily_answers enable row level security;
 drop policy if exists "daily_answers_public_all" on public.daily_answers;
 create policy "daily_answers_public_all" on public.daily_answers
   for all to anon, authenticated using (true) with check (true);
+
+-- 13) صورت‌های فلکی (آسمان شب)
+create table if not exists public.constellations (
+  id         text primary key,
+  name       text not null,
+  days       text not null,        -- روزهای انتخاب‌شده به ترتیب، جداشده با کاما؛ مثلاً 2026-10-13,2026-10-20
+  author     text,
+  created_at bigint not null
+);
+alter table public.constellations enable row level security;
+drop policy if exists "constellations_public_all" on public.constellations;
+create policy "constellations_public_all" on public.constellations
+  for all to anon, authenticated using (true) with check (true);
