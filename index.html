@@ -1533,6 +1533,37 @@ body.reading-mode .reading-content {
 .up-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
 .up-info { font-size: 0.72rem; color: var(--muted); }
 .up-row.ok { border-color: #5ad67d; } .up-row.bad { border-color: #ff4d6d; }
+
+.cal-tabs{display:flex;gap:8px;margin:0 0 12px}
+.cal-tabs button{flex:1;padding:9px 10px;border-radius:12px;border:1px solid var(--border,#ddd);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.cal-tabs button.on{background:var(--primary,#c06bd6);color:#fff;border-color:transparent}
+
+.cls-bar{margin-bottom:10px}
+.cls-next{margin:8px 0;padding:9px 12px;border-radius:12px;background:rgba(192,107,214,.14)}
+.cls-form{padding:12px;border-radius:14px;border:1px solid var(--border,#ddd);margin:10px 0;display:flex;flex-direction:column;gap:8px}
+.cls-form input[type=text],.cls-form input[type=time]{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--border,#ccc);font:inherit;background:transparent;color:inherit;box-sizing:border-box}
+.cls-two{display:flex;gap:8px}.cls-two>*{flex:1;min-width:0}
+.cls-two label{display:flex;flex-direction:column;gap:4px;font-size:.85rem}
+.cls-colors{display:flex;gap:8px;flex-wrap:wrap}
+.cls-colors button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.cls-colors button.on{border-color:#fff;box-shadow:0 0 0 2px currentColor}
+.cls-row{display:flex;gap:8px;flex-wrap:wrap}
+.cls-week{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.cls-day{padding:10px;border-radius:14px;border:1px solid var(--border,#ddd)}
+.cls-day.today{border-color:var(--primary,#c06bd6)}
+.cls-dh{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.cls-par{font-size:.75rem;padding:2px 8px;border-radius:99px;background:rgba(120,120,200,.18)}
+.cls-today{font-size:.75rem;color:var(--primary,#c06bd6)}
+.cls-item{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;border-inline-start:4px solid var(--c);background:rgba(128,128,128,.07);margin-top:6px}
+.cls-time{font-size:.8rem;white-space:nowrap;opacity:.85}
+.cls-body{flex:1;min-width:0}.cls-title{font-weight:600}.cls-meta{font-size:.78rem;opacity:.75}
+.cls-warn{font-size:.72rem;color:#d9822b}
+.cls-act button{background:none;border:0;cursor:pointer;font-size:1rem}
+.cls-empty,.cls-hint{opacity:.6;font-size:.85rem;padding:4px}
+.cls-mini{margin:8px 0;padding:8px;border-radius:12px;background:rgba(192,107,214,.1)}
+.cls-mini-h{font-size:.82rem;margin-bottom:4px}
+.cls-mini-i{display:block;width:100%;text-align:start;background:none;border:0;border-inline-start:3px solid var(--c);padding:4px 8px;margin-top:4px;color:inherit;font:inherit;font-size:.85rem;cursor:pointer}
+.cls-mini-i small{opacity:.6;margin-inline-start:6px}
 </style>
 </head>
 <body>
@@ -1851,8 +1882,13 @@ body.reading-mode .reading-content {
   <div class="container screen" id="screen-calendar">
     <div class="chapters-header">
       <h2>📅 تقویم ما</h2>
-      <button class="btn ghost" onclick="calToday()">امروز</button>
+      <button class="btn ghost" id="calTodayBtn" onclick="calToday()">امروز</button>
     </div>
+    <div class="cal-tabs" id="calTabs">
+      <button type="button" class="on" data-tab="cal">📅 تقویم</button>
+      <button type="button" data-tab="classes">🎓 کلاس‌ها (زوج/فرد)</button>
+    </div>
+    <div id="calMain">
     <div class="cal-card">
       <div class="cal-nav">
         <button class="cal-arrow" onclick="calShift(-1)" title="ماه قبل">▶</button>
@@ -1864,6 +1900,8 @@ body.reading-mode .reading-content {
     </div>
     <div class="cal-day-panel" id="calDayPanel"></div>
     <div class="cal-upcoming" id="calUpcoming" style="display:none;"></div>
+    </div>
+    <div id="classesBox" style="display:none"></div>
   </div>
 
   <!-- ============ صفحه پروفایل ============ -->
@@ -1928,6 +1966,7 @@ body.reading-mode .reading-content {
 <script src="./sky.js" defer></script>
 <script src="./garden.js" defer></script>
 <script src="./puzzle.js" defer></script>
+<script src="./classes.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -2113,8 +2152,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-14e';
+const SITE_VERSION = '2026-10-14f';
 const SITE_CHANGES = [
+  '🎓 توی تقویم یه تب «کلاس‌ها» اومد: کلاس‌های روزهای زوج و فرد با ساعت شروع و پایان، فیلتر زوج/فرد و هر نفر، افزودن، ویرایش و حذف',
   '☑️ توی گالری هم می‌تونی چندتا عکس/ویدیو رو با هم انتخاب و یک‌جا حذف کنی',
   '🧩 بازی پازل عکس: یه عکس از گالری انتخاب کن، سختی رو بگو (۳×۳ تا ۵×۵) و قطعه‌ها رو بکش و جابه‌جا کن. بهترین زمان هر پازل برای هر دو نفر ثبت می‌شه',
   '🌳 باغِ خاطره‌ها: فصل‌ها رز، عکس‌ها گل، صوتی‌ها زنگوله و آهنگ‌ها درخت نورانی می‌شن؛ هر گیاه به محتوای خودش وصله. فیلتر بر اساس سال، نوع و علاقه‌مندی‌ها',
@@ -4373,6 +4413,7 @@ async function refreshEvents() {
 const ensureEventsLoaded = () => eventsLoaded ? Promise.resolve() : refreshEvents();
 
 async function loadCalendar() {
+  if (window.Classes) Classes.init();
   if (calYear === null) { const t = jalaliFromIso(todayIso()); calYear = t.jy; calMonth = t.jm; }
   if (eventsLoaded) renderCalendar();           // اول از کش نشون بده، بعد تازه‌ش کن
   const before = JSON.stringify(eventsCache);
@@ -4437,6 +4478,7 @@ function renderDayPanel() {
 
   panel.innerHTML = `
     <h3>${fmtJalaliLong(calSelected)}</h3>
+    ${window.Classes ? Classes.dayHtml(calSelected) : ''}
     ${list}
     <div class="ev-form evf">
       <div class="ev-emojis">
@@ -4695,7 +4737,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} }
 
-const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', constellation: 'sky' };
+const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', constellation: 'sky', class: 'calendar' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {
