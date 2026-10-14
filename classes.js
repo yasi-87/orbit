@@ -1,11 +1,11 @@
 /* 🎓 برنامهٔ کلاس‌ها (روزهای فرد و زوج) — داخل صفحهٔ تقویم
-   روزهای هفته مثل دانشگاه‌های ایران: فرد = شنبه، دوشنبه، چهارشنبه | زوج = یکشنبه، سه‌شنبه، پنجشنبه
+   روزهای هفته مثل دانشگاه‌های ایران: زوج = شنبه، دوشنبه، چهارشنبه، جمعه | فرد = یکشنبه، سه‌شنبه، پنجشنبه
    هر کلاس: عنوان، استاد، مکان، روزها، ساعت شروع و پایان، رنگ؛ اضافه، ویرایش و حذف می‌شه. */
 (function () {
   'use strict';
   const esc = s => (window.escapeHtml ? escapeHtml(s) : String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
   const fa = n => Recur.toFa(n);
-  const ODD = [0, 2, 4], EVEN = [1, 3, 5];                 // شنبه=۰ ... جمعه=۶
+  const ODD = [1, 3, 5], EVEN = [0, 2, 4, 6];                 // شنبه=۰ ... جمعه=۶
   const DAY_NAMES = Recur.JAL_WEEKDAYS;                     // ['شنبه', 'یکشنبه', ...]
   const COLORS = ['#b57bff', '#ff8fc0', '#6fe3ff', '#ffd54f', '#7ae09a', '#ff9d6b', '#8b9bff', '#ff6f91'];
   const hhmmFa = t => fa(t);
@@ -43,7 +43,7 @@
   function dayHtml(iso) {
     if (!list.length) return '';
     const wd = Recur.weekdayIndex(iso), cs = dayClasses(wd); if (!cs.length) return '';
-    return `<div class="cls-mini"><div class="cls-mini-h">🎓 کلاس‌های این روز${wd === 6 ? '' : ' (' + parityLabel(ODD.includes(wd) ? 'odd' : 'even') + ')'}</div>${cs.map(c => `<button type="button" class="cls-mini-i" style="--c:${esc(c.color || COLORS[0])}" onclick="Classes.setTab('classes')"><b>${timeStr(c)}</b> ${esc(c.title)}${c.place ? ' · ' + esc(c.place) : ''}<small>${esc(c.author || '')}</small></button>`).join('')}</div>`;
+    return `<div class="cls-mini"><div class="cls-mini-h">🎓 کلاس‌های این روز (${parityLabel(ODD.includes(wd) ? 'odd' : 'even')})</div>${cs.map(c => `<button type="button" class="cls-mini-i" style="--c:${esc(c.color || COLORS[0])}" onclick="Classes.setTab('classes')"><b>${timeStr(c)}</b> ${esc(c.title)}${c.place ? ' · ' + esc(c.place) : ''}<small>${esc(c.author || '')}</small></button>`).join('')}</div>`;
   }
 
   /* ---------- نمایش ---------- */
@@ -66,15 +66,15 @@
     const chip = (on, attr, label) => `<button type="button" class="gd-chip${on ? ' on' : ''}" ${attr}>${label}</button>`;
     const showDays = filter.parity === 'odd' ? ODD : filter.parity === 'even' ? EVEN : [0, 1, 2, 3, 4, 5, 6];
     const today = Recur.weekdayIndex(Recur.todayIso()), nx = nextClass();
-    let h = `<div class="cls-bar"><div class="gd-row"><span class="gd-lab">روزها</span>${chip(filter.parity === 'all', 'data-parity="all"', 'همه')}${chip(filter.parity === 'odd', 'data-parity="odd"', '🔵 فرد <small>ش · د · چ</small>')}${chip(filter.parity === 'even', 'data-parity="even"', '🟣 زوج <small>ی · س · پ</small>')}</div>
+    let h = `<div class="cls-bar"><div class="gd-row"><span class="gd-lab">روزها</span>${chip(filter.parity === 'all', 'data-parity="all"', 'همه')}${chip(filter.parity === 'odd', 'data-parity="odd"', '🔵 فرد <small>ی · س · پ</small>')}${chip(filter.parity === 'even', 'data-parity="even"', '🟣 زوج <small>ش · د · چ · ج</small>')}</div>
       ${authors.length > 1 ? `<div class="gd-row"><span class="gd-lab">برنامهٔ</span>${chip(filter.who === 'all', 'data-who=""', 'همه')}${authors.map(a => chip(filter.who === a, `data-who="${esc(a)}"`, esc(a))).join('')}</div>` : ''}
       <button type="button" class="btn" data-cls="new">➕ کلاس جدید</button></div>`;
     if (nx) h += `<div class="cls-next">⏭️ کلاس بعدی: <b>${esc(nx.c.title)}</b> · ${nx.k === 0 ? 'امروز' : nx.k === 1 ? 'فردا' : DAY_NAMES[nx.wd]} ساعت ${hhmmFa(nx.c.start_time || '')}${nx.c.place ? ' · ' + esc(nx.c.place) : ''}</div>`;
     if (editing) h += formHtml();
     const any = list.filter(filterOk).length;
     h += `<div class="cls-week">${showDays.map(wd => {
-      const cs = dayClasses(wd).filter(filterOk), par = wd === 6 ? '' : ODD.includes(wd) ? 'odd' : 'even';
-      if (!cs.length && wd === 6) return '';
+      const cs = dayClasses(wd).filter(filterOk), par = ODD.includes(wd) ? 'odd' : 'even';
+      
       return `<div class="cls-day${wd === today ? ' today' : ''}"><div class="cls-dh"><b>${DAY_NAMES[wd]}</b>${par ? `<span class="cls-par ${par}">${parityLabel(par)}</span>` : ''}${wd === today ? '<span class="cls-today">امروز</span>' : ''}</div>
         ${cs.length ? cs.map(c => `<div class="cls-item" style="--c:${esc(c.color || COLORS[0])}"><div class="cls-time">${timeStr(c) || '—'}</div><div class="cls-body"><div class="cls-title">${esc(c.title)}${overlaps(c, wd) ? ' <span class="cls-warn" title="با کلاس دیگه‌ای از همین نفر تداخل داره">⚠️ تداخل</span>' : ''}</div>
           <div class="cls-meta">${[c.teacher ? '👤 ' + esc(c.teacher) : '', c.place ? '📍 ' + esc(c.place) : '', c.author ? '💜 ' + esc(c.author) : ''].filter(Boolean).join(' · ')}</div></div>
