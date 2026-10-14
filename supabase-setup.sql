@@ -177,3 +177,16 @@ alter table public.cats enable row level security;
 drop policy if exists "cats_public_all" on public.cats;
 create policy "cats_public_all" on public.cats
   for all to anon, authenticated using (true) with check (true);
+
+-- 15) باغ خاطره‌ها: علاقه‌مندی‌ها
+create table if not exists public.garden_favs (
+  id         text primary key,
+  key        text not null,        -- مثلاً chapter:ch_123 یا song:sg_9
+  author     text,
+  created_at bigint not null
+);
+create index if not exists garden_favs_key_idx on public.garden_favs (key);
+alter table public.garden_favs enable row level security;
+drop policy if exists "garden_favs_public_all" on public.garden_favs;
+create policy "garden_favs_public_all" on public.garden_favs
+  for all to anon, authenticated using (true) with check (true);
