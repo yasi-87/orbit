@@ -207,3 +207,21 @@ alter table public.puzzle_records enable row level security;
 drop policy if exists "puzzle_records_public_all" on public.puzzle_records;
 create policy "puzzle_records_public_all" on public.puzzle_records
   for all to anon, authenticated using (true) with check (true);
+
+-- 17) کلاس‌های زوج/فرد (برنامهٔ هفتگی داخل تقویم)
+create table if not exists public.classes (
+  id         text primary key,
+  title      text not null,
+  teacher    text,
+  place      text,
+  days       text not null,        -- اندیس روزهای هفته، شنبه=۰، با کاما جدا شده
+  start_time text,
+  end_time   text,
+  color      text,
+  author     text,
+  created_at bigint not null
+);
+alter table public.classes enable row level security;
+drop policy if exists "classes_public_all" on public.classes;
+create policy "classes_public_all" on public.classes
+  for all to anon, authenticated using (true) with check (true);

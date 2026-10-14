@@ -239,6 +239,7 @@
     gallery: { icon: '🖼️', text: 'یه عکس/ویدیو به گالری اضافه کرد' },
     daily: { icon: '❓', text: 'به سؤال امروز جواب داد' },
     constellation: { icon: '🌌', text: 'یه صورت فلکی ساخت' },
+    class: { icon: '🎓', text: 'یه کلاس اضافه کرد' },
     reminder: { icon: '⏰', text: null }
   };
   function notifLine(n) {
