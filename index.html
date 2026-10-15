@@ -1566,6 +1566,12 @@ body.reading-mode .reading-content {
   .editor, .reading-content { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 }
 body.tab-hidden *, body.tab-hidden *::before, body.tab-hidden *::after { animation-play-state: paused !important; }
+
+.class-alarm{position:fixed;inset:0;z-index:900;background:rgba(5,3,15,.88);display:flex;align-items:center;justify-content:center;padding:20px}
+.ca-box{background:var(--paper,#14141c);border:1px solid var(--accent);border-radius:22px;padding:26px 22px;text-align:center;max-width:380px;width:100%;box-shadow:0 0 60px rgba(212,165,255,.35);animation:caShake 1.2s ease-in-out infinite}
+.ca-ico{font-size:3rem}.ca-box h3{margin:8px 0;color:var(--gold)}.ca-box p{margin:8px 0 18px;line-height:1.9}
+.ca-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@keyframes caShake{0%,100%{transform:rotate(0)}10%{transform:rotate(-2deg)}20%{transform:rotate(2deg)}30%{transform:rotate(-2deg)}40%{transform:rotate(0)}}
 </style>
 </head>
 <body>
@@ -2106,8 +2112,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-15a';
+const SITE_VERSION = '2026-10-15b';
 const SITE_CHANGES = [
+  '🔔 یادآوری و آلارم کلاس: هر کلاس رو که ثبت می‌کنی می‌تونی بگی چند دقیقه قبل از شروع، به هر دو نفرتون (یا فقط خودت) اعلان بیاد. وقتی سایت بازه آلارم با صدا و پنجره‌ی بزرگ می‌زنه، و وقتی بسته‌ست اعلان گوشی می‌رسه',
   '✍️ ویرایشگر موبایل: فونت و اندازه و هایلایت حالا منوی خودشون رو دارن و انتخاب متن از دست نمی‌ره. فقط کافیه مکان‌نما رو وسط یه کلمه بذاری تا همون کلمه تغییر کنه. هایلایت هم با یک تپ روی رنگ انجام می‌شه',
   '⚡ سایت روی گوشی سبک‌تر و روون‌تر شد',
   '🎓 توی تقویم یه تب «کلاس‌ها» اومد: کلاس‌های روزهای زوج و فرد با ساعت شروع و پایان، فیلتر زوج/فرد و هر نفر، افزودن، ویرایش و حذف',
@@ -4718,6 +4725,7 @@ async function checkReminders() {
       const due = Recur.latestDue(ev, now, since);
       if (due) await fireReminder(ev, due);
     }
+    if (window.Classes) await Classes.tick();
   } catch (e) { console.warn('reminders:', e); }
   finally { reminderBusy = false; }
 }
@@ -4750,7 +4758,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} }
 
-const NOTIF_SCREEN = { files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar' };
+const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {
@@ -4803,7 +4811,37 @@ function onNotifInsert(n) {
   if (notifPanelOpen()) renderNotifPanel();
 }
 
+
+/* ⏰ آلارم کلاس: صدای زنگ تکرارشونده + ویبره + پنجرهٔ بزرگ، تا وقتی بستیش یا چُرت بزنی */
+let alarmCtx = null, alarmTimer = null, alarmSnooze = null;
+function alarmBeep() {
+  try {
+    alarmCtx = alarmCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (alarmCtx.state === 'suspended') alarmCtx.resume();
+    const t0 = alarmCtx.currentTime;
+    [0, .22, .44].forEach((d, i) => {
+      const o = alarmCtx.createOscillator(), g = alarmCtx.createGain();
+      o.type = 'sine'; o.frequency.value = i === 1 ? 1180 : 880;
+      g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(0.35, t0 + d + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + .18);
+      o.connect(g); g.connect(alarmCtx.destination); o.start(t0 + d); o.stop(t0 + d + .2);
+    });
+  } catch (e) {}
+  try { navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 600]); } catch (e) {}
+}
+function stopAlarm() { clearInterval(alarmTimer); alarmTimer = null; const el = document.getElementById('classAlarm'); if (el) el.remove(); }
+function classAlarm(n) {
+  stopAlarm(); clearTimeout(alarmSnooze);
+  const el = document.createElement('div'); el.id = 'classAlarm'; el.className = 'class-alarm';
+  el.innerHTML = `<div class="ca-box"><div class="ca-ico">🎓⏰</div><h3>کلاس داره شروع می‌شه!</h3><p>${escapeHtml(n.title || '')}</p>
+    <div class="ca-row"><button class="btn" id="caOk">✔️ باشه، رفتم</button><button class="btn ghost" id="caSnooze">😴 ۵ دقیقه بعد</button></div></div>`;
+  document.body.appendChild(el);
+  alarmBeep(); let k = 0; alarmTimer = setInterval(() => { if (++k > 40) return stopAlarm(); alarmBeep(); }, 2500);
+  document.getElementById('caOk').onclick = () => { clearTimeout(alarmSnooze); stopAlarm(); };
+  document.getElementById('caSnooze').onclick = () => { stopAlarm(); toast('😴 ۵ دقیقه دیگه دوباره یادآوری می‌کنم'); alarmSnooze = setTimeout(() => classAlarm(Object.assign({}, n, { title: n.title })), 5 * 60000); };
+}
+
 function alertNotif(n) {
+  if (n.type === 'class_rem' && Date.now() - Number(n.created_at) < 15 * 60000) classAlarm(n);
   const { icon, line } = notifText(n);
   toast(icon + ' ' + line + (n.title ? ' — «' + n.title + '»' : ''));
   if (document.hidden) showSystemNotification(n);

@@ -16,7 +16,9 @@ self.addEventListener('push', e => {
       icon: './icon-192.png',
       badge: './icons8-star-48.png',
       dir: 'rtl', lang: 'fa',
-      data: { url: d.url || './' }
+      data: { url: d.url || './' },
+      requireInteraction: !!d.alarm, renotify: !!d.alarm,
+      vibrate: d.alarm ? [400, 200, 400, 200, 800, 300, 800] : undefined
     });
   })());
 });

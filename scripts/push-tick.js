@@ -52,10 +52,36 @@ async function claimReminders(db, now, log) {
   return fired;
 }
 
+async function claimClasses(db, now, log) {
+  let rows;
+  try { rows = await db.get('classes?select=*&remind_before=gt.0'); }
+  catch (e) { log('classes: ' + e.message); return 0; }
+  let fired = 0;
+  for (const c of rows || []) {
+    const since = Math.max(Number(c.last_fired) || 0, Number(c.created_at) || 0);
+    const due = Recur.classDue(c, now, since);
+    if (!due) continue;
+    const cond = c.last_fired == null ? 'last_fired=is.null' : 'last_fired=eq.' + c.last_fired;
+    let got;
+    try { got = await db.patch('classes?id=eq.' + encodeURIComponent(c.id) + '&' + cond, { last_fired: due.ts }); }
+    catch (e) { log('class claim: ' + e.message); continue; }
+    if (!got || !got.length) continue;
+    await db.post('notifications', {
+      id: 'nf_' + now + '_' + Math.random().toString(36).slice(2, 7),
+      type: 'class_rem', title: Recur.classRemindText(c, due.startTs, now).slice(0, 80), author: '⏰',
+      ref_id: c.id, target: c.remind_who === 'me' ? c.author : null,
+      pushed: false, created_at: now
+    });
+    fired++;
+  }
+  return fired;
+}
+
 function payloadFor(n) {
   const l = Recur.notifLine(n);
   const body = n.type === 'reminder' ? '⏰ ' + (n.title || '') : l.icon + ' ' + l.line + (n.title ? ': ' + n.title : '');
-  return JSON.stringify({ title: 'Our Memories 💜', body, tag: n.id, url: './?n=' + encodeURIComponent(n.id) });
+  const alarm = n.type === 'class_rem';
+  return JSON.stringify({ title: alarm ? '🎓 کلاس داره شروع می‌شه!' : 'Our Memories 💜', body: alarm ? '⏰ ' + (n.title || '') : body, tag: n.id, alarm, url: './?n=' + encodeURIComponent(n.id) });
 }
 
 async function pushPending(db, webpush, now, log) {
@@ -91,7 +117,7 @@ async function run(opts) {
   const log = opts.log || (m => console.log(m));
   const now = opts.now || Date.now();
   const db = opts.db || makeDb(opts.fetch || fetch);
-  const fired = await claimReminders(db, now, log);
+  const fired = (await claimReminders(db, now, log)) + (await claimClasses(db, now, log));
   let res = { sent: 0, dropped: 0 };
   let webpush = opts.webpush;
   if (!webpush) {
@@ -105,5 +131,5 @@ async function run(opts) {
   return Object.assign({ fired }, res);
 }
 
-module.exports = { run, makeDb, claimReminders, pushPending, payloadFor };
+module.exports = { run, makeDb, claimReminders, claimClasses, pushPending, payloadFor };
 if (require.main === module) run().catch(e => { console.error(e); process.exit(1); });
