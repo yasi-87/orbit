@@ -1928,6 +1928,7 @@ body.tab-hidden *, body.tab-hidden *::before, body.tab-hidden *::after { animati
 <script src="./garden.js" defer></script>
 <script src="./puzzle.js" defer></script>
 <script src="./classes.js" defer></script>
+<script src="./sync.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -1946,6 +1947,7 @@ let userProfile = {
 
 function saveUserProfile() {
   if (userProfile.name) localStorage.setItem('diary_user_name', userProfile.name);
+  if (window.ProfileSync && userProfile.name) setTimeout(() => ProfileSync.start(), 0);
   if (userProfile.avatar) localStorage.setItem('diary_user_avatar', userProfile.avatar);
   updateProfileUI();
   updateHomeGreeting();
@@ -2040,6 +2042,7 @@ function uploadAvatar(ev) {
   resizeImageFile(file, 160, 0.85).then(dataUrl => {
     userProfile.avatar = dataUrl;
     saveUserProfile();
+    if (window.ProfileSync) ProfileSync.avatarChanged();
     toast('✅ عکس پروفایل ذخیره شد');
   }).catch(() => toast('⚠️ خطا در خواندن عکس'));
   ev.target.value = '';
@@ -2097,6 +2100,7 @@ function enterApp() {
   showWelcomeMessage();
   setTimeout(showWhatsNew, 1200);
   try { CatPal.start(); } catch (e) { console.warn(e); }
+  if (window.ProfileSync) setTimeout(() => ProfileSync.start(), 600);
   setTimeout(checkDailyNudge, 10000);
 }
 
@@ -2112,8 +2116,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-15b';
+const SITE_VERSION = '2026-10-15c';
 const SITE_CHANGES = [
+  '🔗 اتصال دستگاه‌ها: اگه با یه اسم (مثلاً ارشیا یا یاسی) هم توی گوشی و هم توی لپ‌تاپ وارد بشی، عکس پروفایل، گربه و آیتم‌هاش و خوندن اعلان‌ها بین هر دو دستگاه یکی می‌شه',
   '🔔 یادآوری و آلارم کلاس: هر کلاس رو که ثبت می‌کنی می‌تونی بگی چند دقیقه قبل از شروع، به هر دو نفرتون (یا فقط خودت) اعلان بیاد. وقتی سایت بازه آلارم با صدا و پنجره‌ی بزرگ می‌زنه، و وقتی بسته‌ست اعلان گوشی می‌رسه',
   '✍️ ویرایشگر موبایل: فونت و اندازه و هایلایت حالا منوی خودشون رو دارن و انتخاب متن از دست نمی‌ره. فقط کافیه مکان‌نما رو وسط یه کلمه بذاری تا همون کلمه تغییر کنه. هایلایت هم با یک تپ روی رنگ انجام می‌شه',
   '⚡ سایت روی گوشی سبک‌تر و روون‌تر شد',
@@ -4064,7 +4069,7 @@ function renderDaily() {
   const days = {}; dailyList.forEach(r => { if (r.day !== today) (days[r.day] = days[r.day] || []).push(r); });
   const keys = Object.keys(days).sort().reverse();
   const both = new Set(dailyList.filter(r => r.day !== today).map(r => r.day)).size;
-  const bothDays = Object.keys(days).filter(k => new Set(days[k].map(r => (r.author || '').trim().toLowerCase())).size >= 2).length + (mine && others.length ? 1 : 0);
+  const bothDays = Object.keys(days).filter(k => new Set(days[k].map(r => Recur.nameKey(r.author))).size >= 2).length + (mine && others.length ? 1 : 0);
   if (bothDays) h += `<div class="daily-stat">💞 ${Recur.toFa(bothDays)} روز هر دومون جواب دادیم</div>`;
   if (keys.length) {
     h += '<div class="daily-sub">📚 سؤال‌ها و جواب‌های قبلی</div>' + keys.map(k => {
@@ -4752,11 +4757,11 @@ let notifList = [], notifIds = new Set(), notifInited = false, notifPrevSeen = 0
 let notifSeen = (() => { try { const v = localStorage.getItem(NOTIF_SEEN_KEY); return v ? Number(v) : null; } catch (e) { return null; } })();
 
 const myName = () => (userProfile.name || '').trim();
-const sameName = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+const sameName = (a, b) => Recur.sameName(a, b);
 const isMine = n => sameName(n.author, myName() || 'ناشناس');
 /* اعلانی که باید به من نشون داده بشه: از طرف خودم نباشه و اگه «هدف» داره، هدفش خودم باشم */
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
-function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} }
+function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} if (window.ProfileSync) ProfileSync.push(); }
 
 const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar' };
 const notifText = n => Recur.notifLine(n);

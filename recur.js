@@ -193,6 +193,19 @@
     return null;
   }
 
+  /* ---------- کلید یکتای اسم: «ارشیا/عرشیا/Arshia» یکی حساب می‌شن، «یاسی/یاسنا/Yasi» هم ----------
+     دو دستگاه (گوشی و لپ‌تاپ) با هر کدوم از این املاها، یک حساب هستن */
+  const NAME_ALIASES = [[/^(ارشیا|عرشیا|ارشیا|arshia|arshya|arsia)$/, 'arshia'], [/^(یاسی|یاسنا|یاسینا|یاس|yasi|yasna|yasina)$/, 'yasna']];
+  function nameKey(name) {
+    let s = String(name == null ? '' : name).trim().toLowerCase()
+      .replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\u200c\u200d\u064b-\u065f\u0640]/g, '').replace(/[ةۀ]/g, 'ه')
+      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\s+/g, ' ');
+    const first = s.split(' ')[0];
+    for (const [re, k] of NAME_ALIASES) if (re.test(first)) return k;
+    return s.replace(/ /g, '_');
+  }
+  const sameName = (a, b) => nameKey(a) === nameKey(b);
+
   /* ---------- یادآوری کلاس ---------- */
   const CLASS_GRACE_MS = 10 * 60000;   // تا ۱۰ دقیقه بعد از شروع کلاس هنوز اعلام می‌شه
   function classDue(c, nowMs, sinceMs) {
@@ -279,7 +292,7 @@
     isoFromJalali, jalaliFromIso, weekdayIndex, daysBetween, addDaysIso,
     fmtJalaliLong, fmtJalaliShort,
     TEHRAN_OFFSET_MIN, wallToEpoch, epochToWall, todayIso,
-    occursOn, latestDue, nextOccurrence, describe, classDue, classRemindText,
+    occursOn, latestDue, nextOccurrence, describe, nameKey, sameName, classDue, classRemindText,
     NOTIF_TEXT, notifLine
   };
 });

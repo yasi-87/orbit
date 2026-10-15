@@ -230,3 +230,18 @@ create policy "classes_public_all" on public.classes
 alter table public.classes add column if not exists remind_before int;   -- چند دقیقه قبل از شروع (خالی = بدون یادآوری)
 alter table public.classes add column if not exists remind_who text;     -- both | me
 alter table public.classes add column if not exists last_fired bigint;
+
+-- 19) اتصال دو دستگاه یک حساب (گوشی + لپ‌تاپ): پروفایل بر اساس اسم
+create table if not exists public.profiles (
+  key        text primary key,      -- اسمِ یکتاشده (ارشیا/عرشیا → arshia ، یاسی/یاسنا → yasna)
+  name       text,
+  avatar     text,
+  avatar_at  bigint,
+  cat        text,                  -- وضعیت گربه (JSON)
+  notif_seen bigint,
+  updated_at bigint
+);
+alter table public.profiles enable row level security;
+drop policy if exists "profiles_public_all" on public.profiles;
+create policy "profiles_public_all" on public.profiles
+  for all to anon, authenticated using (true) with check (true);

@@ -50,7 +50,7 @@
   const me = () => (typeof myName === 'function' && myName()) || 'ناشناس';
   const favsOf = key => G.favs.filter(f => f.key === key);
   const isFav = key => favsOf(key).length > 0;
-  const myFav = key => G.favs.find(f => f.key === key && (f.author || '').trim().toLowerCase() === me().trim().toLowerCase());
+  const myFav = key => G.favs.find(f => f.key === key && Recur.sameName(f.author, me()));
 
   /* ---------- تصویر گیاه‌ها (SVG) ---------- */
   const SYMS = `

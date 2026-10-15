@@ -14,7 +14,7 @@
   let pick = null, level = 3, showOk = true;
   let P = null;   // بازی در حال انجام: { photo, n, ratio, order, t0, moves, done, sel, timer, peeks }
   const me = () => (typeof myName === 'function' && myName()) || 'ناشناس';
-  const same = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+  const same = (a, b) => Recur.sameName(a, b);
   const fmt = ms => { const s = ms / 1000, m = Math.floor(s / 60); return fa(String(m).padStart(2, '0')) + ':' + fa((s - m * 60).toFixed(1).padStart(4, '0')); };
 
   /* ---------- داده ---------- */
@@ -28,7 +28,7 @@
     else { recsMissing = false; recs = r.data || []; }
     loaded = true;
   }
-  const recId = (photoId, n, author) => 'pz_' + String(author).trim().toLowerCase().replace(/\s+/g, '_') + '_' + photoId + '_' + n;
+  const recId = (photoId, n, author) => 'pz_' + Recur.nameKey(author) + '_' + photoId + '_' + n;
   const myRec = (photoId, n) => recs.find(r => r.photo_id === photoId && r.size === n && same(r.author, me()));
   async function record(photo, n, ms, moves) {
     const old = myRec(photo.id, n);
