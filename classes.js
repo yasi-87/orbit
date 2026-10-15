@@ -195,7 +195,7 @@
         const { data, error } = await q.select('id');
         if (error || !data || !data.length) { if (!error) loadedAt = 0; continue; }   // یه دستگاه دیگه زودتر اعلام کرد
         c.last_fired = due.ts;
-        const text = Recur.classRemindText(c, due.startTs, now), mine = c.remind_who !== 'me' || String(c.author || '').trim().toLowerCase() === me().trim().toLowerCase();
+        const text = Recur.classRemindText(c, due.startTs, now), mine = c.remind_who !== 'me' || Recur.sameName(c.author, me());
         await notify('class_rem', text, c.id, { author: '⏰', target: c.remind_who === 'me' ? c.author : null });
         if (mine && typeof classAlarm === 'function') { classAlarm({ title: text, created_at: Date.now() }); toast('🎓 ' + text); }   // دستگاهی که اعلام کرد، خودش آلارم می‌زنه
       }

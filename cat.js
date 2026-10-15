@@ -16,7 +16,9 @@
   let S = { pets: 0, visits: 0, streak: 0, lastDay: '', acts: {}, unlocked: [], worn: { acc: [], fur: 'cream' }, mood: 'normal', lastGreet: -1, lastMem: '' };
   try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') S = Object.assign(S, v); } catch (e) {}
   S.worn = S.worn || { acc: [], fur: 'cream' }; S.acts = S.acts || {}; S.unlocked = S.unlocked || [];
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} scheduleSync(); };
+  /* «upd» فقط وقتی عوض می‌شه که ظاهر گربه (لباس/رنگ) عوض بشه؛ وگرنه هر دستگاهی که تازه باز می‌شه (و فقط بازدیدش رو ثبت می‌کنه) ظاهر دستگاه دیگه رو بازنویسی می‌کرد */
+  let lastLook = JSON.stringify(S.worn);
+  const save = () => { const lk = JSON.stringify(S.worn); if (lk !== lastLook) { lastLook = lk; S.upd = Date.now(); } try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} scheduleSync(); };
   const totalActs = () => Object.values(S.acts).reduce((a, b) => a + b, 0);
   const actN = (...t) => t.reduce((a, k) => a + (S.acts[k] || 0), 0);
 
@@ -375,7 +377,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
 
 
   /* ---------- دیدن گربه‌های همدیگه (توی پروفایل) ---------- */
-  const catId = n => 'cat_' + String(n || '').trim().toLowerCase().replace(/\s+/g, '_');
+  const catId = n => 'cat_' + Recur.nameKey(n);
   let syncT = 0, lastSynced = '';
   function myRow() {
     const nm = (typeof myName === 'function' ? myName() : '') || '';
@@ -448,5 +450,18 @@ body.reading-mode .catpal:hover{opacity:1}`;
     setTimeout(() => { if (fresh.length) announce(fresh); else say(greeting(), 6500); save(); }, 3200);
     scheduleMove();
   }
-  window.CatPal = { start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  /* همگام‌سازی بین دو دستگاه یک حساب: ادغام بی‌خطر (بیشینه‌ها، اجتماع آیتم‌ها، آخرین ظاهر) */
+  function exportState() { return JSON.parse(JSON.stringify(S)); }
+  function importState(R) {
+    if (!R || typeof R !== 'object') return false;
+    let ch = false;
+    ['pets', 'visits'].forEach(k => { if ((R[k] || 0) > (S[k] || 0)) { S[k] = R[k]; ch = true; } });
+    const un = [...new Set(S.unlocked.concat(R.unlocked || []))]; if (un.length !== new Set(S.unlocked).size) { S.unlocked = un; ch = true; }
+    Object.keys(R.acts || {}).forEach(k => { if ((R.acts[k] || 0) > (S.acts[k] || 0)) { S.acts[k] = R.acts[k]; ch = true; } });
+    if (R.lastDay && R.lastDay > (S.lastDay || '')) { S.lastDay = R.lastDay; S.streak = R.streak || S.streak; ch = true; }
+    if ((R.upd || 0) > (S.upd || 0)) { if (R.worn) { S.worn = R.worn; lastLook = JSON.stringify(S.worn); } S.upd = R.upd; ch = true; }
+    if (ch) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} try { redraw(); } catch (e) {} }
+    return ch;
+  }
+  window.CatPal = { exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();

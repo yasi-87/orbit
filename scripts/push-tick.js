@@ -9,7 +9,7 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_q4-KdXKxPB2dK99
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BLLAxqJFbG3kIwZwUYdM7qJrvaKGMWQ9TwEY17o_wE_USXG5wiPNvf3KUTmPrrcS4VSlF0INcV4mTcqnuq1qULA';
 const MAX_AGE = 3 * 24 * 3600 * 1000;   // اعلان‌های قدیمی‌تر از ۳ روز دیگه push نمی‌شن
 
-const same = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+const same = (a, b) => Recur.sameName(a, b);
 
 function makeDb(fetchFn) {
   const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' };
