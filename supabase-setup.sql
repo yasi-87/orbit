@@ -225,3 +225,8 @@ alter table public.classes enable row level security;
 drop policy if exists "classes_public_all" on public.classes;
 create policy "classes_public_all" on public.classes
   for all to anon, authenticated using (true) with check (true);
+
+-- 18) یادآوری و آلارم کلاس‌ها (اگه جدول classes رو قبلاً ساختی، فقط همین سه خط لازمه)
+alter table public.classes add column if not exists remind_before int;   -- چند دقیقه قبل از شروع (خالی = بدون یادآوری)
+alter table public.classes add column if not exists remind_who text;     -- both | me
+alter table public.classes add column if not exists last_fired bigint;

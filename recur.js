@@ -193,6 +193,30 @@
     return null;
   }
 
+  /* ---------- یادآوری کلاس ---------- */
+  const CLASS_GRACE_MS = 10 * 60000;   // تا ۱۰ دقیقه بعد از شروع کلاس هنوز اعلام می‌شه
+  function classDue(c, nowMs, sinceMs) {
+    const rb = parseInt(c && c.remind_before, 10);
+    if (!(rb > 0) || !c.start_time) return null;
+    const days = String(c.days || '').split(',').filter(x => x !== '').map(Number);
+    const since = Math.max(Number(sinceMs) || 0, nowMs - 3 * 3600000);
+    const today = epochToWall(nowMs).iso;
+    let best = null;
+    for (const off of [-1, 0, 1]) {
+      const iso = addDaysIso(today, off);
+      if (!days.includes(weekdayIndex(iso))) continue;
+      const startTs = wallToEpoch(iso, c.start_time), at = startTs - rb * 60000;
+      if (at > nowMs || at <= since || nowMs > startTs + CLASS_GRACE_MS) continue;
+      if (!best || at > best.ts) best = { ts: at, startTs, key: iso };
+    }
+    return best;
+  }
+  function classRemindText(c, startTs, nowMs) {
+    const min = Math.max(0, Math.round((startTs - (nowMs == null ? Date.now() : nowMs)) / 60000));
+    const when = min > 0 ? toFa(min) + ' دقیقه دیگه' : 'الان';
+    return (String(c.title || '').slice(0, 40)) + ' · ' + toFa(c.start_time) + (c.place ? ' · ' + String(c.place).slice(0, 20) : '') + ' (' + when + ')';
+  }
+
   /* اولین رخداد از fromMs به بعد (برای نمایش «بعدی») */
   function nextOccurrence(ev, fromMs) {
     if (!ev || !ev.event_date) return null;
@@ -239,11 +263,13 @@
     gallery: { icon: '🖼️', text: 'یه عکس/ویدیو به گالری اضافه کرد' },
     daily: { icon: '❓', text: 'به سؤال امروز جواب داد' },
     class: { icon: '🎓', text: 'یه کلاس اضافه کرد' },
+    class_rem: { icon: '🎓', text: null },
     reminder: { icon: '⏰', text: null }
   };
   function notifLine(n) {
     const t = NOTIF_TEXT[n.type] || { icon: '🔔', text: 'یه چیز جدید اضافه کرد' };
     if (n.type === 'reminder') return { icon: t.icon, line: 'یادآوری' };
+    if (n.type === 'class_rem') return { icon: t.icon, line: 'کلاس داره شروع می‌شه!' };
     return { icon: t.icon, line: (n.author || 'ناشناس') + ' ' + t.text };
   }
 
@@ -253,7 +279,7 @@
     isoFromJalali, jalaliFromIso, weekdayIndex, daysBetween, addDaysIso,
     fmtJalaliLong, fmtJalaliShort,
     TEHRAN_OFFSET_MIN, wallToEpoch, epochToWall, todayIso,
-    occursOn, latestDue, nextOccurrence, describe,
+    occursOn, latestDue, nextOccurrence, describe, classDue, classRemindText,
     NOTIF_TEXT, notifLine
   };
 });
