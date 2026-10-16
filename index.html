@@ -1608,6 +1608,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     </div>
     <div class="spacer"></div>
     <button class="icon-btn" id="bellBtn" onclick="toggleNotifPanel()" title="اعلان‌ها">🔔<span class="bell-badge" id="bellBadge" style="display:none">0</span></button>
+    <button class="icon-btn" id="updatesBtn" onclick="showWhatsNew(true)" title="آپدیت‌ها: چی اضافه شده؟">✨</button>
     <button class="icon-btn" id="muteBtn" title="صدا">🔊</button>
     <button class="icon-btn" onclick="backToWelcome()" title="خروج">🚪</button>
   </div>
@@ -2130,8 +2131,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-16a';
+const SITE_VERSION = '2026-10-16b';
 const SITE_CHANGES = [
+  '🎨 پوستر خاطره: متن دقیقاً همون‌طور که توی فصل نوشتی چاپ می‌شه (بولد، رنگ، هایلایت، فونت، چینش و فاصله‌ی خط‌ها). و کنار 🔔 یه دکمه‌ی ✨ اومد که همین لیست آپدیت‌ها رو نشونت می‌ده',
   '⏱️ تایم‌لاین آهنگ: توی صفحه پلی‌لیست می‌تونی نوار رو بکشی و آهنگ رو عقب و جلو ببری، با دکمه‌های ⏪۱۰ و ۱۰⏩ هم ۱۰ ثانیه جابه‌جا کنی',
   '🔗 اتصال دستگاه‌ها: اگه با یه اسم (مثلاً عرشیا یا یاسی) هم توی گوشی و هم توی لپ‌تاپ وارد بشی، عکس پروفایل، گربه و آیتم‌هاش و خوندن اعلان‌ها بین هر دو دستگاه یکی می‌شه',
   '🔔 یادآوری و آلارم کلاس: هر کلاس رو که ثبت می‌کنی می‌تونی بگی چند دقیقه قبل از شروع، به هر دو نفرتون (یا فقط خودت) اعلان بیاد. وقتی سایت بازه آلارم با صدا و پنجره‌ی بزرگ می‌زنه، و وقتی بسته‌ست اعلان گوشی می‌رسه',
@@ -2166,14 +2168,17 @@ const SITE_CHANGES = [
   '📄 از هر فصل می‌تونی خروجی PDF بگیری (دکمهٔ «خروجی PDF» بالای فصل)',
   '⚡ سایت سبک‌تر و سریع‌تر شد'
 ];
-function showWhatsNew() {
-  let seen = null; try { seen = localStorage.getItem('diary_site_version'); } catch (e) {}
-  if (seen === SITE_VERSION) return;
-  try { localStorage.setItem('diary_site_version', SITE_VERSION); } catch (e) {}
-  if (seen === null && !userProfile.name) return;
+function showWhatsNew(force) {
+  if (document.querySelector('.whats-new')) return;
+  if (force !== true) {
+    let seen = null; try { seen = localStorage.getItem('diary_site_version'); } catch (e) {}
+    if (seen === SITE_VERSION) return;
+    try { localStorage.setItem('diary_site_version', SITE_VERSION); } catch (e) {}
+    if (seen === null && !userProfile.name) return;
+  }
   const box = document.createElement('div');
   box.className = 'lightbox'; box.style.display = 'flex';
-  box.innerHTML = '<div class="whats-new"><h3>✨ سایت آپدیت شد!</h3><ul>' + SITE_CHANGES.map(c => '<li>' + escapeHtml(c) + '</li>').join('') + '</ul><button class="btn" type="button">باشه 💜</button></div>';
+  box.innerHTML = '<div class="whats-new"><h3>' + (force === true ? '✨ آپدیت‌ها: چیا اضافه شده؟' : '✨ سایت آپدیت شد!') + '</h3><ul>' + SITE_CHANGES.map(c => '<li>' + escapeHtml(c) + '</li>').join('') + '</ul><button class="btn" type="button">باشه 💜</button></div>';
   box.addEventListener('click', e => { if (e.target === box || e.target.tagName === 'BUTTON') box.remove(); });
   document.body.appendChild(box);
 }
@@ -2645,7 +2650,8 @@ function makeChapterPoster() {
   Poster.open({
     id: currentChapterId,
     title: document.getElementById('chapterTitle').value,
-    text: document.getElementById('editor').textContent,
+    text: document.getElementById('editor').innerText,
+    html: document.getElementById('editor').innerHTML,
     iso: ts ? Recur.epochToWall(Number(ts)).iso : Recur.todayIso()
   });
 }
