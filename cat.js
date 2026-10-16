@@ -8,6 +8,7 @@
   'use strict';
   const KEY = 'cat_state_v1';
   const fa = n => Number(n).toLocaleString('fa-IR');
+  let asleep = false, lastTouch = Date.now(), sleepAud = null;
   const rnd = a => a[Math.floor(Math.random() * a.length)];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -15,7 +16,8 @@
   /* ---------- وضعیت ذخیره‌شده (برای هر نفر توی مرورگر خودش) ---------- */
   let S = { pets: 0, visits: 0, streak: 0, lastDay: '', acts: {}, unlocked: [], worn: { acc: [], fur: 'cream' }, mood: 'normal', lastGreet: -1, lastMem: '' };
   try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') S = Object.assign(S, v); } catch (e) {}
-  S.worn = S.worn || { acc: [], fur: 'cream' }; S.acts = S.acts || {}; S.unlocked = S.unlocked || [];
+  S.worn = S.worn || { acc: [], fur: 'cream' }; S.acts = S.acts || {}; S.unlocked = (S.unlocked || []).filter(x => x !== 'm_sleep');
+  if (S.mood === 'sleepy') S.mood = 'normal'; delete S.sleepy;     // خواب دیگه آیتم کمد نیست؛ بخشی از خود گربه‌ست
   /* «upd» فقط وقتی عوض می‌شه که ظاهر گربه (لباس/رنگ) عوض بشه؛ وگرنه هر دستگاهی که تازه باز می‌شه (و فقط بازدیدش رو ثبت می‌کنه) ظاهر دستگاه دیگه رو بازنویسی می‌کرد */
   let lastLook = JSON.stringify(S.worn);
   const save = () => { const lk = JSON.stringify(S.worn); if (lk !== lastLook) { lastLook = lk; S.upd = Date.now(); } try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} scheduleSync(); };
@@ -38,7 +40,6 @@
     m_love:    { kind: 'mood', ico: '😻', name: 'عاشق',      hint: '۸ بار نوازش',                   ok: () => S.pets >= 8, mood: 'love' },
     m_dance:   { kind: 'mood', ico: '💃', name: 'رقصان',     hint: '۲۰ بار نوازش',                  ok: () => S.pets >= 20, mood: 'dance' },
     m_star:    { kind: 'mood', ico: '🤩', name: 'ستاره‌چشم', hint: '۵ فعالیت توی سایت',              ok: () => totalActs() >= 5, mood: 'star' },
-    m_sleep:   { kind: 'mood', ico: '😴', name: 'خواب‌آلود', hint: 'آخر شب سر بزن (بعد از ۱۱ شب)',   ok: () => S.sleepy === true, mood: 'sleepy' }
   };
   const FUR = {
     cream:  { fur: '#f2c894', dark: '#d9a46a' }, black: { fur: '#40374d', dark: '#29222f' },
@@ -49,7 +50,7 @@
 
   /* ---------- شکل گربه (طرح اختصاصی) ---------- */
   function svg(st) {
-    st = st || S; const f = FUR[(st.worn || {}).fur] || FUR.cream, w = (st.worn || {}).acc || [], mood = st.mood || 'normal';
+    st = st || S; const f = FUR[(st.worn || {}).fur] || FUR.cream, w = (st.worn || {}).acc || [], mood = st.asleep ? 'sleepy' : (st.mood === 'sleepy' ? 'normal' : st.mood || 'normal');
     const eyes = mood === 'love' ? '<path class="heart" d="M40 52 C33 46 34 41 38 41 C40 41 40 43 40 43 C40 43 40 41 42 41 C46 41 47 46 40 52Z" fill="#ff4f7b"/><path class="heart" d="M60 52 C53 46 54 41 58 41 C60 41 60 43 60 43 C60 43 60 41 62 41 C66 41 67 46 60 52Z" fill="#ff4f7b"/>'
       : mood === 'sleepy' ? '<path d="M35 49 q5 4 10 0 M55 49 q5 4 10 0" stroke="#2a1a35" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
       : mood === 'star' ? '<path class="spin" d="M40 42 l2 4.5 5 .6 -3.7 3.3 1 4.8 -4.3 -2.5 -4.3 2.5 1 -4.8 -3.7 -3.3 5 -.6z M60 42 l2 4.5 5 .6 -3.7 3.3 1 4.8 -4.3 -2.5 -4.3 2.5 1 -4.8 -3.7 -3.3 5 -.6z" fill="#ffd54f"/>'
@@ -89,26 +90,63 @@
     'میو! 🐾', 'نوازشم کن بازم 😽', 'پرررر… خرخر 💜', 'اینجا رو بخار، پشت گوشم!', 'من نگهبان خاطره‌هاتونم 🐱',
     'می‌دونستی؟ شما دوتا بهترین چیزِ این سایتین', 'میو میو! (یعنی دوستت دارم)', 'گشنمه… ولی خاطره هم می‌خورم 😼',
     'بیا یه خاطره بخونیم باهم 📖', 'دم‌م رو نکش، فقط قلقلکش بده 🐈', 'ایشالا همیشه کنار هم باشین ✨', 'امروز چقدر خوشگل شدی!',
-    'یه چیزی بنویس برام، لطفاً ✍️', 'من یه گربهٔ خیلی باهوشم، ولی تنبل 😴', 'قلب‌ات رو به من بسپار، مراقبشم 💗'
+    'یه چیزی بنویس برام، لطفاً ✍️', 'من یه گربهٔ خیلی باهوشم، ولی تنبل 😴', 'قلب‌ات رو به من بسپار، مراقبشم 💗',
+    'هر بار که نازم می‌کنی، یه ستاره توی دلم روشن می‌شه 🌟', 'عاشقی قشنگ‌ترین خاطره‌ست، و شما دوتا توش غرق شدین 💞',
+    'می‌دونی چرا خرخر می‌کنم؟ چون کنار شما دوتا آرومم 😽', 'من فقط یه گربه‌ام، ولی عشق شما رو از دور هم حس می‌کنم 💘',
+    'هیچ خاطره‌ای قشنگ‌تر از لحظه‌ای نیست که کنار همین‌ن 🌷', 'یه نفر توی این دنیا هست که فقط با فکر کردن بهش لبخند می‌زنی… میدونم کیه 😏💜',
+    'دوست داشتن یعنی همین: دو نفر، یه دفترچه، کلی خاطره 📖💕', 'میو… یعنی «دلم برای نگاهت تنگ شده» 🥺', 'قلبتون با هم یه ریتم می‌زنه، من می‌شنوم 🎶',
+    'اگه عشق وزن داشت، این سایت از سنگینی‌ش می‌شکست 💗', 'امشب یه چیز قشنگ بنویس، از اونی که دوستش داری ✨', 'تو بخند، من هم برات می‌رقصم 💃🐈',
+    'عشق شما دوتا گرم‌ترین گوشهٔ دنیاست؛ من اونجا می‌خوابم 🧡', 'یه بغل بزرگ برات دارم، فقط بیا نزدیک‌تر 🤗', 'هر روزی که با هم باشین، عیده 🎀',
+    'من نگهبان عشق شمام، پس خیالتون راحت 🛡️💞', 'می‌دونستی توی هر خاطره یه ذره از دل شما جا مونده؟ 🫶', 'نوازشت مثل بوسهٔ نرم‌ه… بازم لطفاً 😻',
+    'یه رازی بگم؟ عاشق‌ها قشنگ‌ترین چیزی‌ان که دیدم 🙊', 'ستاره‌ها هم به شما حسودی می‌کنن 🌌💜', 'امروز هم به هم بگین دوستت دارم، من شاهدم 📜💗',
+    'پنجه‌هام کوچیکه ولی قلبم بزرگه، همش مال شماست 🐾❤️', 'هر خاطره یه نامهٔ عاشقانه‌ست که به آینده می‌فرستین 💌', 'کنار هم بودن، قشنگ‌ترین هنری‌ه که بلدین 🎨',
+    'گربه‌ها رو می‌گن هفت جان دارن؛ منم هر هفتاش رو برای شادی شما می‌دم 😽', 'دلتنگی یعنی نصف دل اونجاست، نصفش اینجا… زنگ بزن بهش 📞💞'
   ];
+  const WAKE_LINES = [
+    'هوم؟ بیدار شدم… نازم کردی؟ 🥺💜', 'آخیش، چه نوازش خوبی! خوابم پرید 😽', 'میو؟ داشتم تو خواب شما دوتا رو می‌دیدم 💭💗', 'اوووم… دست‌ت گرمه، بیدار شدم ☺️',
+    'خواب دیدم کنار هم نشسته بودین و من وسطتون بودم 🌙💞', 'هووم… یه لحظه چشم‌ام گرم شده بود 😴➡️😻', 'نازم کنی بیدار می‌شم؛ این یه قانونه 🐾',
+    'ای جانم، با این نوازش دیگه خواب‌م نمی‌بره 💘', 'صبح بخیر… یا هر وقتی که هست! حالا که اومدی، بیدارم ✨', 'پرررر… خرخر… باز هم بکن، خواب نمی‌خوام 💤🚫'
+  ];
+  const SLEEP_LINES = [
+    'هوووم… خوابم گرفت 😴', 'زیاد نازم نکردی… دارم خوابم می‌بره 💤', 'من یه چرتی بزنم، بیدارم کن با نوازش 🌙', 'zzz… خواب شما دوتا رو می‌بینم 💭',
+    'چشمام داره گرم می‌شه… شب‌بخیر 🌛', 'یه خواب شیرین می‌رم؛ نازم کنی بیدار می‌شم 🐾', 'خوابم برد… اگه دلتنگم شدی بیدارم کن 💜', 'میو… (یعنی یه کم می‌خوابم، دوستت دارم) 😽💤'
+  ];
+  const MOVE_LINES = [
+    'اینجام! 🐾', 'کوچ کردم 😼', 'منو پیدا کردی؟ 🙈', 'اینجا بهتر می‌بینم 👀', 'میو~ جام عوض شد', 'از اینجا شما رو بهتر می‌بینم، عاشقا 👀💞',
+    'یه گوشهٔ دیگه از دلتون رو بگردم 💗', 'دارم خونه‌تون رو قدم می‌زنم، شما فقط عاشق بمونین 🏡', 'اینجا نور بهتره، برای عکس‌های قشنگتون 📸',
+    'جام عوض شد ولی عشقم به شما عوض نشد 😽', 'یه پرش کردم تا بیشتر ببینمتون 🐈‍⬛', 'بو کشیدم، اینجا بوی عشقه 👃💞', 'پنهون شدم ولی همیشه مراقبتونم 🫣'
+  ];
+  const ACT_LINES = [
+    'آفرین! 👏', 'چه کار قشنگی 💜', 'میو! دیدم چیکار کردی 🐾', 'ایول! ✨', 'یه خاطرهٔ دیگه به عشقتون اضافه شد 💞', 'دمت گرم، دفترچه‌تون داره پر می‌شه 📖💗',
+    'همین کارای کوچیکه که عشق رو بزرگ می‌کنه 🌱💕', 'ببین چقدر قشنگ ساختین‌ش! 🥹', 'من که عاشق این دفترچه‌م، مثل خودتون 😻', 'ثبتش کردم توی قلبم 📌💜',
+    'اینم یه ستارهٔ دیگه برای آسمون عشق شما 🌟', 'نوشتن از عشق، خودش یه جور عاشقی کردنه ✍️💘'
+  ];
+  /* انتخاب بدون تکرار: چند جملهٔ اخیر دوباره نمیان */
+  const recentLines = {};
+  function pickLine(key, pool) {
+    const rc = recentLines[key] = recentLines[key] || [], keep = Math.min(pool.length - 1, 12);
+    const cand = pool.filter(x => !rc.includes(x)), v = rnd(cand.length ? cand : pool);
+    rc.push(v); while (rc.length > keep) rc.shift(); return v;
+  }
   const nameOr = d => { try { const n = (myName() || '').trim(); return n || d; } catch (e) { return d; } };
   function greeting() {
     const hr = new Date().getHours(), nm = nameOr('عزیزم'), L = [];
     const part = hr < 5 ? 'night' : hr < 12 ? 'morning' : hr < 17 ? 'noon' : hr < 21 ? 'evening' : 'night';
     const pool = {
-      morning: [`صبح بخیر ${nm}! قهوه‌ت رو بردار بیا خاطره بنویسیم ☕`, 'صبح شد و من قبل از همه بیدار شدم 🌅', 'امروز یه خاطرهٔ خوب بسازین، من شاهدم 🐾'],
-      noon: [`ظهر بخیر ${nm}! ناهار خوردی؟ 🍚`, 'نیمهٔ روزه، یه لحظه بیا پیش من 🐱', 'هوای دفترچه امروز عالیه ✨'],
-      evening: [`عصر بخیر ${nm}! بریم سراغ یه خاطرهٔ قشنگ؟ 🌇`, 'غروبه… وقت نوشتن از امروزه 🧡', 'آهنگ بذاریم و بخونیم؟ 🎵'],
-      night: [`شب بخیر ${nm}… هنوز بیداری؟ 🌙`, 'شبا خاطره‌ها قشنگ‌تر می‌شن 🌌', 'من نگهبانِ شب‌م، تو بنویس 🕯️']
+      morning: [`صبح بخیر ${nm}! قهوه‌ت رو بردار بیا خاطره بنویسیم ☕`, 'صبح شد و من قبل از همه بیدار شدم 🌅', 'امروز یه خاطرهٔ خوب بسازین، من شاهدم 🐾', `صبح تو رو بخیر ${nm}، امروز هم دنیا با عشق شما قشنگ‌تره 🌷`, 'امروز اولین پیامت رو برای عشقت بفرست، بعد بیا خاطره بنویس 💌', 'صبح که چشم باز می‌کنم، اول به شما دوتا فکر می‌کنم ☀️💞', 'یه صبح خوب با یه لبخند شروع می‌شه… لبخندِ تو 😊'],
+      noon: [`ظهر بخیر ${nm}! ناهار خوردی؟ 🍚`, 'نیمهٔ روزه، یه لحظه بیا پیش من 🐱', 'هوای دفترچه امروز عالیه ✨', 'نیمروزه و دلم هنوز پیش شماست 💗', 'یه پیام کوچیک به اونی که دوستش داری، همین الان 📩💜', 'ناهار رو با یاد عشقت بخور، قشنگ‌تر می‌شه 🍽️💞'],
+      evening: [`عصر بخیر ${nm}! بریم سراغ یه خاطرهٔ قشنگ؟ 🌇`, 'غروبه… وقت نوشتن از امروزه 🧡', 'آهنگ بذاریم و بخونیم؟ 🎵', 'غروب‌ها رنگ عشق می‌گیرن، مثل دفترچهٔ شما 🌆💞', 'بیا امروز رو با یه آهنگ عاشقانه تموم کنیم 🎶💗', 'عصرِ تو به‌خیر، دلم می‌خواد از امروزتون بشنوم ☕💜'],
+      night: [`شب بخیر ${nm}… هنوز بیداری؟ 🌙`, 'شبا خاطره‌ها قشنگ‌تر می‌شن 🌌', 'من نگهبانِ شب‌م، تو بنویس 🕯️', 'شب‌ها دلتنگی بلندتر می‌شه… بیا برات یه خاطره بخونم 🌙💞', 'قبل از خواب به عشقت بگو «دوستت دارم» 💤💌', 'ستاره‌ها بیدارن تا به عشق شما نگاه کنن ✨🌌']
     }[part];
     L.push(...pool);
-    L.push(`${nm}! دلم برات تنگ شده بود 😽`, 'میو! اومدی؟ خوشحال شدم 💜', 'امروز می‌خوام یه خاطره‌ت رو بخونم 📖', 'به به! کی اومده اینجا 🐾', 'یه سورپرایز داخل سایت هست، پیداش کن 🎁');
+    L.push(`${nm}! دلم برات تنگ شده بود 😽`, 'میو! اومدی؟ خوشحال شدم 💜', 'امروز می‌خوام یه خاطره‌ت رو بخونم 📖', 'به به! کی اومده اینجا 🐾', 'یه سورپرایز داخل سایت هست، پیداش کن 🎁',
+      `${nm}، هر وقت میای، قلب این دفترچه تندتر می‌زنه 💓`, 'دلم برای شما دوتا تنگ می‌شه وقتی نیستین 🥺💜', 'بهترین بخش روزم لحظه‌ایه که شما میاین 😻', 'تو که میای، خاطره‌ها هم لبخند می‌زنن 🌸',
+      'می‌دونستی عشق شما این سایت رو زنده نگه می‌داره؟ 💞', `${nm}، امروز هم عاشق‌تر از دیروزی؟ 😏💗`, 'یه خاطرهٔ جدید از عشقتون می‌خوام، لطفاً 🥰', 'دفترچه منتظر بود که بیای و یه صفحهٔ قشنگ دیگه بنویسی 📖💕');
     if (S.streak >= 2) L.push(`${fa(S.streak)} روزه پشت سر هم میای! آفرین 🔥`);
     if (S.visits > 1 && S.gapDays >= 4) L.push(`${fa(S.gapDays)} روز نبودی! کجا بودی؟ 😿`);
     if (S.pets >= 20) L.push(`تا الان ${fa(S.pets)} بار نوازشم کردی، دوستت دارم 💗`);
     try { const u = typeof unreadCount === 'function' ? unreadCount() : 0; if (u > 0) L.push(`${fa(u)} تا خبر جدید توی 🔔 داری!`); } catch (e) {}
-    let i; do { i = Math.floor(Math.random() * L.length); } while (L.length > 1 && L[i] === S.lastGreet);
-    S.lastGreet = L[i]; return L[i];
+    const v = pickLine('greet', L); S.lastGreet = v; return v;
   }
 
   /* ---------- خاطرهٔ تصادفی ---------- */
@@ -252,7 +290,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
     window.addEventListener('resize', () => { if (spot) place(spot, true); });
     redraw();
   }
-  const redraw = () => { if (!body) return; body.innerHTML = svg(); root.classList.toggle('sleepy', S.mood === 'sleepy'); };
+  const redraw = () => { if (!body) return; body.innerHTML = svg(asleep ? Object.assign({}, S, { asleep: true }) : S); root.classList.toggle('sleepy', asleep); };
 
   /* جاهایی که گربه می‌تونه ظاهر بشه (px از لبه‌ها). side = سمتی که گربه بهش چسبیده */
   function spots() {
@@ -275,7 +313,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
     root.classList.toggle('below', top < 250);
   }
   function relocate() {
-    if (!root || busy || bubble.classList.contains('show') || document.hidden) return;
+    if (!root || busy || asleep || bubble.classList.contains('show') || document.hidden) return;
     const open = document.querySelector('.lightbox[style*="flex"], .fv');
     if (open) return;
     busy = true; root.classList.add('out');
@@ -283,7 +321,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
       let s, tries = 0; const all = spots();
       do { s = rnd(all); tries++; } while (spot && s.side === spot.side && s.b === spot.b && tries < 6);
       place(s); void root.offsetWidth; root.classList.remove('out'); busy = false;
-      if (Math.random() < .4) say(rnd(['اینجام! 🐾', 'کوچ کردم 😼', 'منو پیدا کردی؟ 🙈', 'اینجا بهتر می‌بینم 👀', 'میو~ جام عوض شد']), 3200);
+      if (Math.random() < .45) say(pickLine('move', MOVE_LINES), 3400);
     }, reduced() ? 50 : 600);
   }
   function scheduleMove() { clearTimeout(moveT); moveT = setTimeout(() => { relocate(); scheduleMove(); }, 50000 + Math.random() * 60000); }
@@ -298,7 +336,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
   const SND_KEY = 'diary_cat_sound';
   const soundOn = () => { try { return localStorage.getItem(SND_KEY) !== '0'; } catch (e) { return true; } };
   const siteMuted = () => { try { return typeof muted !== 'undefined' && muted === true; } catch (e) { return false; } };
-  const audios = {}; let curSnd = null, lastSnd = 0, lastWho = '', lastFile = '', lastSleepSnd = 0;
+  const audios = {}; let curSnd = null, lastSnd = 0, lastWho = '', lastFile = '';
   function playFile(f, vol) {
     try {
       let a = audios[f]; if (!a) { a = audios[f] = new Audio('./sounds/' + f + '.mp3'); a.preload = 'auto'; }
@@ -320,18 +358,44 @@ body.reading-mode .catpal:hover{opacity:1}`;
     const now = Date.now(); if (!force && now - lastSnd < 1500) return false;
     lastSnd = now; playFile(pickVoice().f); return true;
   }
-  function sleepSound(force) {
-    if (!soundOn() || siteMuted()) return false;
-    const now = Date.now(); if (!force && now - lastSleepSnd < 45000) return false;
-    lastSleepSnd = now; lastSnd = now; playFile(SLEEP_VOICE, 0.8); return true;
-  }
   /* صدا برای هر حالت: خواب → ویس خواب، وگرنه میو */
-  function voiceFor(force) { return S.mood === 'sleepy' ? sleepSound(force) : meow(force); }
+  function voiceFor(force) { return asleep ? false : meow(force); }
+
+
+  /* ---------- 😴 خواب: وقتی کم نازش می‌کنی خودش می‌خوابه، ویس خواب پشت‌سرهم پخش می‌شه، با نوازش بیدار می‌شه ---------- */
+  const IDLE_MS = 150000, IDLE_NIGHT_MS = 75000;           // بدون نوازش: ۲٫۵ دقیقه (شب‌ها ۱٫۲۵ دقیقه) تا خوابش ببره
+  function syncSleepAudio() {
+    const want = asleep && soundOn() && !siteMuted() && !document.hidden;
+    try {
+      if (want) {
+        if (!sleepAud) { sleepAud = new Audio('./sounds/' + SLEEP_VOICE + '.mp3'); sleepAud.loop = true; sleepAud.volume = 0.5; }
+        if (sleepAud.paused) { const p = sleepAud.play(); if (p && p.catch) p.catch(() => {}); }
+      } else if (sleepAud && !sleepAud.paused) sleepAud.pause();
+    } catch (e) {}
+  }
+  function fallAsleep(force) {
+    if (!root || asleep) return false;
+    if (!force && (busy || bubble.classList.contains('show') || document.hidden)) return false;
+    asleep = true; redraw(); closeBubble();
+    openBubble('<div class="cp-say">' + esc(pickLine('sleep', SLEEP_LINES)) + '</div>', 3500); syncSleepAudio(); return true;
+  }
+  function wake() {
+    if (!asleep) return false;
+    asleep = false; lastTouch = Date.now(); redraw(); syncSleepAudio(); return true;
+  }
+  function sleepTick() {
+    syncSleepAudio();
+    if (!root || asleep) return;
+    const h = new Date().getHours(), lim = (h >= 23 || h < 5) ? IDLE_NIGHT_MS : IDLE_MS;
+    if (Date.now() - Math.max(lastTouch, S.lastPet || 0) > lim) fallAsleep(false);
+  }
+  setInterval(sleepTick, 5000);
+  document.addEventListener('visibilitychange', syncSleepAudio);
 
   function armHide(ms) { clearTimeout(hideT); hideT = setTimeout(closeBubble, ms); }
   function closeBubble() { if (bubble) bubble.classList.remove('show'); clearTimeout(hideT); }
   function openBubble(html, ms) { bubble.innerHTML = html; bubble.classList.add('show'); armHide(ms || 7000); }
-  function say(t, ms) { if (!root) return; openBubble('<div class="cp-say">' + esc(t) + '</div>', ms); if (Math.random() < (S.mood === 'sleepy' ? .5 : .7)) voiceFor(false); }
+  function say(t, ms) { if (!root) return; openBubble('<div class="cp-say">' + esc(t) + '</div>', ms); if (!asleep && Math.random() < .7) voiceFor(false); }
   function sparkle(emoji, n) {
     if (reduced() || !root) return;
     const r = root.getBoundingClientRect();
@@ -345,12 +409,13 @@ body.reading-mode .catpal:hover{opacity:1}`;
 
   /* کلیک روی گربه: واکنش + حرف + خاطرهٔ تصادفی */
   async function poke() {
-    S.pets++; save();
+    const wasAsleep = wake();
+    S.pets++; S.lastPet = Date.now(); lastTouch = S.lastPet; save();
     voiceFor(true);
     root.classList.remove('poke'); void root.offsetWidth; root.classList.add('poke');
     sparkle(S.mood === 'love' ? ['💗', '💖', '💕'] : ['💜', '✨', '🐾'], 6);
     if (S.mood === 'dance') { root.classList.add('dance'); setTimeout(() => root.classList.remove('dance'), 4300); }
-    const line = rnd(CLICK_LINES);
+    const line = wasAsleep ? pickLine('wake', WAKE_LINES) : pickLine('click', CLICK_LINES);
     openBubble('<div class="cp-say">' + esc(line) + '</div><div class="cp-mem"><small>⏳ دارم یه خاطره پیدا می‌کنم…</small></div>', 14000);
     const fresh = checkUnlocks();
     const m = await pickMemory(); curMem = m;
@@ -367,7 +432,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
       else if (a === 'new') { closeBubble(); showScreen('chapters'); setTimeout(() => { try { createChapter(); } catch (er) {} }, 150); }
       else if (a === 'more') { b.disabled = true; b.textContent = '⏳'; poke(); S.pets--; save(); }
       else if (a === 'wardrobe') wardrobe();
-      else if (a === 'snd') { try { localStorage.setItem(SND_KEY, soundOn() ? '0' : '1'); } catch (er) {} b.textContent = soundOn() ? '🔊 صدای میو: روشن' : '🔇 صدای میو: خاموش'; if (soundOn()) meow(true); }
+      else if (a === 'snd') { try { localStorage.setItem(SND_KEY, soundOn() ? '0' : '1'); } catch (er) {} b.textContent = soundOn() ? '🔊 صدای میو: روشن' : '🔇 صدای میو: خاموش'; syncSleepAudio(); if (soundOn() && !asleep) meow(true); }
       else if (a === 'close') closeBubble();
     });
   }
@@ -472,7 +537,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
       S.acts[type] = (S.acts[type] || 0) + 1; save();
       const fresh = checkUnlocks();
       if (fresh.length && root) { root.classList.remove('poke'); void root.offsetWidth; root.classList.add('poke'); announce(fresh); }
-      else if (root && Math.random() < .3 && !bubble.classList.contains('show')) say(rnd(['آفرین! 👏', 'چه کار قشنگی 💜', 'میو! دیدم چیکار کردی 🐾', 'ایول! ✨']), 3000);
+      else if (root && !asleep && Math.random() < .3 && !bubble.classList.contains('show')) say(pickLine('act', ACT_LINES), 3200);
     } catch (e) { console.warn(e); }
   }
   function start() {
@@ -484,7 +549,6 @@ body.reading-mode .catpal:hover{opacity:1}`;
       const gap = prev ? Math.round((new Date(day.replace(/-/g, '/')) - prev) / 864e5) : 0;
       S.gapDays = gap; S.streak = prev && gap === 1 ? (S.streak || 1) + 1 : 1; S.visits++; S.lastDay = day;
     }
-    if (now.getHours() >= 23 || now.getHours() < 5) S.sleepy = true;
     const fresh = checkUnlocks(); save();
     build();
     const mob = window.innerWidth < 640; place({ side: 'r', x: 14, b: mob ? 96 : 18 });
@@ -498,12 +562,12 @@ body.reading-mode .catpal:hover{opacity:1}`;
     if (!R || typeof R !== 'object') return false;
     let ch = false;
     ['pets', 'visits'].forEach(k => { if ((R[k] || 0) > (S[k] || 0)) { S[k] = R[k]; ch = true; } });
-    const un = [...new Set(S.unlocked.concat(R.unlocked || []))]; if (un.length !== new Set(S.unlocked).size) { S.unlocked = un; ch = true; }
+    const un = [...new Set(S.unlocked.concat((R.unlocked || []).filter(x => x !== 'm_sleep')))]; if (un.length !== new Set(S.unlocked).size) { S.unlocked = un; ch = true; }
     Object.keys(R.acts || {}).forEach(k => { if ((R.acts[k] || 0) > (S.acts[k] || 0)) { S.acts[k] = R.acts[k]; ch = true; } });
     if (R.lastDay && R.lastDay > (S.lastDay || '')) { S.lastDay = R.lastDay; S.streak = R.streak || S.streak; ch = true; }
     if ((R.upd || 0) > (S.upd || 0)) { if (R.worn) { S.worn = R.worn; lastLook = JSON.stringify(S.worn); } S.upd = R.upd; ch = true; }
     if (ch) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} try { redraw(); } catch (e) {} }
     return ch;
   }
-  window.CatPal = { meow, sleepSound, _voices: VOICES, exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  window.CatPal = { meow, _sleep: on => on === false ? wake() : fallAsleep(true), _asleep: () => asleep, _idle: ms => { lastTouch = Date.now() - ms; S.lastPet = 0; }, _sleepAudio: () => sleepAud, _voices: VOICES, exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();
