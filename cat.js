@@ -288,10 +288,50 @@ body.reading-mode .catpal:hover{opacity:1}`;
   }
   function scheduleMove() { clearTimeout(moveT); moveT = setTimeout(() => { relocate(); scheduleMove(); }, 50000 + Math.random() * 60000); }
 
+  /* ---------- 🔊 صدای میو: ویس‌های خودمون (یاسی و عرشیا)؛ هر بار یکی از دو نفر به‌صورت تصادفی ----------
+     v2 = ویس خواب گربه. who فقط برای پخش نوبتی بین صدای دو نفره (حدسی از روی زیر و بمی صدا؛ اگه جابه‌جاست فقط این‌جا عوضش کن) */
+  const VOICES = [
+    { f: 'v1', who: 'yasna' }, { f: 'v5', who: 'yasna' }, { f: 'v6', who: 'yasna' }, { f: 'v7', who: 'yasna' }, { f: 'v8', who: 'yasna' }, { f: 'v9', who: 'yasna' },
+    { f: 'v3', who: 'arshia' }, { f: 'v4', who: 'arshia' }
+  ];
+  const SLEEP_VOICE = 'v2';
+  const SND_KEY = 'diary_cat_sound';
+  const soundOn = () => { try { return localStorage.getItem(SND_KEY) !== '0'; } catch (e) { return true; } };
+  const siteMuted = () => { try { return typeof muted !== 'undefined' && muted === true; } catch (e) { return false; } };
+  const audios = {}; let curSnd = null, lastSnd = 0, lastWho = '', lastFile = '', lastSleepSnd = 0;
+  function playFile(f, vol) {
+    try {
+      let a = audios[f]; if (!a) { a = audios[f] = new Audio('./sounds/' + f + '.mp3'); a.preload = 'auto'; }
+      if (curSnd && curSnd !== a) { curSnd.pause(); }
+      a.currentTime = 0; a.volume = vol == null ? 0.9 : vol; curSnd = a;
+      const p = a.play(); if (p && p.catch) p.catch(() => {});
+      return a;
+    } catch (e) { return null; }
+  }
+  /* یه میو (نوبتی بین دو نفر، بدون تکرار پشت‌سرهم) */
+  function pickVoice() {
+    const who = lastWho === 'yasna' ? 'arshia' : lastWho === 'arshia' ? 'yasna' : rnd(['yasna', 'arshia']);
+    const w2 = Math.random() < .25 ? (who === 'yasna' ? 'arshia' : 'yasna') : who;       // گاهی ترتیب بهم می‌خوره تا حدس‌زدنی نباشه
+    const pool = VOICES.filter(v => v.who === w2 && v.f !== lastFile);
+    const v = rnd(pool.length ? pool : VOICES); lastWho = v.who; lastFile = v.f; return v;
+  }
+  function meow(force) {
+    if (!soundOn() || siteMuted()) return false;
+    const now = Date.now(); if (!force && now - lastSnd < 1500) return false;
+    lastSnd = now; playFile(pickVoice().f); return true;
+  }
+  function sleepSound(force) {
+    if (!soundOn() || siteMuted()) return false;
+    const now = Date.now(); if (!force && now - lastSleepSnd < 45000) return false;
+    lastSleepSnd = now; lastSnd = now; playFile(SLEEP_VOICE, 0.8); return true;
+  }
+  /* صدا برای هر حالت: خواب → ویس خواب، وگرنه میو */
+  function voiceFor(force) { return S.mood === 'sleepy' ? sleepSound(force) : meow(force); }
+
   function armHide(ms) { clearTimeout(hideT); hideT = setTimeout(closeBubble, ms); }
   function closeBubble() { if (bubble) bubble.classList.remove('show'); clearTimeout(hideT); }
   function openBubble(html, ms) { bubble.innerHTML = html; bubble.classList.add('show'); armHide(ms || 7000); }
-  function say(t, ms) { if (!root) return; openBubble('<div class="cp-say">' + esc(t) + '</div>', ms); }
+  function say(t, ms) { if (!root) return; openBubble('<div class="cp-say">' + esc(t) + '</div>', ms); if (Math.random() < (S.mood === 'sleepy' ? .5 : .7)) voiceFor(false); }
   function sparkle(emoji, n) {
     if (reduced() || !root) return;
     const r = root.getBoundingClientRect();
@@ -306,6 +346,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
   /* کلیک روی گربه: واکنش + حرف + خاطرهٔ تصادفی */
   async function poke() {
     S.pets++; save();
+    voiceFor(true);
     root.classList.remove('poke'); void root.offsetWidth; root.classList.add('poke');
     sparkle(S.mood === 'love' ? ['💗', '💖', '💕'] : ['💜', '✨', '🐾'], 6);
     if (S.mood === 'dance') { root.classList.add('dance'); setTimeout(() => root.classList.remove('dance'), 4300); }
@@ -326,6 +367,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
       else if (a === 'new') { closeBubble(); showScreen('chapters'); setTimeout(() => { try { createChapter(); } catch (er) {} }, 150); }
       else if (a === 'more') { b.disabled = true; b.textContent = '⏳'; poke(); S.pets--; save(); }
       else if (a === 'wardrobe') wardrobe();
+      else if (a === 'snd') { try { localStorage.setItem(SND_KEY, soundOn() ? '0' : '1'); } catch (er) {} b.textContent = soundOn() ? '🔊 صدای میو: روشن' : '🔇 صدای میو: خاموش'; if (soundOn()) meow(true); }
       else if (a === 'close') closeBubble();
     });
   }
@@ -360,7 +402,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
       <div class="cp-sec">رنگ</div><div class="cp-chips">${furCream}${ids('fur').map(chip).join('')}</div>
       <div class="cp-sec">حالت</div><div class="cp-chips">${moodNormal}${ids('mood').map(chip).join('')}</div>
       <div class="cp-sec" id="cpHint">روی آیتم‌های 🔒 بزن تا بفهمی چطور باز می‌شن</div>
-      <div class="cp-row"><button class="cp-btn" data-a="close">بستن</button></div>`, 30000);
+      <div class="cp-row"><button class="cp-btn" data-a="snd">${soundOn() ? '🔊 صدای میو: روشن' : '🔇 صدای میو: خاموش'}</button><button class="cp-btn" data-a="close">بستن</button></div>`, 30000);
     bubble.querySelectorAll('.cp-chip').forEach(c => c.onclick = e => { e.stopPropagation(); pick(c.dataset.id); });
     wire();
   }
@@ -463,5 +505,5 @@ body.reading-mode .catpal:hover{opacity:1}`;
     if (ch) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} try { redraw(); } catch (e) {} }
     return ch;
   }
-  window.CatPal = { exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  window.CatPal = { meow, sleepSound, _voices: VOICES, exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();
