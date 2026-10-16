@@ -66,6 +66,118 @@
     return lines;
   }
 
+  /* ---------- متن غنی: همون چیزی که توی فصل نوشته شده (بولد، رنگ، هایلایت، فونت، اندازه، چینش، خط خالی) ---------- */
+  const BLOCK_TAG = /^(DIV|P|LI|H[1-6]|BLOCKQUOTE|PRE|UL|OL)$/;
+  const HEAD_SCALE = { H1: 1.5, H2: 1.3, H3: 1.15 };
+  function parseBlocks(html) {
+    const root = document.createElement('div'); root.innerHTML = html || '';
+    root.querySelectorAll('img,video,audio,script,style,iframe,object,embed,svg,canvas').forEach(n => n.remove());
+    const blocks = []; let cur = null;
+    const start = al => { cur = { runs: [], align: al || '' }; blocks.push(cur); return cur; };
+    const alignOf = (el, inherit) => { const a = (el.style && el.style.textAlign) || el.getAttribute('align') || ''; return /^(left|right|center)$/.test(a) ? a : inherit; };
+    function walk(n, st, al, listCtx) {
+      if (n.nodeType === 3) {
+        const t = n.nodeValue.replace(/[\r\n\t\u00a0]+/g, ' ');
+        if (!t || (!cur && !t.trim())) return;
+        (cur || start(al)).runs.push(Object.assign({ text: t }, st)); return;
+      }
+      if (n.nodeType !== 1) return;
+      const tag = n.tagName;
+      if (tag === 'BR') { if (!cur || !cur.runs.length) { cur = null; start(al); cur = null; } else cur = null; return; }
+      const s2 = Object.assign({}, st), sty = n.style || {};
+      if (tag === 'B' || tag === 'STRONG' || /^(bold|[6-9]00)$/.test(sty.fontWeight || '')) s2.bold = true;
+      if (tag === 'I' || tag === 'EM' || sty.fontStyle === 'italic') s2.italic = true;
+      if (tag === 'U' || /underline/.test(sty.textDecoration || sty.textDecorationLine || '')) s2.ul = true;
+      if (tag === 'S' || tag === 'STRIKE' || /line-through/.test(sty.textDecoration || sty.textDecorationLine || '')) s2.st = true;
+      const col = sty.color || (tag === 'FONT' && n.getAttribute('color')); if (col) s2.color = col;
+      const bg = sty.backgroundColor; if (bg && bg !== 'transparent' && !/rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/.test(bg)) s2.bg = bg; else if (bg === 'transparent') s2.bg = '';
+      const fam = sty.fontFamily || (tag === 'FONT' && n.getAttribute('face')); if (fam) s2.family = String(fam).split(',')[0].replace(/["']/g, '').trim();
+      if (sty.fontSize && /px$/.test(sty.fontSize)) s2.size = parseFloat(sty.fontSize);
+      if (HEAD_SCALE[tag]) { s2.bold = true; s2.size = (s2.size || 17) * HEAD_SCALE[tag]; }
+      if (BLOCK_TAG.test(tag)) {
+        cur = null; const al2 = alignOf(n, al);
+        if (tag === 'UL' || tag === 'OL') { let i = 0; n.childNodes.forEach(ch => { if (ch.tagName === 'LI') { i++; walk(ch, s2, al2, { ord: tag === 'OL', i }); } else walk(ch, s2, al2, null); }); cur = null; return; }
+        if (tag === 'LI') { const b = start(al2); b.runs.push({ text: (listCtx && listCtx.ord ? faN(listCtx.i) + '. ' : '• '), bold: false }); }
+        n.childNodes.forEach(ch => walk(ch, s2, al2, null)); cur = null; return;
+      }
+      n.childNodes.forEach(ch => walk(ch, s2, al, listCtx));
+    }
+    root.childNodes.forEach(ch => walk(ch, {}, '', null));
+    const isBlank = b => !b.runs.some(r => r.text.trim());
+    while (blocks.length && isBlank(blocks[0])) blocks.shift();
+    while (blocks.length && isBlank(blocks[blocks.length - 1])) blocks.pop();
+    let blanks = 0; return blocks.filter(b => { if (isBlank(b)) { b.runs = []; return ++blanks <= 3; } blanks = 0; return true; });
+  }
+  const plainBlocks = text => String(text || '').split(/\n/).map(l => ({ runs: l.trim() ? [{ text: l }] : [], align: '' }));
+  const fontsIn = blocks => [...new Set([].concat(...blocks.map(b => b.runs.map(r => r.family).filter(Boolean))))];
+  const lum = col => { const m = /rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)/.exec(col) || (/^#([0-9a-f]{6})$/i.test(col) ? [0, ...[1, 3, 5].map(i => parseInt(col.slice(i, i + 2), 16))] : null); return m ? (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) / 255 : null; };
+  const isLtr = w => /[A-Za-z0-9]/.test(w) && !/[\u0600-\u06FF]/.test(w);
+
+  /* می‌چینه و می‌کشه؛ اگه جا نشد، اندازه رو کم می‌کنه (متن هیچ‌وقت عوض نمی‌شه) */
+  function layoutRich(c, blocks, o, x0, y0, maxW, maxH, theme) {
+    const DEF = 'Vazirmatn, Estedad, Sahel, Tahoma, sans-serif';
+    const fnt = (r, base) => `${r.italic ? 'italic ' : ''}${r.bold ? 700 : 400} ${Math.round(base * Math.min(3, Math.max(.6, (r.size || 17) / 17)))}px ${r.family ? '"' + r.family + '", ' : ''}${DEF}`;
+    const sz = (r, base) => Math.round(base * Math.min(3, Math.max(.6, (r.size || 17) / 17)));
+    function build(base) {
+      const out = []; let total = 0;
+      blocks.forEach(b => {
+        if (!b.runs.length) { const h = base * 1.7; out.push({ h, blank: true, items: [] }); total += h; return; }
+        const toks = [];
+        b.runs.forEach(r => String(r.text).split(/( +)/).forEach(part => { if (part === '') return; if (/^ +$/.test(part)) { toks.push({ sp: true, r }); return; } toks.push({ w: part, r, ltr: isLtr(part) }); }));
+        c.direction = 'rtl'; let line = [], lw = 0; const lines = [];
+        const flush = () => { while (line.length && line[line.length - 1].sp) line.pop(); if (line.length) lines.push(line); line = []; lw = 0; };
+        toks.forEach(t => {
+          c.font = fnt(t.r, base); t.m = c.measureText(t.sp ? ' ' : t.w).width;
+          if (t.sp) { if (line.length) { line.push(t); lw += t.m; } return; }
+          if (lw + t.m > maxW && line.length) flush();
+          line.push(t); lw += t.m;
+        });
+        flush();
+        lines.forEach(L => {
+          const w = L.reduce((a, t) => a + t.m, 0), size = Math.max(...L.map(t => sz(t.r, base))), h = size * 1.75;
+          out.push({ items: L, w, size, h, align: b.align }); total += h;
+        });
+      });
+      return { out, total };
+    }
+    let base = 50, res = build(base);
+    while (res.total > maxH && base > 22) { base -= 2; res = build(base); }
+    let lines = res.out;
+    if (res.total > maxH) {                     // حتی با کوچک‌ترین اندازه جا نشد: آخرش «…»
+      let acc = 0, keep = []; for (const l of lines) { if (acc + l.h > maxH) break; keep.push(l); acc += l.h; }
+      if (keep.length) { const last = keep[keep.length - 1]; if (!last.blank) last.items.push({ w: ' …', m: c.measureText(' …').width, r: last.items[last.items.length - 1].r }); }
+      lines = keep;
+    }
+    const anyAlign = blocks.some(b => b.align), few = lines.length <= 3 && !anyAlign;
+    let y = y0;
+    lines.forEach(l => {
+      if (l.blank) { y += l.h; return; }
+      const al = few ? 'center' : (l.align || 'right');
+      const tw = l.items.reduce((a, t) => a + (t.m || 0), 0);
+      let cursor = al === 'center' ? x0 + (maxW + tw) / 2 : al === 'left' ? x0 + tw : x0 + maxW;   // لبهٔ راست هر خط (RTL)
+      const base0 = y + l.size * 1.25;
+      for (let i = 0; i < l.items.length;) {
+        const t = l.items[i];
+        if (t.ltr) {                            // چند کلمهٔ لاتین پشت‌هم: داخل خودشون چپ‌به‌راست
+          let j = i, G = 0; const grp = [];
+          while (j < l.items.length && (l.items[j].ltr || (l.items[j].sp && j + 1 < l.items.length && l.items[j + 1].ltr))) { grp.push(l.items[j]); G += l.items[j].m; j++; }
+          let gx = cursor - G; grp.forEach(g => { drawTok(g, gx, base0, 'ltr'); gx += g.m; }); cursor -= G; i = j; continue;
+        }
+        cursor -= t.m; drawTok(t, cursor, base0, 'rtl'); i++;
+      }
+      y += l.h;
+    });
+    function drawTok(t, x, by, dir) {
+      if (t.sp) { if (t.r.bg) { const sz2 = sz(t.r, base); c.fillStyle = t.r.bg; c.fillRect(x - 1, by - sz2 * 1.0, t.m + 2, sz2 * 1.45); } return; }
+      const r = t.r, size = sz(r, base); c.font = fnt(r, base); c.direction = dir; c.textAlign = 'left';
+      if (r.bg) { c.fillStyle = r.bg; c.fillRect(x - 2, by - size * 1.0, t.m + 4, size * 1.45); }
+      let col = r.color || o.soft; const L = r.color ? lum(r.color) : null;
+      if (L != null) { if (theme === 'light' && L > .72) col = o.ink; else if (theme !== 'light' && L < .22) col = o.ink; }
+      c.fillStyle = col; c.fillText(t.w, x, by);
+      if (r.ul || r.st) { c.fillRect(x, r.st ? by - size * .3 : by + size * .12, t.m, Math.max(2, size * .06)); }
+    }
+  }
+
   /* ---------- رسم اصلی ---------- */
   function draw(canvas, o) {
     const c = canvas.getContext('2d'); canvas.width = W; canvas.height = H;
@@ -108,7 +220,7 @@
     for (let i = 0; i < 70; i++) { c.fillStyle = dark ? `rgba(255,255,255,${R(.2, .8)})` : hsl(h1, 60, 45, R(.15, .45)); sparkle(c, R(40, W - 40), R(40, H - 40), R(3, 9)); c.fill(); }
 
     // نقش فصل: بهار گل، تابستان آفتاب، پاییز برگ، زمستان دانهٔ برف
-    const inText = (x, y) => x > 150 && x < W - 150 && y > 560 && y < 1330;
+    const inText = (x, y) => x > 150 && x < W - 150 && y > 560 && y < 1520;
     const motifN = 16 + Math.floor(rnd() * 8);
     for (let i = 0; i < motifN; i++) {
       let x = R(30, W - 30), y = R(30, H - 30), tries = 0; while (inText(x, y) && tries++ < 8) { x = R(30, W - 30); y = R(30, H - 30); }
@@ -138,7 +250,7 @@
     c.fillStyle = gold; [[48, 48], [W - 48, 48], [48, H - 48], [W - 48, H - 48]].forEach(p => { c.save(); c.translate(p[0], p[1]); c.rotate(Math.PI / 4); c.fillRect(-9, -9, 18, 18); c.restore(); });
 
     // کارت نیمه‌شفاف پشت متن
-    c.fillStyle = dark ? 'rgba(14,8,26,.42)' : 'rgba(255,255,255,.5)'; rr(120, 560, W - 240, 780, 40); c.fill();
+    c.fillStyle = dark ? 'rgba(14,8,26,.42)' : 'rgba(255,255,255,.5)'; rr(120, 560, W - 240, 960, 40); c.fill();
 
     // متن‌ها
     c.direction = 'rtl'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
@@ -158,12 +270,11 @@
     let fs = 104; c.font = F(700, fs); let tl = wrap(c, title, W - 340, 3);
     while (tl.length > 2 && fs > 64) { fs -= 8; c.font = F(700, fs); tl = wrap(c, title, W - 340, 3); }
     c.fillStyle = ink; const lh = fs * 1.55, ty = 790; tl.forEach((l, i) => c.fillText(l, W / 2, ty + i * lh));
-    // نقل‌قول از متن
-    const text = (o.text || '').replace(/\s+/g, ' ').trim();
-    if (text) {
-      const qy = ty + tl.length * lh + 30; c.fillStyle = soft; c.font = F(400, 46, 'Gandom');
-      const maxQ = Math.max(2, Math.min(6, Math.floor((1300 - qy) / 78))), ql = wrap(c, '«' + text.slice(0, 260) + '»', W - 380, maxQ);
-      ql.forEach((l, i) => c.fillText(l, W / 2, qy + i * 76));
+    // متن خاطره: دقیقاً همون‌طور که نوشته شده (بدون «»، بدون بریدن، با فاصلهٔ خطوط)
+    const blocks = o._blocks || plainBlocks(o.text);
+    if (blocks.length) {
+      const qy = ty + tl.length * lh + 20;
+      layoutRich(c, blocks, { ink, soft }, 190, qy, W - 380, Math.max(160, 1490 - qy), dark ? 'dark' : 'light');
     }
     // پایین
     c.fillStyle = soft; c.font = F(400, 34, 'Sahel');
@@ -178,6 +289,8 @@
   let opts = null, modal = null;
   async function render() {
     const cv = modal.querySelector('canvas');
+    if (!opts._blocks) opts._blocks = opts.html != null ? parseBlocks(opts.html) : plainBlocks(opts.text);
+    try { await Promise.all(fontsIn(opts._blocks).map(f => document.fonts.load('400 30px "' + f + '"')).concat(document.fonts.load('700 30px Vazirmatn'), document.fonts.load('400 30px Vazirmatn'))); } catch (e) {}
     try { await Promise.all([document.fonts.load('700 80px Estedad'), document.fonts.load('400 40px Gandom'), document.fonts.load('400 30px Sahel')]); } catch (e) {}
     draw(cv, opts);
   }
@@ -229,5 +342,5 @@ body.poster-open{overflow:hidden}
     const img = pa.firstChild; const go = () => setTimeout(() => window.print(), 150);
     img.complete ? go() : (img.onload = go);
   }
-  window.Poster = { open: openPoster, draw, _close: close };
+  window.Poster = { open: openPoster, draw, parseBlocks, _close: close };
 })();
