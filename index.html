@@ -1572,6 +1572,20 @@ body.tab-hidden *, body.tab-hidden *::before, body.tab-hidden *::after { animati
 .ca-ico{font-size:3rem}.ca-box h3{margin:8px 0;color:var(--gold)}.ca-box p{margin:8px 0 18px;line-height:1.9}
 .ca-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 @keyframes caShake{0%,100%{transform:rotate(0)}10%{transform:rotate(-2deg)}20%{transform:rotate(2deg)}30%{transform:rotate(-2deg)}40%{transform:rotate(0)}}
+
+.playlist-current{flex-wrap:wrap}
+.seek-row{display:flex;align-items:center;gap:10px;width:100%;flex-basis:100%}
+.seek-t{font-size:.74rem;color:var(--muted);min-width:34px;text-align:center;font-variant-numeric:tabular-nums}
+input.seek{-webkit-appearance:none;appearance:none;flex:1;height:28px;background:transparent;cursor:pointer;touch-action:none;margin:0}
+input.seek::-webkit-slider-runnable-track{height:6px;border-radius:99px;background:linear-gradient(to left,var(--accent) var(--p,0%),rgba(255,255,255,.16) var(--p,0%))}
+input.seek::-moz-range-track{height:6px;border-radius:99px;background:rgba(255,255,255,.16)}
+input.seek::-moz-range-progress{height:6px;border-radius:99px;background:var(--accent)}
+input.seek::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--accent);margin-top:-6px;box-shadow:0 0 10px rgba(212,165,255,.7)}
+input.seek::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--accent)}
+input.seek:disabled{opacity:.4;cursor:default}
+.music-player{flex-wrap:wrap;border-radius:20px}
+.mp-seekrow{margin-top:-2px;gap:6px}
+@media (max-width:640px){.mp-seekrow{order:9}}
 </style>
 </head>
 <body>
@@ -1745,10 +1759,13 @@ body.tab-hidden *, body.tab-hidden *::before, body.tab-hidden *::after { animati
       </div>
       <div class="pc-actions">
         <button class="btn ghost" onclick="playPrev()" title="قبلی">⏮</button>
+        <button class="btn ghost" onclick="seekBy(-10)" title="۱۰ ثانیه عقب">⏪ ۱۰</button>
         <button class="btn ghost" onclick="togglePlayPause()" id="pcPlayBtn">⏸ توقف</button>
+        <button class="btn ghost" onclick="seekBy(10)" title="۱۰ ثانیه جلو">۱۰ ⏩</button>
         <button class="btn ghost" onclick="playNext()" title="بعدی">⏭</button>
         <button class="btn ghost" onclick="toggleRepeat()" id="pcLoopBtn">🔁 پشت‌سرهم</button>
       </div>
+      <div class="seek-row pc-seek"><span class="seek-t" id="pcCur">۰:۰۰</span><input type="range" class="seek" id="pcSeek" min="0" max="1000" value="0" aria-label="تایم‌لاین آهنگ" /><span class="seek-t" id="pcDur">۰:۰۰</span></div>
     </div>
 
     <label class="playlist-upload">
@@ -1912,6 +1929,7 @@ body.tab-hidden *, body.tab-hidden *::before, body.tab-hidden *::after { animati
   <button class="mp-btn" id="mpPlay">▶</button>
   <button class="mp-btn mp-next" id="mpNext" onclick="playNext()" title="بعدی" style="display:none">⏭</button>
   <input type="range" class="mp-vol" id="mpVol" min="0" max="1" step="0.01" value="0.35" />
+  <div class="seek-row mp-seekrow"><span class="seek-t" id="mpCur">۰:۰۰</span><input type="range" class="seek" id="mpSeek" min="0" max="1000" value="0" aria-label="تایم‌لاین آهنگ" /><span class="seek-t" id="mpDur">۰:۰۰</span></div>
 </div>
 
 <div class="notif-panel" id="notifPanel"></div>
@@ -2116,8 +2134,9 @@ function backToWelcome() {
 let homeStatsAt = 0;   // (بخش خانه برداشته شد؛ این متغیر فقط برای سازگاری با کدهای قدیمی می‌مونه)
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-15d';
+const SITE_VERSION = '2026-10-15e';
 const SITE_CHANGES = [
+  '⏱️ تایم‌لاین آهنگ: توی صفحه پلی‌لیست و پلیر شناور می‌تونی نوار رو بکشی و آهنگ رو عقب و جلو ببری، با دکمه‌های ⏪۱۰ و ۱۰⏩ هم ۱۰ ثانیه جابه‌جا کنی',
   '🔗 اتصال دستگاه‌ها: اگه با یه اسم (مثلاً عرشیا یا یاسی) هم توی گوشی و هم توی لپ‌تاپ وارد بشی، عکس پروفایل، گربه و آیتم‌هاش و خوندن اعلان‌ها بین هر دو دستگاه یکی می‌شه',
   '🔔 یادآوری و آلارم کلاس: هر کلاس رو که ثبت می‌کنی می‌تونی بگی چند دقیقه قبل از شروع، به هر دو نفرتون (یا فقط خودت) اعلان بیاد. وقتی سایت بازه آلارم با صدا و پنجره‌ی بزرگ می‌زنه، و وقتی بسته‌ست اعلان گوشی می‌رسه',
   '✍️ ویرایشگر موبایل: فونت و اندازه و هایلایت حالا منوی خودشون رو دارن و انتخاب متن از دست نمی‌ره. فقط کافیه مکان‌نما رو وسط یه کلمه بذاری تا همون کلمه تغییر کنه. هایلایت هم با یک تپ روی رنگ انجام می‌شه',
@@ -5057,6 +5076,40 @@ function maybeNotifyChapter(id, title, content) {
     s.classList.add('go');
   }, { passive: true });
 })();
+
+
+/* ⏱️ تایم‌لاین آهنگ: کشیدن برای عقب/جلو رفتن + دکمه‌های ۱۰ ثانیه (هم توی صفحه پلی‌لیست، هم توی پلیر شناور) */
+const activeAudio = () => (currentSong ? customAudio : bgAudio);
+const fmtTime = t => { t = Math.max(0, Math.floor(t || 0)); return toFa(Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0')); };
+let seekDragging = false;
+function updateSeek() {
+  const a = activeAudio(), d = a.duration, ok = isFinite(d) && d > 0;
+  const v = ok ? Math.round(a.currentTime / d * 1000) : 0;
+  [['pcSeek', 'pcCur', 'pcDur'], ['mpSeek', 'mpCur', 'mpDur']].forEach(([r, c, du]) => {
+    const R = document.getElementById(r); if (!R) return;
+    R.disabled = !ok;
+    if (!seekDragging || document.activeElement !== R) R.value = v;
+    R.style.setProperty('--p', (R.value / 10) + '%');
+    document.getElementById(c).textContent = fmtTime(ok ? (seekDragging && document.activeElement === R ? R.value / 1000 * d : a.currentTime) : 0);
+    document.getElementById(du).textContent = ok ? fmtTime(d) : '۰:۰۰';
+  });
+}
+function seekBy(sec) {
+  const a = activeAudio(); if (!isFinite(a.duration)) return;
+  a.currentTime = Math.min(Math.max(0, a.currentTime + sec), Math.max(0, a.duration - 0.25)); updateSeek();
+}
+['pcSeek', 'mpSeek'].forEach(id => {
+  const R = document.getElementById(id); if (!R) return;
+  R.addEventListener('pointerdown', () => { seekDragging = true; });
+  ['pointerup', 'pointercancel', 'change', 'blur'].forEach(ev => R.addEventListener(ev, () => { seekDragging = false; updateSeek(); }));
+  R.addEventListener('input', () => {
+    const a = activeAudio(); if (!isFinite(a.duration) || !a.duration) return;
+    seekDragging = true; a.currentTime = R.value / 1000 * a.duration; updateSeek();
+  });
+});
+[customAudio, bgAudio].forEach(a => ['timeupdate', 'loadedmetadata', 'durationchange', 'seeked', 'emptied', 'play'].forEach(ev => a.addEventListener(ev, updateSeek)));
+setInterval(() => { if (!document.hidden) updateSeek(); }, 1000);
+updateSeek();
 
 document.addEventListener('visibilitychange', () => document.body.classList.toggle('tab-hidden', document.hidden));
 
