@@ -2170,7 +2170,9 @@ function sha256Hex(str) {
   }
   return h.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
 }
-const gateOpen = () => { try { return localStorage.getItem(GATE_KEY) === GATE_HASH; } catch (e) { return false; } };
+let gateOk = false;   // فقط توی حافظهٔ صفحه؛ هر بار که سایت باز یا رفرش بشه دوباره رمز می‌خواد
+try { localStorage.removeItem(GATE_KEY); } catch (e) {}
+const gateOpen = () => gateOk;
 let gateFails = 0, gateLockUntil = 0;
 function showGate() {
   const g = document.getElementById('gate'); g.classList.add('show');
@@ -2181,7 +2183,7 @@ document.getElementById('gateForm').addEventListener('submit', e => {
   const inp = document.getElementById('gatePass'), err = document.getElementById('gateErr'), box = document.getElementById('gateForm');
   if (Date.now() < gateLockUntil) { err.textContent = 'کمی صبر کن و دوباره امتحان کن ⏳'; return; }
   if (sha256Hex('om:' + inp.value.trim()) === GATE_HASH) {
-    try { localStorage.setItem(GATE_KEY, GATE_HASH); } catch (er) {}
+    gateOk = true;
     document.getElementById('gate').classList.remove('show'); inp.value = ''; err.textContent = '';
   } else {
     gateFails++; inp.value = ''; err.textContent = 'رمز درست نیست 🙈';
@@ -2192,11 +2194,12 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-16e';
+const SITE_VERSION = '2026-10-16f';
 const SITE_CHANGES = [
+  '🔒 هر بار که وارد سایت می‌شیم (حتی با رفرش) رمز رو می‌پرسه',
   '😴💞 گربه جمله‌های عاشقانه‌ی بیشتر و متنوع‌تری داره؛ وقتی کم نازش کنی خودش می‌خوابه و ویس خواب پشت‌سرهم پخش می‌شه، با نوازش بیدار می‌شه (خواب از کمد رفت و جزو خودشه)',
   '🐱🔊 گربه با صدای خودمون میو می‌کنه: وقتی روش کلیک می‌کنی یا حرف می‌زنه یکی از ویس‌های من و عرشیا پخش می‌شه، و وقتی خوابه ویس خواب. توی کمد گربه می‌تونی صدا رو خاموش کنی',
-  '🔒 سایت رمز گرفت: اولین بار که از یه دستگاه وارد می‌شی رمز رو می‌پرسه و بعدش روی همون دستگاه یادش می‌مونه',
+  '🔒 سایت رمز گرفت: اولین بار که از یه دستگاه وارد می‌شی رمز رو می‌پرسه',
   '🎨 پوستر خاطره: متن دقیقاً همون‌طور که توی فصل نوشتی چاپ می‌شه (بولد، رنگ، هایلایت، فونت، چینش و فاصله‌ی خط‌ها). و کنار 🔔 یه دکمه‌ی ✨ اومد که همین لیست آپدیت‌ها رو نشونت می‌ده',
   '⏱️ تایم‌لاین آهنگ: توی صفحه پلی‌لیست می‌تونی نوار رو بکشی و آهنگ رو عقب و جلو ببری، با دکمه‌های ⏪۱۰ و ۱۰⏩ هم ۱۰ ثانیه جابه‌جا کنی',
   '🔗 اتصال دستگاه‌ها: اگه با یه اسم (مثلاً عرشیا یا یاسی) هم توی گوشی و هم توی لپ‌تاپ وارد بشی، عکس پروفایل، گربه و آیتم‌هاش و خوندن اعلان‌ها بین هر دو دستگاه یکی می‌شه',
