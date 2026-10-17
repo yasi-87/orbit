@@ -2150,6 +2150,7 @@ function backToWelcome() {
   document.getElementById('app').classList.remove('active');
   document.getElementById('welcome').classList.remove('hidden');
   currentChapterId = null;
+  gateOk = false;   // با خروج، دفعهٔ بعد دوباره رمز می‌خواد
 }
 
 /* ============================================================
@@ -2204,8 +2205,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-16g';
+const SITE_VERSION = '2026-10-17a';
 const SITE_CHANGES = [
+  '🚪 با دکمهٔ خروج که بیرون بیای، دفعهٔ بعد دوباره رمز رو می‌پرسه',
   '⚡ سایت سبک‌تر شد و کمتر هنگ می‌کنه: بلور و انیمیشن‌های اضافه حذف شد و ویدیوهای گالری فقط وقتی دیده بشن بارگذاری می‌شن',
   '🔒 هر بار که وارد سایت می‌شیم (حتی با رفرش) رمز رو می‌پرسه',
   '😴💞 گربه جمله‌های عاشقانه‌ی بیشتر و متنوع‌تری داره؛ وقتی کم نازش کنی خودش می‌خوابه و ویس خواب پشت‌سرهم پخش می‌شه، با نوازش بیدار می‌شه (خواب از کمد رفت و جزو خودشه)',
