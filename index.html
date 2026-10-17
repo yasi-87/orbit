@@ -1553,6 +1553,16 @@ body.reading-mode .reading-content {
 .tbp-list{display:flex;flex-direction:column;max-height:min(55vh,420px);overflow-y:auto;min-width:200px;-webkit-overflow-scrolling:touch}
 .tbp-f{background:none;border:0;color:var(--text);text-align:right;padding:11px 12px;font-size:1.05rem;border-radius:8px;cursor:pointer}
 .tbp-f:hover{background:rgba(212,165,255,.18)}
+/* سبک‌سازی روی همهٔ دستگاه‌ها: بلور و انیمیشن‌های بی‌پایان و رندر لیست‌های بلند */
+.topbar, .nav-bar, .toolbar, .page-inner > .toolbar, .music-player, .notif-panel { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.topbar { background: rgba(10,10,15,0.96); } .nav-bar { background: rgba(10,10,15,0.94); }
+.page-inner > .toolbar, .toolbar { background: rgba(14,10,22,0.98); }
+.music-player { background: rgba(20,20,28,0.97); }
+.bg-blur { filter: none !important; opacity: .35; transform: none !important; }
+.fun-tab .ft-ico, #welcome h1 { animation: none !important; }
+#gardenSvg .swing, #gardenSvg .swing2, #gardenSvg .tglow, #gardenSvg .gfly, #gardenSvg [style*="gsway"] { animation: none !important; }
+.chapter-card, .song-item, .playlist-item, .ev-item, .g-item, .note-item { content-visibility: auto; contain-intrinsic-size: auto 90px; }
+.g-item { contain-intrinsic-size: auto 160px; }
 /* سبک‌تر روی موبایل: بلور و انیمیشن‌های بی‌پایان گوشی رو کند می‌کنن */
 @media (max-width:820px), (hover:none) {
   .topbar, .nav-bar, .toolbar, .page-inner > .toolbar, .music-player, .notif-panel { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
@@ -2194,8 +2204,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-16f';
+const SITE_VERSION = '2026-10-16g';
 const SITE_CHANGES = [
+  '⚡ سایت سبک‌تر شد و کمتر هنگ می‌کنه: بلور و انیمیشن‌های اضافه حذف شد و ویدیوهای گالری فقط وقتی دیده بشن بارگذاری می‌شن',
   '🔒 هر بار که وارد سایت می‌شیم (حتی با رفرش) رمز رو می‌پرسه',
   '😴💞 گربه جمله‌های عاشقانه‌ی بیشتر و متنوع‌تری داره؛ وقتی کم نازش کنی خودش می‌خوابه و ویس خواب پشت‌سرهم پخش می‌شه، با نوازش بیدار می‌شه (خواب از کمد رفت و جزو خودشه)',
   '🐱🔊 گربه با صدای خودمون میو می‌کنه: وقتی روش کلیک می‌کنی یا حرف می‌زنه یکی از ویس‌های من و عرشیا پخش می‌شه، و وقتی خوابه ویس خواب. توی کمد گربه می‌تونی صدا رو خاموش کنی',
@@ -3571,11 +3582,19 @@ function renderGallery() {
   el.innerHTML = galleryList.map(g => `
     <div class="g-item${gallerySel.has(g.id) ? ' selected' : ''}" data-id="${escapeHtml(g.id)}">
       ${g.kind === 'video'
-        ? `<video src="${escapeHtml(g.url)}#t=0.1" preload="metadata" muted playsinline></video><span class="g-play">▶</span>`
+        ? `<video data-src="${escapeHtml(g.url)}#t=0.1" preload="none" muted playsinline></video><span class="g-play">▶</span>`
         : `<img src="${escapeHtml(g.url)}" loading="lazy" decoding="async" alt="">`}
       ${gallerySelMode ? `<span class="g-chk">${gallerySel.has(g.id) ? '✓' : ''}</span>` : `<button class="g-del" title="حذف" onclick="event.stopPropagation();removeGalleryItem('${g.id}')">✕</button>`}
       <span class="g-by">${escapeHtml(g.author || '')}</span>
     </div>`).join('');
+  lazyGalleryVideos(el);
+}
+function lazyGalleryVideos(el) {
+  const vs = el.querySelectorAll('video[data-src]'); if (!vs.length) return;
+  const load = v => { v.src = v.dataset.src; v.removeAttribute('data-src'); v.preload = 'metadata'; };
+  if (!('IntersectionObserver' in window)) { vs.forEach(load); return; }
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); load(e.target); } }), { rootMargin: '200px' });
+  vs.forEach(v => io.observe(v));
 }
 let gallerySelMode = false; const gallerySel = new Set();
 function setGallerySelMode(on) { gallerySelMode = on; gallerySel.clear(); renderGallery(); }
