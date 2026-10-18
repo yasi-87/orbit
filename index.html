@@ -1516,6 +1516,7 @@ body.reading-mode .reading-content {
 .cls-form{padding:12px;border-radius:14px;border:1px solid var(--border,#ddd);margin:10px 0;display:flex;flex-direction:column;gap:8px}
 .cls-form input[type=text],.cls-form input[type=time]{width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--border,#ccc);font:inherit;background:transparent;color:inherit;box-sizing:border-box}
 .cls-two{display:flex;gap:8px}.cls-two>*{flex:1;min-width:0}
+.cls-tm{display:flex;flex-direction:column;gap:4px;font-size:.85rem}.cls-tsel{display:flex;align-items:center;gap:4px;direction:ltr}.cls-tsel select{flex:1;min-width:0;padding:9px 6px;border-radius:10px;border:1px solid var(--border,#ccc);font:inherit;font-size:1rem;background:var(--paper,#14141c);color:inherit;text-align:center}
 .cls-two label{display:flex;flex-direction:column;gap:4px;font-size:.85rem}
 .cls-colors{display:flex;gap:8px;flex-wrap:wrap}
 .cls-colors button{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer}
@@ -2205,8 +2206,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-17a';
+const SITE_VERSION = '2026-10-18a';
 const SITE_CHANGES = [
+  '⏰ ساعت شروع و پایان کلاس‌ها توی موبایل با دو لیست (ساعت و دقیقه) انتخاب می‌شه',
   '🚪 با دکمهٔ خروج که بیرون بیای، دفعهٔ بعد دوباره رمز رو می‌پرسه',
   '⚡ سایت سبک‌تر شد و کمتر هنگ می‌کنه: بلور و انیمیشن‌های اضافه حذف شد و ویدیوهای گالری فقط وقتی دیده بشن بارگذاری می‌شن',
   '🔒 هر بار که وارد سایت می‌شیم (حتی با رفرش) رمز رو می‌پرسه',

@@ -93,17 +93,29 @@
       <div class="evf-lbl">روزهای هفته</div>
       <div class="evf-chips cls-dchips">${DAY_NAMES.map((n, i) => `<button type="button" data-day="${i}" class="${d.days.includes(i) ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="evf-chips"><button type="button" data-quick="odd">🔵 همهٔ روزهای فرد</button><button type="button" data-quick="even">🟣 همهٔ روزهای زوج</button><button type="button" data-quick="clear">پاک کن</button></div>
-      <div class="cls-two"><label>⏰ شروع <input id="clsStart" type="time" value="${esc(d.start_time)}"></label><label>🏁 پایان <input id="clsEnd" type="time" value="${esc(d.end_time)}"></label></div>
+      <div class="cls-two"><div class="cls-tm"><span>⏰ شروع</span>${timeSel('clsStart', d.start_time)}</div><div class="cls-tm"><span>🏁 پایان</span>${timeSel('clsEnd', d.end_time)}</div></div>
       <div class="evf-lbl">🔔 یادآوری و آلارم قبل از شروع کلاس</div>
       <div class="evf-chips cls-rem">${[[0, 'بدون'], [5, '۵ دقیقه'], [10, '۱۰ دقیقه'], [15, '۱۵ دقیقه'], [30, '۳۰ دقیقه'], [60, '۱ ساعت']].map(([m, t]) => `<button type="button" data-rem="${m}" class="${d.remind_before === m ? 'on' : ''}">${t}</button>`).join('')}</div>
       ${d.remind_before > 0 ? `<div class="evf-chips cls-who"><button type="button" data-rwho="both" class="${d.remind_who !== 'me' ? 'on' : ''}">👫 هر دو نفرمون</button><button type="button" data-rwho="me" class="${d.remind_who === 'me' ? 'on' : ''}">🙋 فقط من</button></div>` : ''}
       <div class="evf-lbl">رنگ</div><div class="cls-colors">${COLORS.map(c => `<button type="button" data-color="${c}" class="${d.color === c ? 'on' : ''}" style="background:${c}" aria-label="رنگ"></button>`).join('')}</div>
       <div class="cls-row"><button class="btn" type="button" data-cls="save">💾 ${editing === 'new' ? 'ذخیره' : 'ذخیرهٔ ویرایش'}</button><button class="btn ghost" type="button" data-cls="cancel">انصراف</button></div></div>`;
   }
+  /* انتخاب ساعت با دو لیست (ساعت و دقیقه): روی موبایل، ورودی time مرورگر گاهی انتخابگر نشون نمیده */
+  function timeSel(id, val) {
+    const m = /^(\d{1,2}):(\d{2})/.exec(val || ''), h = m ? +m[1] : -1, mi = m ? +m[2] : -1, p = n => String(n).padStart(2, '0');
+    const hs = '<option value="">--</option>' + Array.from({ length: 24 }, (_, i) => `<option value="${p(i)}"${i === h ? ' selected' : ''}>${p(i)}</option>`).join('');
+    const mins = Array.from({ length: 12 }, (_, i) => i * 5); if (mi >= 0 && mins.indexOf(mi) < 0) { mins.push(mi); mins.sort((a, b) => a - b); }
+    const ms = '<option value="">--</option>' + mins.map(x => `<option value="${p(x)}"${x === mi ? ' selected' : ''}>${p(x)}</option>`).join('');
+    return `<div class="cls-tsel"><select id="${id}H" aria-label="ساعت">${hs}</select><b>:</b><select id="${id}M" aria-label="دقیقه">${ms}</select></div>`;
+  }
+  function readTime(id) {
+    const h = document.getElementById(id + 'H'), m = document.getElementById(id + 'M');
+    return h && h.value ? h.value + ':' + (m && m.value ? m.value : '00') : '';
+  }
   function readDraft() {
     const g = id => { const e = document.getElementById(id); return e ? e.value : ''; };
     if (!document.getElementById('clsTitle')) return;
-    draft.title = g('clsTitle'); draft.teacher = g('clsTeacher'); draft.place = g('clsPlace'); draft.start_time = g('clsStart'); draft.end_time = g('clsEnd');
+    draft.title = g('clsTitle'); draft.teacher = g('clsTeacher'); draft.place = g('clsPlace'); draft.start_time = readTime('clsStart'); draft.end_time = readTime('clsEnd');
   }
 
   /* ---------- عملیات ---------- */
