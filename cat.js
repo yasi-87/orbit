@@ -8,7 +8,7 @@
   'use strict';
   const KEY = 'cat_state_v1';
   const fa = n => Number(n).toLocaleString('fa-IR');
-  let asleep = false, lastTouch = Date.now(), sleepAud = null;
+  let asleep = false, lastTouch = Date.now(), sleepAud = null, sleepIdx = 0;
   const rnd = a => a[Math.floor(Math.random() * a.length)];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -330,9 +330,11 @@ body.reading-mode .catpal:hover{opacity:1}`;
      v2 = ویس خواب گربه. who فقط برای پخش نوبتی بین صدای دو نفره (حدسی از روی زیر و بمی صدا؛ اگه جابه‌جاست فقط این‌جا عوضش کن) */
   const VOICES = [
     { f: 'v1', who: 'yasna' }, { f: 'v5', who: 'yasna' }, { f: 'v6', who: 'yasna' }, { f: 'v7', who: 'yasna' }, { f: 'v8', who: 'yasna' }, { f: 'v9', who: 'yasna' },
-    { f: 'v3', who: 'arshia' }, { f: 'v4', who: 'arshia' }
+    { f: 'v3', who: 'arshia' }, { f: 'v4', who: 'arshia' },
+    // میوهای جدید (صاحب صدا نامشخص؛ توی هر دو نوبت پخش می‌شن)
+    ...['v10', 'v11', 'v12', 'v13', 'v14', 'v15', 'v16', 'v17'].map(f => ({ f, who: 'any' }))
   ];
-  const SLEEP_VOICE = 'v2';
+  const SLEEP_VOICES = ['v2', 'l1', 'l2'];      // ویس‌های لالایی/خواب؛ یکی‌یکی و پشت‌سرهم پخش می‌شن
   const SND_KEY = 'diary_cat_sound';
   const soundOn = () => { try { return localStorage.getItem(SND_KEY) !== '0'; } catch (e) { return true; } };
   const siteMuted = () => { try { return typeof muted !== 'undefined' && muted === true; } catch (e) { return false; } };
@@ -350,8 +352,8 @@ body.reading-mode .catpal:hover{opacity:1}`;
   function pickVoice() {
     const who = lastWho === 'yasna' ? 'arshia' : lastWho === 'arshia' ? 'yasna' : rnd(['yasna', 'arshia']);
     const w2 = Math.random() < .25 ? (who === 'yasna' ? 'arshia' : 'yasna') : who;       // گاهی ترتیب بهم می‌خوره تا حدس‌زدنی نباشه
-    const pool = VOICES.filter(v => v.who === w2 && v.f !== lastFile);
-    const v = rnd(pool.length ? pool : VOICES); lastWho = v.who; lastFile = v.f; return v;
+    const pool = VOICES.filter(v => (v.who === w2 || v.who === 'any') && v.f !== lastFile);
+    const v = rnd(pool.length ? pool : VOICES); if (v.who !== 'any') lastWho = v.who; lastFile = v.f; return v;
   }
   function meow(force) {
     if (!soundOn() || siteMuted()) return false;
@@ -368,7 +370,11 @@ body.reading-mode .catpal:hover{opacity:1}`;
     const want = asleep && soundOn() && !siteMuted() && !document.hidden;
     try {
       if (want) {
-        if (!sleepAud) { sleepAud = new Audio('./sounds/' + SLEEP_VOICE + '.mp3'); sleepAud.loop = true; sleepAud.volume = 0.5; }
+        if (!sleepAud) {
+          sleepAud = new Audio(); sleepAud.volume = 0.5; sleepAud.loop = false;
+          sleepAud.addEventListener('ended', () => { sleepIdx = (sleepIdx + 1) % SLEEP_VOICES.length; sleepAud.src = './sounds/' + SLEEP_VOICES[sleepIdx] + '.mp3'; syncSleepAudio(); });
+          sleepIdx = Math.floor(Math.random() * SLEEP_VOICES.length); sleepAud.src = './sounds/' + SLEEP_VOICES[sleepIdx] + '.mp3';
+        }
         if (sleepAud.paused) { const p = sleepAud.play(); if (p && p.catch) p.catch(() => {}); }
       } else if (sleepAud && !sleepAud.paused) sleepAud.pause();
     } catch (e) {}
@@ -569,5 +575,5 @@ body.reading-mode .catpal:hover{opacity:1}`;
     if (ch) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} try { redraw(); } catch (e) {} }
     return ch;
   }
-  window.CatPal = { meow, _sleep: on => on === false ? wake() : fallAsleep(true), _asleep: () => asleep, _idle: ms => { lastTouch = Date.now() - ms; S.lastPet = 0; }, _sleepAudio: () => sleepAud, _voices: VOICES, exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  window.CatPal = { meow, _sleep: on => on === false ? wake() : fallAsleep(true), _asleep: () => asleep, _idle: ms => { lastTouch = Date.now() - ms; S.lastPet = 0; }, _sleepAudio: () => sleepAud, _voices: VOICES, _sleepVoices: SLEEP_VOICES, exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();
