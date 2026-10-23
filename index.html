@@ -1554,6 +1554,10 @@ body.reading-mode .reading-content {
 .tbp-list{display:flex;flex-direction:column;max-height:min(55vh,420px);overflow-y:auto;min-width:200px;-webkit-overflow-scrolling:touch}
 .tbp-f{background:none;border:0;color:var(--text);text-align:right;padding:11px 12px;font-size:1.05rem;border-radius:8px;cursor:pointer}
 .tbp-f:hover{background:rgba(212,165,255,.18)}
+/* گوش دادن با هم */
+.together-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+.together-bar .btn.on{background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1a1030;border-color:transparent}
+.together-st{font-size:.85rem;color:var(--muted)}
 /* سبک‌سازی روی همهٔ دستگاه‌ها: بلور و انیمیشن‌های بی‌پایان و رندر لیست‌های بلند */
 .topbar, .nav-bar, .toolbar, .page-inner > .toolbar, .music-player, .notif-panel { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .topbar { background: rgba(10,10,15,0.96); } .nav-bar { background: rgba(10,10,15,0.94); }
@@ -1775,6 +1779,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div class="chapters-header">
       <h2>🎵 پلی‌لیست ما</h2>
     </div>
+    <div class="together-bar"><button class="btn ghost" id="togetherBtn" type="button">🎧 گوش دادن با هم</button><div class="together-st" id="togetherSt" style="display:none"></div></div>
 
     <div class="playlist-current" id="playlistCurrent" style="display:none;">
       <div class="pc-disc">🎵</div>
@@ -1971,6 +1976,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 <script src="./puzzle.js" defer></script>
 <script src="./classes.js" defer></script>
 <script src="./sync.js" defer></script>
+<script src="./together.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -2206,8 +2212,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-19a';
+const SITE_VERSION = '2026-10-23a';
 const SITE_CHANGES = [
+  '🎧 گوش دادن با هم: توی بخش پلی‌لیست دکمهٔ «گوش دادن با هم» رو هر دومون بزنیم، پخش، توقف، جلو/عقب و عوض کردن آهنگ همزمان می‌شه',
   '🐱🎵 چند میوی جدید و دو ویس لالایی جدید به گربه اضافه شد؛ موقع خواب لالایی‌ها یکی‌یکی و پشت‌سرهم پخش می‌شن',
   '⏰ ساعت شروع و پایان کلاس‌ها توی موبایل با دو لیست (ساعت و دقیقه) انتخاب می‌شه',
   '🚪 با دکمهٔ خروج که بیرون بیای، دفعهٔ بعد دوباره رمز رو می‌پرسه',
