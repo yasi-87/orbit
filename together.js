@@ -105,6 +105,9 @@
     const b = $('togetherBtn'); if (b) b.addEventListener('click', toggle);
     status();
   }
-  window.Together = { toggle, init, _on: () => on, _peers: () => peers, _id: ID };
+  /* آهنگ که تموم شد، فقط یکی از دو نفر (ID کوچک‌تر) آهنگ بعدی رو انتخاب می‌کنه؛ اون یکی از طریق پیام همگام می‌شه */
+  const shouldWait = () => on && peers > 0 && ID > peerIds()[0];
+  function peerIds() { let st = {}; try { st = ch.presenceState() || {}; } catch (e) {} return Object.keys(st).filter(k => k !== ID).sort(); }
+  window.Together = { shouldWait, toggle, init, _on: () => on, _peers: () => peers, _id: ID };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
