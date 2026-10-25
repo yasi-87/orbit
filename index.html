@@ -1794,6 +1794,7 @@ input.seek:disabled{opacity:.4;cursor:default}
         <button class="btn ghost" onclick="seekBy(10)" title="۱۰ ثانیه جلو">۱۰ ⏪</button>
         <button class="btn ghost" onclick="playNext()" title="بعدی">⏭</button>
         <button class="btn ghost" onclick="toggleRepeat()" id="pcLoopBtn">🔁 پشت‌سرهم</button>
+        <button class="btn ghost" onclick="toggleShuffle()" id="pcShuffleBtn">🔀 شافل</button>
       </div>
       <div class="seek-row pc-seek"><span class="seek-t" id="pcCur">۰:۰۰</span><input type="range" class="seek" id="pcSeek" min="0" max="1000" value="0" aria-label="تایم‌لاین آهنگ" /><span class="seek-t" id="pcDur">۰:۰۰</span></div>
     </div>
@@ -2212,8 +2213,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-23a';
+const SITE_VERSION = '2026-10-25a';
 const SITE_CHANGES = [
+  '🔀 شافل توی پلی‌لیست: با دکمهٔ «شافل» آهنگ‌ها تصادفی (بدون تکرار تا همه پخش بشن) پخش می‌شن',
   '🎧 گوش دادن با هم: توی بخش پلی‌لیست دکمهٔ «گوش دادن با هم» رو هر دومون بزنیم، پخش، توقف، جلو/عقب و عوض کردن آهنگ همزمان می‌شه',
   '🐱🎵 چند میوی جدید و دو ویس لالایی جدید به گربه اضافه شد؛ موقع خواب لالایی‌ها یکی‌یکی و پشت‌سرهم پخش می‌شن',
   '⏰ ساعت شروع و پایان کلاس‌ها توی موبایل با دو لیست (ساعت و دقیقه) انتخاب می‌شه',
@@ -3274,6 +3276,8 @@ document.addEventListener('mousemove', e => {
    ============================================================ */
 let playlist = [];
 let currentSong = null;
+let shuffleOn = (() => { try { return localStorage.getItem('diary_shuffle') === '1'; } catch (e) { return false; } })();
+let shuffleQueue = [], shuffleHist = [];
 let repeatOne = (() => { try { return localStorage.getItem('diary_repeat_one') === '1'; } catch (e) { return false; } })();
 let customAudio = new Audio();
 let playlistLoaded = false;
@@ -3364,6 +3368,7 @@ function syncPlaylistState() {
     const lb = document.getElementById('pcLoopBtn');
     lb.textContent = repeatOne ? '🔂 تکرار این آهنگ' : '🔁 پشت‌سرهم';
     lb.classList.toggle('on', repeatOne);
+    const sb = document.getElementById('pcShuffleBtn'); if (sb) { sb.textContent = shuffleOn ? '🔀 شافل: روشن' : '🔀 شافل'; sb.classList.toggle('on', shuffleOn); }
   } else {
     currentEl.style.display = 'none';
   }
@@ -3507,11 +3512,32 @@ function togglePlayPause() {
   else customAudio.pause();
 }
 
-function stepSong(dir) {
+function shufflePick() {
+  const cur = currentSong ? currentSong.id : null;
+  shuffleQueue = shuffleQueue.filter(id => id !== cur && playlist.some(s => s.id === id));
+  if (!shuffleQueue.length) {
+    shuffleQueue = playlist.map(s => s.id).filter(id => id !== cur);
+    for (let i = shuffleQueue.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffleQueue[i], shuffleQueue[j]] = [shuffleQueue[j], shuffleQueue[i]]; }
+  }
+  return shuffleQueue.shift();
+}
+function stepSong(dir, auto) {
   if (!playlist.length) return;
+  if (auto && window.Together && Together.shouldWait && Together.shouldWait()) return;   // موقع گوش دادن با هم فقط یکی از دو نفر آهنگ بعدی رو انتخاب می‌کنه
+  if (shuffleOn && playlist.length > 1) {
+    if (dir < 0 && shuffleHist.length) { playSong(shuffleHist.pop(), true); return; }
+    if (currentSong && dir > 0) { shuffleHist.push(currentSong.id); if (shuffleHist.length > 50) shuffleHist.shift(); }
+    playSong(shufflePick(), true); return;
+  }
   let idx = currentSong ? playlist.findIndex(s => s.id === currentSong.id) : -1;
   idx = idx < 0 ? 0 : (idx + dir + playlist.length) % playlist.length;
   playSong(playlist[idx].id, true);
+}
+function toggleShuffle() {
+  shuffleOn = !shuffleOn; shuffleQueue = []; shuffleHist = [];
+  try { localStorage.setItem('diary_shuffle', shuffleOn ? '1' : '0'); } catch (e) {}
+  toast(shuffleOn ? '🔀 آهنگ‌ها شافل (تصادفی) پخش می‌شن' : '➡️ آهنگ‌ها به ترتیب پخش می‌شن');
+  syncPlaylistState();
 }
 const playNext = () => stepSong(1);
 const playPrev = () => stepSong(-1);
@@ -3527,7 +3553,7 @@ function toggleRepeat() {
 customAudio.addEventListener('ended', () => {
   if (!currentSong) return;
   if (repeatOne) { customAudio.currentTime = 0; customAudio.play().catch(() => {}); }
-  else stepSong(1);
+  else stepSong(1, true);
 });
 customAudio.addEventListener('play', syncPlaylistState);
 customAudio.addEventListener('pause', syncPlaylistState);
