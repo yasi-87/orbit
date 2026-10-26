@@ -1562,6 +1562,7 @@ body.reading-mode .reading-content {
 .vc-tile.speak{border-color:#7CFC9A;box-shadow:0 0 0 4px rgba(124,252,154,.25)}
 .vc-tile.muted{opacity:.7}
 .vc-av{width:64px;height:64px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1a1030;font-weight:700}
+.vc-av{overflow:hidden}.vc-av img{width:100%;height:100%;object-fit:cover}
 .vc-nm{font-size:.95rem}.vc-empty{color:var(--muted)}
 .vc-ctl{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .vc-ctl .btn.danger{background:#c0392b;color:#fff;border-color:transparent}
@@ -2246,8 +2247,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-26b';
+const SITE_VERSION = '2026-10-26c';
 const SITE_CHANGES = [
+  '🖼️ عکس پروفایل هر نفر توی اتاق صحبت نمایش داده می‌شه',
   '🎙️💬 اتاق صحبت: نشانگر «صدات داره می‌ره؟» + چت کوچولو زیرش؛ و تماس سه‌نفره (مثلاً گوشی و لپ‌تاپ همزمان) هم درست کار می‌کنه',
   '🎙️ اتاق صحبت (مثل دیسکورد): توی منوی بالا «اتاق صحبت» رو بزنیم و با صدا با هم حرف بزنیم؛ میکروفون و قطع صدا هم داره',
   '🔀 شافل توی پلی‌لیست: با دکمهٔ «شافل» آهنگ‌ها تصادفی (بدون تکرار تا همه پخش بشن) پخش می‌شن',
