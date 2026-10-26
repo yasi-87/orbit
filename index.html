@@ -1554,6 +1554,18 @@ body.reading-mode .reading-content {
 .tbp-list{display:flex;flex-direction:column;max-height:min(55vh,420px);overflow-y:auto;min-width:200px;-webkit-overflow-scrolling:touch}
 .tbp-f{background:none;border:0;color:var(--text);text-align:right;padding:11px 12px;font-size:1.05rem;border-radius:8px;cursor:pointer}
 .tbp-f:hover{background:rgba(212,165,255,.18)}
+/* اتاق صحبت */
+.vc-room{display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center;padding:10px 0}
+.vc-st{font-size:1rem;color:var(--muted)}
+.vc-tiles{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;min-height:120px;align-items:center}
+.vc-tile{width:120px;padding:16px 8px;border-radius:20px;border:2px solid rgba(212,165,255,.25);background:rgba(255,255,255,.04);transition:border-color .2s,box-shadow .2s}
+.vc-tile.speak{border-color:#7CFC9A;box-shadow:0 0 0 4px rgba(124,252,154,.25)}
+.vc-tile.muted{opacity:.7}
+.vc-av{width:64px;height:64px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1a1030;font-weight:700}
+.vc-nm{font-size:.95rem}.vc-empty{color:var(--muted)}
+.vc-ctl{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.vc-ctl .btn.danger{background:#c0392b;color:#fff;border-color:transparent}
+.vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
 /* گوش دادن با هم */
 .together-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
 .together-bar .btn.on{background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1a1030;border-color:transparent}
@@ -1651,6 +1663,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
     <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
     <button class="nav-btn" data-screen="fun" onclick="showScreen('fun')">🎬 سرگرمی</button>
+    <button class="nav-btn" data-screen="voice" onclick="showScreen('voice')">🎙️ اتاق صحبت</button>
     <button class="nav-btn" data-screen="garden" onclick="showScreen('garden')">🌳 باغ</button>
     <button class="nav-btn" data-screen="puzzle" onclick="showScreen('puzzle')">🧩 پازل</button>
     <button class="nav-btn" data-screen="daily" onclick="showScreen('daily')">❓ سؤال روز</button>
@@ -1863,6 +1876,12 @@ input.seek:disabled{opacity:.4;cursor:default}
   </div>
 
   <!-- ============ باغ خاطره‌ها ============ -->
+  <div class="container screen" id="screen-voice">
+    <div class="chapters-header"><h2>🎙️ اتاق صحبتِ ما</h2></div>
+    <div id="voiceBox"></div>
+    <audio id="vcAudio" autoplay playsinline></audio>
+  </div>
+
   <div class="container screen" id="screen-garden">
     <div class="chapters-header"><h2>🌳 باغِ خاطره‌های ما</h2></div>
     <div id="gardenBox"></div>
@@ -1978,6 +1997,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 <script src="./classes.js" defer></script>
 <script src="./sync.js" defer></script>
 <script src="./together.js" defer></script>
+<script src="./voice.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -2129,6 +2149,7 @@ function showScreen(name) {
   if (name === 'fun') loadFun();
   if (name === 'notes') loadNotes();
   if (name === 'daily') loadDaily();
+  if (name === 'voice' && window.Voice) Voice.load();
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
   if (name === 'calendar') loadCalendar();
@@ -2213,8 +2234,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-25a';
+const SITE_VERSION = '2026-10-26a';
 const SITE_CHANGES = [
+  '🎙️ اتاق صحبت (مثل دیسکورد): توی منوی بالا «اتاق صحبت» رو بزنیم و با صدا با هم حرف بزنیم؛ میکروفون و قطع صدا هم داره',
   '🔀 شافل توی پلی‌لیست: با دکمهٔ «شافل» آهنگ‌ها تصادفی (بدون تکرار تا همه پخش بشن) پخش می‌شن',
   '🎧 گوش دادن با هم: توی بخش پلی‌لیست دکمهٔ «گوش دادن با هم» رو هر دومون بزنیم، پخش، توقف، جلو/عقب و عوض کردن آهنگ همزمان می‌شه',
   '🐱🎵 چند میوی جدید و دو ویس لالایی جدید به گربه اضافه شد؛ موقع خواب لالایی‌ها یکی‌یکی و پشت‌سرهم پخش می‌شن',
@@ -4908,7 +4930,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} if (window.ProfileSync) ProfileSync.push(); }
 
-const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar' };
+const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar', voice: 'voice' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {
