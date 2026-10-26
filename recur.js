@@ -276,6 +276,7 @@
     gallery: { icon: '🖼️', text: 'یه عکس/ویدیو به گالری اضافه کرد' },
     daily: { icon: '❓', text: 'به سؤال امروز جواب داد' },
     class: { icon: '🎓', text: 'یه کلاس اضافه کرد' },
+    voice: { icon: '🎙️', text: 'توی اتاق صحبت منتظرته، بیا!' },
     class_rem: { icon: '🎓', text: null },
     reminder: { icon: '⏰', text: null }
   };
