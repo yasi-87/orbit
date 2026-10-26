@@ -13,11 +13,30 @@
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
   const say = m => { if (typeof toast === 'function') toast(m); };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const okAv = s => (typeof s === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 30000) ? s : '';
+  let myThumb = '', thumbSrc = '';
+  /* عکس پروفایل کوچیک‌شده (۹۶ پیکسل) تا توی حضور (presence) جا بشه */
+  function makeThumb(cb) {
+    const src = (typeof userProfile !== 'undefined' && userProfile.avatar) || '';
+    if (!src) { myThumb = ''; thumbSrc = ''; return cb(); }
+    if (src === thumbSrc) return cb();
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = c.height = 96; const x = c.getContext('2d');
+        const s = Math.min(im.width, im.height), sx = (im.width - s) / 2, sy = (im.height - s) / 2;
+        x.drawImage(im, sx, sy, s, s, 0, 0, 96, 96); myThumb = okAv(c.toDataURL('image/jpeg', 0.7)); thumbSrc = src;
+      } catch (e) { myThumb = ''; }
+      cb();
+    };
+    im.onerror = () => { myThumb = ''; cb(); };
+    im.src = src;
+  }
   const sd = d => ({ type: d.type, sdp: d.sdp });
 
   function others() {
     let st = {}; try { st = ch.presenceState() || {}; } catch (e) {}
-    const r = []; Object.keys(st).forEach(k => { if (k !== ID) (st[k] || []).forEach(m => r.push({ id: k, name: (m && m.name) || 'اون یکی', inCall: !!(m && m.call) })); });
+    const r = []; Object.keys(st).forEach(k => { if (k !== ID) (st[k] || []).forEach(m => r.push({ id: k, name: (m && m.name) || 'اون یکی', av: okAv(m && m.av), inCall: !!(m && m.call) })); });
     return r;
   }
   const inCallOthers = () => (ch && subscribed ? others().filter(o => o.inCall) : []);
@@ -33,10 +52,10 @@
       : !o.length ? '⏳ منتظر اون یکی هستی…'
       : anyBad ? '🔴 اتصال با یکی‌تون برقرار نشد (شبکه جلوی ارتباط مستقیم رو گرفته)'
       : allOk ? '🟢 وصلید ' + dur : '⏳ در حال وصل شدن…';
-    const tile = (id, n, me, muted, bad) => `<div class="vc-tile${muted ? ' muted' : ''}" data-who="${me ? 'me' : 'peer'}" data-peer="${id}"><div class="vc-av">${esc((n || '?').trim().slice(0, 1))}</div><div class="vc-nm">${esc(n)}${muted ? ' 🔇' : ''}${bad ? ' ⚠️' : ''}</div>${me ? '<div class="vc-meter"><i id="vcMeter"></i></div>' : ''}</div>`;
+    const tile = (id, n, me, muted, bad, av) => `<div class="vc-tile${muted ? ' muted' : ''}" data-who="${me ? 'me' : 'peer'}" data-peer="${id}"><div class="vc-av">${av ? '<img alt="" src="' + esc(av) + '">' : esc((n || '?').trim().slice(0, 1))}</div><div class="vc-nm">${esc(n)}${muted ? ' 🔇' : ''}${bad ? ' ⚠️' : ''}</div>${me ? '<div class="vc-meter"><i id="vcMeter"></i></div>' : ''}</div>`;
     const sendTxt = joined ? (!micOn ? '🔇 میکروفونت خاموشه؛ صدایی نمی‌ره' : (o.length && allOk ? '<span id="vcOut">🎙️ صدات داره می‌ره…</span>' : '<span id="vcOut">🎙️ میکروفونت روشنه</span>')) : '';
     const html = `<div class="vc-room"><div class="vc-st" id="vcSt">${stTxt}</div>
-      <div class="vc-tiles">${joined ? tile(ID, nm(), true, !micOn) : ''}${o.map(x => tile(x.id, x.name, false, false, (peers[x.id] || {}).state === 'failed')).join('')}${!joined && !o.length ? '<div class="vc-empty">هنوز کسی توی اتاق نیست 🌙</div>' : ''}</div>
+      <div class="vc-tiles">${joined ? tile(ID, nm(), true, !micOn, false, (typeof userProfile !== 'undefined' && userProfile.avatar) || '') : ''}${o.map(x => tile(x.id, x.name, false, false, (peers[x.id] || {}).state === 'failed', x.av)).join('')}${!joined && !o.length ? '<div class="vc-empty">هنوز کسی توی اتاق نیست 🌙</div>' : ''}</div>
       ${joined ? '<div class="vc-out" id="vcOutBox">' + sendTxt + '</div>' : ''}
       <div class="vc-ctl">${joined
         ? `<button class="btn ${micOn ? '' : 'ghost'}" data-vc="mic" type="button">${micOn ? '🎙️ میکروفون روشنه' : '🔇 میکروفون خاموشه'}</button>
@@ -59,7 +78,7 @@
         .subscribe(s => { if (s === 'SUBSCRIBED') { subscribed = true; if (joined) track(); setTimeout(onPresence, 200); render(); renderChat(); } });
     } catch (e) { console.warn('voice off', e); ch = null; }
   }
-  const track = () => { try { ch.track({ name: nm(), call: joined }); } catch (e) {} };
+  const track = () => makeThumb(() => { try { ch.track({ name: nm(), call: joined, av: myThumb }); } catch (e) {} });
   function send(p, to) { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'vc', payload: Object.assign({ from: ID, to: to || '' }, p) }); } catch (e) {} }
 
   function onPresence() {
