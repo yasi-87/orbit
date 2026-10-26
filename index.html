@@ -1565,6 +1565,16 @@ body.reading-mode .reading-content {
 .vc-nm{font-size:.95rem}.vc-empty{color:var(--muted)}
 .vc-ctl{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .vc-ctl .btn.danger{background:#c0392b;color:#fff;border-color:transparent}
+.vc-out{font-size:.9rem;color:var(--muted)}
+.vc-meter{height:5px;border-radius:4px;background:rgba(255,255,255,.12);margin-top:8px;overflow:hidden}.vc-meter i{display:block;height:100%;width:0;background:#7CFC9A;transition:width .1s}
+.vc-chat{max-width:520px;margin:14px auto 0;border:1px solid rgba(212,165,255,.25);border-radius:16px;background:rgba(255,255,255,.03);overflow:hidden}
+.vc-chat-h{padding:10px 14px;border-bottom:1px solid rgba(212,165,255,.2);font-weight:600}
+.vc-chat-list{height:240px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.vc-msg{max-width:80%;padding:7px 11px;border-radius:14px;background:rgba(255,255,255,.07);align-self:flex-start;display:flex;flex-direction:column;gap:2px;word-break:break-word}
+.vc-msg.me{align-self:flex-end;background:rgba(212,165,255,.22)}
+.vc-msg b{font-size:.75rem;color:var(--gold)}.vc-msg i{font-size:.65rem;color:var(--muted);font-style:normal}
+.vc-chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(212,165,255,.2)}
+.vc-chat-form input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(212,165,255,.35);background:rgba(10,10,15,.5);color:inherit;font:inherit}
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
 /* گوش دادن با هم */
 .together-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
@@ -1879,7 +1889,9 @@ input.seek:disabled{opacity:.4;cursor:default}
   <div class="container screen" id="screen-voice">
     <div class="chapters-header"><h2>🎙️ اتاق صحبتِ ما</h2></div>
     <div id="voiceBox"></div>
-    <audio id="vcAudio" autoplay playsinline></audio>
+    <div id="vcAudios"></div>
+    <div class="vc-chat"><div class="vc-chat-h">💬 چت کوچولو</div><div class="vc-chat-list" id="vcChatList"></div>
+      <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form></div>
   </div>
 
   <div class="container screen" id="screen-garden">
@@ -2234,8 +2246,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-26a';
+const SITE_VERSION = '2026-10-26b';
 const SITE_CHANGES = [
+  '🎙️💬 اتاق صحبت: نشانگر «صدات داره می‌ره؟» + چت کوچولو زیرش؛ و تماس سه‌نفره (مثلاً گوشی و لپ‌تاپ همزمان) هم درست کار می‌کنه',
   '🎙️ اتاق صحبت (مثل دیسکورد): توی منوی بالا «اتاق صحبت» رو بزنیم و با صدا با هم حرف بزنیم؛ میکروفون و قطع صدا هم داره',
   '🔀 شافل توی پلی‌لیست: با دکمهٔ «شافل» آهنگ‌ها تصادفی (بدون تکرار تا همه پخش بشن) پخش می‌شن',
   '🎧 گوش دادن با هم: توی بخش پلی‌لیست دکمهٔ «گوش دادن با هم» رو هر دومون بزنیم، پخش، توقف، جلو/عقب و عوض کردن آهنگ همزمان می‌شه',

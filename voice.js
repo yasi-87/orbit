@@ -1,42 +1,50 @@
-/* 🎙️ اتاق صحبت (مثل دیسکورد): تماس صوتی بین ما دو نفر.
-   صدا مستقیم بین دو دستگاه (WebRTC) می‌ره؛ سیگنال‌دهی با Supabase Realtime (broadcast + presence)
-   و هیچ جدول یا SQL جدیدی لازم نیست. */
+/* 🎙️ اتاق صحبت (مثل دیسکورد): تماس صوتی و چت کوچولو.
+   صدا مستقیم بین دستگاه‌ها (WebRTC، هر جفت یک اتصال) می‌ره؛ سیگنال‌دهی و چت با Supabase Realtime
+   (broadcast + presence). هیچ جدول یا SQL جدیدی لازم نیست. بیشتر از دو نفر (مثلاً گوشی و لپ‌تاپ هر دو) هم کار می‌کنه. */
 (function () {
   'use strict';
   const ID = Math.random().toString(36).slice(2, 9);
   const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
-  let ch = null, subscribed = false, joined = false, pc = null, local = null, remoteStream = null, peerId = '', peerName = '';
-  let lastHtml = '', micOn = true, deaf = false, t0 = 0, tickT = null, actx = null, speakT = null, lastNotify = 0, state = 'idle', pending = [], remoteSet = false;
+  const CHAT_KEY = 'vc_chat';
+  let ch = null, subscribed = false, joined = false, local = null, micOn = true, deaf = false, t0 = 0, tickT = null, meterT = null, statT = null;
+  let lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
+  const peers = {};   // id -> { pc, stream, remoteSet, pending, state, an, lvl, name }
   const $ = id => document.getElementById(id);
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
   const say = m => { if (typeof toast === 'function') toast(m); };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const sd = d => ({ type: d.type, sdp: d.sdp });
 
-  /* ---------- رابط ---------- */
   function others() {
     let st = {}; try { st = ch.presenceState() || {}; } catch (e) {}
-    const r = []; Object.keys(st).forEach(k => { if (k !== ID) (st[k] || []).forEach(m => r.push({ id: k, name: (m && m.name) || 'اون یکی' })); });
+    const r = []; Object.keys(st).forEach(k => { if (k !== ID) (st[k] || []).forEach(m => r.push({ id: k, name: (m && m.name) || 'اون یکی', inCall: !!(m && m.call) })); });
     return r;
   }
+  const inCallOthers = () => (ch && subscribed ? others().filter(o => o.inCall) : []);
+
+  /* ---------- رابط ---------- */
   function render() {
     const box = $('voiceBox'); if (!box) return;
-    const o = ch && subscribed ? others() : [];
-    const mm = Math.floor((Date.now() - t0) / 60000), ss = Math.floor((Date.now() - t0) / 1000) % 60;
-    const dur = joined && t0 ? String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0') : '';
-    const stTxt = !joined ? (o.length ? '💞 ' + esc(o[0].name) + ' توی اتاقه؛ بیا تو!' : 'اتاق خالیه') :
-      state === 'connected' ? '🟢 وصلید ' + dur : state === 'failed' ? '🔴 اتصال برقرار نشد (شبکه جلوی ارتباط مستقیم رو گرفته)' :
-      o.length ? '⏳ در حال وصل شدن…' : '⏳ منتظر اون یکی هستی…';
-    const tile = (n, me, speaking, muted) => `<div class="vc-tile${speaking ? ' speak' : ''}${muted ? ' muted' : ''}" data-who="${me ? 'me' : 'peer'}"><div class="vc-av">${esc((n || '?').trim().slice(0, 1))}</div><div class="vc-nm">${esc(n)}${muted ? ' 🔇' : ''}</div></div>`;
+    const o = inCallOthers();
+    const sec = Math.floor((Date.now() - t0) / 1000), dur = joined && t0 ? String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') : '';
+    const states = o.map(x => (peers[x.id] || {}).state || 'connecting');
+    const allOk = o.length && states.every(s => s === 'connected'), anyBad = states.some(s => s === 'failed');
+    const stTxt = !joined ? (o.length ? '💞 ' + esc(o.map(x => x.name).join(' و ')) + ' توی اتاقه؛ بیا تو!' : 'اتاق خالیه')
+      : !o.length ? '⏳ منتظر اون یکی هستی…'
+      : anyBad ? '🔴 اتصال با یکی‌تون برقرار نشد (شبکه جلوی ارتباط مستقیم رو گرفته)'
+      : allOk ? '🟢 وصلید ' + dur : '⏳ در حال وصل شدن…';
+    const tile = (id, n, me, muted, bad) => `<div class="vc-tile${muted ? ' muted' : ''}" data-who="${me ? 'me' : 'peer'}" data-peer="${id}"><div class="vc-av">${esc((n || '?').trim().slice(0, 1))}</div><div class="vc-nm">${esc(n)}${muted ? ' 🔇' : ''}${bad ? ' ⚠️' : ''}</div>${me ? '<div class="vc-meter"><i id="vcMeter"></i></div>' : ''}</div>`;
+    const sendTxt = joined ? (!micOn ? '🔇 میکروفونت خاموشه؛ صدایی نمی‌ره' : (o.length && allOk ? '<span id="vcOut">🎙️ صدات داره می‌ره…</span>' : '<span id="vcOut">🎙️ میکروفونت روشنه</span>')) : '';
     const html = `<div class="vc-room"><div class="vc-st" id="vcSt">${stTxt}</div>
-      <div class="vc-tiles">${joined ? tile(nm(), true, false, !micOn) : ''}${(joined ? o : o).map(x => tile(x.name, false, false, false)).join('')}${!joined && !o.length ? '<div class="vc-empty">هنوز کسی توی اتاق نیست 🌙</div>' : ''}</div>
+      <div class="vc-tiles">${joined ? tile(ID, nm(), true, !micOn) : ''}${o.map(x => tile(x.id, x.name, false, false, (peers[x.id] || {}).state === 'failed')).join('')}${!joined && !o.length ? '<div class="vc-empty">هنوز کسی توی اتاق نیست 🌙</div>' : ''}</div>
+      ${joined ? '<div class="vc-out" id="vcOutBox">' + sendTxt + '</div>' : ''}
       <div class="vc-ctl">${joined
         ? `<button class="btn ${micOn ? '' : 'ghost'}" data-vc="mic" type="button">${micOn ? '🎙️ میکروفون روشنه' : '🔇 میکروفون خاموشه'}</button>
            <button class="btn ghost" data-vc="deaf" type="button">${deaf ? '🔈 صدا رو باز کن' : '🔊 قطع صدای طرف مقابل'}</button>
            <button class="btn danger" data-vc="leave" type="button">📴 خروج از اتاق</button>`
         : `<button class="btn" data-vc="join" type="button">🎙️ ورود به اتاق صحبت</button>`}</div>
-      <p class="vc-note">برای صحبت، مرورگر اجازهٔ میکروفون می‌خواد. بهتره هر دو هدفون بزنید تا صدا برگشت نخوره.</p></div>`;
+      <p class="vc-note">برای صحبت، مرورگر اجازهٔ میکروفون می‌خواد. بهتره هدفون بزنید تا صدا برگشت نخوره.</p></div>`;
     if (html !== lastHtml) { lastHtml = html; box.innerHTML = html; }
-    const a = $('vcAudio'); if (a && remoteStream) { a.srcObject = remoteStream; a.muted = deaf; const p = a.play(); if (p && p.catch) p.catch(() => {}); }
     const nb = document.querySelector('.nav-btn[data-screen="voice"]'); if (nb) nb.textContent = joined ? '🎙️ در تماس' : '🎙️ اتاق صحبت';
   }
 
@@ -46,69 +54,95 @@
     try {
       ch = dbClient.channel('voice-room', { config: { broadcast: { self: false }, presence: { key: ID } } });
       ch.on('broadcast', { event: 'vc' }, m => onSignal(m && m.payload))
+        .on('broadcast', { event: 'chat' }, m => onChat(m && m.payload))
         .on('presence', { event: 'sync' }, onPresence)
-        .subscribe(s => { if (s === 'SUBSCRIBED') { subscribed = true; if (joined) try { ch.track({ name: nm() }); } catch (e) {} setTimeout(onPresence, 200); render(); } });
+        .subscribe(s => { if (s === 'SUBSCRIBED') { subscribed = true; if (joined) track(); setTimeout(onPresence, 200); render(); renderChat(); } });
     } catch (e) { console.warn('voice off', e); ch = null; }
   }
-  const sd = d => ({ type: d.type, sdp: d.sdp });
-  function send(p) { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'vc', payload: Object.assign({ from: ID }, p) }); } catch (e) {} }
+  const track = () => { try { ch.track({ name: nm(), call: joined }); } catch (e) {} };
+  function send(p, to) { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'vc', payload: Object.assign({ from: ID, to: to || '' }, p) }); } catch (e) {} }
 
   function onPresence() {
     if (!ch) return;
-    const o = others();
+    const o = inCallOthers();
     if (joined) {
-      if (o.length && !pc) { peerId = o.map(x => x.id).sort()[0]; peerName = o[0].name; if (ID < peerId) startCall(true); else startCall(false); }
-      if (!o.length && pc) { closePc(); state = 'idle'; say('📴 اون یکی از اتاق رفت'); }
+      o.forEach(x => { if (!peers[x.id]) startPeer(x.id, x.name); else peers[x.id].name = x.name; });
+      Object.keys(peers).forEach(id => { if (!o.some(x => x.id === id)) { const nmx = peers[id].name; closePeer(id); say('📴 ' + nmx + ' از اتاق رفت'); } });
     }
     render();
   }
 
-  async function startCall(offerer) {
-    if (pc || !local) return;
-    state = 'connecting'; remoteSet = false; pending = [];
-    pc = new RTCPeerConnection(ICE);
+  function startPeer(id, name) {
+    if (peers[id] || !local) return;
+    const P = peers[id] = { pc: new RTCPeerConnection(ICE), state: 'connecting', remoteSet: false, pending: [], name, stream: null, an: null, lvl: 0 };
+    const pc = P.pc;
     local.getTracks().forEach(t => pc.addTrack(t, local));
-    pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
-    pc.ontrack = e => { remoteStream = e.streams[0] || new MediaStream([e.track]); watch(remoteStream); render(); };
+    pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }, id); };
+    pc.ontrack = e => { P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
     pc.onconnectionstatechange = () => {
-      const s = pc && pc.connectionState;
-      if (s === 'connected') { state = 'connected'; say('💞 وصل شدین! حرف بزنین'); }
-      else if (s === 'failed') state = 'failed';
-      else if (s === 'disconnected') state = 'connecting';
+      const s = pc.connectionState;
+      if (s === 'connected') { if (P.state !== 'connected') say('💞 با ' + P.name + ' وصل شدی! حرف بزنین'); P.state = 'connected'; }
+      else if (s === 'failed') P.state = 'failed'; else if (s === 'disconnected' || s === 'connecting') P.state = 'connecting';
       render();
     };
-    if (offerer) {
-      try { const o = await pc.createOffer(); await pc.setLocalDescription(o); send({ t: 'offer', sdp: sd(pc.localDescription) }); } catch (e) { console.warn(e); }
-    } else send({ t: 'ready' });
+    if (ID < id) makeOffer(id); else send({ t: 'ready' }, id);
     render();
   }
+  async function makeOffer(id) {
+    const P = peers[id]; if (!P) return;
+    try { const o = await P.pc.createOffer(); await P.pc.setLocalDescription(o); send({ t: 'offer', sdp: sd(P.pc.localDescription) }, id); } catch (e) { console.warn(e); }
+  }
   async function onSignal(p) {
-    if (!p || p.from === ID || !joined) return;
+    if (!p || p.from === ID || !joined || (p.to && p.to !== ID)) return;
+    const id = p.from;
     try {
-      if (p.t === 'ready') { if (!pc) await startCall(ID < p.from); else if (ID < p.from && pc.signalingState === 'stable' && !pc.remoteDescription) { const o = await pc.createOffer(); await pc.setLocalDescription(o); send({ t: 'offer', sdp: sd(pc.localDescription) }); } return; }
-      if (p.t === 'offer') {
-        if (!pc) await startCall(false);
-        await pc.setRemoteDescription(p.sdp); remoteSet = true;
-        const a = await pc.createAnswer(); await pc.setLocalDescription(a); send({ t: 'answer', sdp: sd(pc.localDescription) }); flushIce();
-      } else if (p.t === 'answer' && pc) { await pc.setRemoteDescription(p.sdp); remoteSet = true; flushIce(); }
-      else if (p.t === 'ice' && pc) { if (remoteSet) await pc.addIceCandidate(p.c).catch(() => {}); else pending.push(p.c); }
-      else if (p.t === 'bye') { closePc(); state = 'idle'; render(); }
+      if (p.t === 'bye') { closePeer(id); render(); return; }
+      if (!peers[id]) { const o = others().find(x => x.id === id); startPeer(id, o ? o.name : 'اون یکی'); }
+      const P = peers[id]; if (!P) return;
+      if (p.t === 'ready') { if (ID < id && !P.pc.remoteDescription && P.pc.signalingState === 'stable') await makeOffer(id); }
+      else if (p.t === 'offer') {
+        await P.pc.setRemoteDescription(p.sdp); P.remoteSet = true;
+        const a = await P.pc.createAnswer(); await P.pc.setLocalDescription(a); send({ t: 'answer', sdp: sd(P.pc.localDescription) }, id); flushIce(P);
+      } else if (p.t === 'answer') { await P.pc.setRemoteDescription(p.sdp); P.remoteSet = true; flushIce(P); }
+      else if (p.t === 'ice') { if (P.remoteSet) await P.pc.addIceCandidate(p.c).catch(() => {}); else P.pending.push(p.c); }
     } catch (e) { console.warn('voice signal', e); }
   }
-  function flushIce() { const q = pending; pending = []; q.forEach(c => pc && pc.addIceCandidate(c).catch(() => {})); }
-  function closePc() { try { if (pc) { pc.onconnectionstatechange = null; pc.close(); } } catch (e) {} pc = null; remoteStream = null; remoteSet = false; pending = []; peerId = ''; }
+  function flushIce(P) { const q = P.pending; P.pending = []; q.forEach(c => P.pc.addIceCandidate(c).catch(() => {})); }
+  function closePeer(id) {
+    const P = peers[id]; if (!P) return;
+    try { P.pc.onconnectionstatechange = null; P.pc.close(); } catch (e) {}
+    const a = $('vcA_' + id); if (a) a.remove();
+    delete peers[id];
+  }
+  function attachAudio(id, stream) {
+    let a = $('vcA_' + id);
+    if (!a) { a = document.createElement('audio'); a.id = 'vcA_' + id; a.autoplay = true; a.setAttribute('playsinline', ''); ($('vcAudios') || document.body).appendChild(a); }
+    a.srcObject = stream; a.muted = deaf; const p = a.play(); if (p && p.catch) p.catch(() => {});
+  }
 
-  /* نشانگر «دارن حرف می‌زنن» */
-  function watch(stream) {
-    try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      const an = actx.createAnalyser(); an.fftSize = 512; actx.createMediaStreamSource(stream).connect(an);
-      const buf = new Uint8Array(an.fftSize); clearInterval(speakT);
-      speakT = setInterval(() => {
-        an.getByteTimeDomainData(buf); let m = 0; for (let i = 0; i < buf.length; i++) m = Math.max(m, Math.abs(buf[i] - 128));
-        const t = document.querySelector('.vc-tile[data-who="peer"]'); if (t) t.classList.toggle('speak', m > 12 && !deaf);
-      }, 150);
-    } catch (e) {}
+  /* ---------- نشانگرها: «دارن حرف می‌زنن» و «صدای من داره می‌ره» ---------- */
+  function analyser(stream) {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume().catch(() => {});
+    const an = actx.createAnalyser(); an.fftSize = 512; actx.createMediaStreamSource(stream).connect(an); return an;
+  }
+  const level = an => { const b = new Uint8Array(an.fftSize); an.getByteTimeDomainData(b); let m = 0; for (let i = 0; i < b.length; i++) m = Math.max(m, Math.abs(b[i] - 128)); return m; };
+  function watch(P) { try { P.an = analyser(P.stream); } catch (e) {} }
+  function startMeters() {
+    clearInterval(meterT);
+    try { myAn = analyser(local); } catch (e) { myAn = null; }
+    meterT = setInterval(() => {
+      myLvl = myAn && micOn ? level(myAn) : 0;
+      const m = $('vcMeter'); if (m) m.style.width = Math.min(100, myLvl * 4) + '%';
+      const me = document.querySelector('.vc-tile[data-who="me"]'); if (me) me.classList.toggle('speak', myLvl > 12);
+      Object.keys(peers).forEach(id => { const P = peers[id], t = document.querySelector('.vc-tile[data-peer="' + id + '"]'); if (t && P.an) t.classList.toggle('speak', !deaf && level(P.an) > 12); });
+    }, 120);
+    clearInterval(statT);
+    statT = setInterval(async () => {   // آیا بایت‌های صدای من واقعاً داره ارسال می‌شه؟
+      let sent = 0; for (const id of Object.keys(peers)) { try { (await peers[id].pc.getStats()).forEach(r => { if (r.type === 'outbound-rtp' && r.kind === 'audio') sent += r.bytesSent || 0; }); } catch (e) {} }
+      sending = sent > sentPrev && micOn; sentPrev = sent;
+      const o = $('vcOut'); if (o && micOn) o.textContent = Object.keys(peers).length ? (sending ? (myLvl > 12 ? '✅ صدات داره می‌رسه' : '✅ وصلی؛ ولی صدایی از میکروفونت نمیاد (حرف بزن)') : '⚠️ صدایی نمی‌ره') : '🎙️ میکروفونت روشنه';
+    }, 1500);
   }
 
   /* ---------- ورود / خروج ---------- */
@@ -117,26 +151,49 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { say('⚠️ این مرورگر از میکروفون پشتیبانی نمی‌کنه (یا سایت امن نیست)'); return; }
     try { local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
     catch (e) { say('⚠️ اجازهٔ میکروفون داده نشد؛ از تنظیمات مرورگر بازش کن'); return; }
-    joined = true; micOn = true; deaf = false; t0 = Date.now(); state = 'idle';
+    joined = true; micOn = true; deaf = false; t0 = Date.now(); sentPrev = 0;
     if (!ch) connectChannel();
-    if (ch && subscribed) { try { ch.track({ name: nm() }); } catch (e) {} setTimeout(onPresence, 150); }
-    clearInterval(tickT); tickT = setInterval(() => { const s = $('vcSt'); if (s && joined && state === 'connected') render(); }, 1000);
-    if (!others().length && Date.now() - lastNotify > 10 * 60000) { lastNotify = Date.now(); try { notify('voice', 'اتاق صحبت', ''); } catch (e) {} }
+    if (ch && subscribed) { track(); setTimeout(onPresence, 150); }
+    startMeters();
+    clearInterval(tickT); tickT = setInterval(() => { if (joined && Object.values(peers).some(p => p.state === 'connected')) render(); }, 1000);
+    if (!inCallOthers().length && Date.now() - lastNotify > 10 * 60000) { lastNotify = Date.now(); try { notify('voice', 'اتاق صحبت', ''); } catch (e) {} }
     render();
   }
   function leave(quiet) {
     if (!joined) return;
-    send({ t: 'bye' }); closePc();
+    send({ t: 'bye' }); Object.keys(peers).forEach(closePeer);
     try { if (local) local.getTracks().forEach(t => t.stop()); } catch (e) {} local = null;
-    try { if (ch) ch.untrack(); } catch (e) {}
-    joined = false; state = 'idle'; clearInterval(tickT); clearInterval(speakT);
+    joined = false; track();
+    clearInterval(tickT); clearInterval(meterT); clearInterval(statT);
     if (!quiet) say('📴 از اتاق صحبت خارج شدی');
     render();
   }
   function toggleMic() { micOn = !micOn; if (local) local.getAudioTracks().forEach(t => { t.enabled = micOn; }); render(); }
-  function toggleDeaf() { deaf = !deaf; const a = $('vcAudio'); if (a) a.muted = deaf; render(); }
+  function toggleDeaf() { deaf = !deaf; document.querySelectorAll('#vcAudios audio').forEach(a => { a.muted = deaf; }); render(); }
 
-  function load() { connectChannel(); render(); }
+  /* ---------- 💬 چت کوچولو ---------- */
+  let msgs = [];
+  try { msgs = JSON.parse(sessionStorage.getItem(CHAT_KEY) || '[]'); } catch (e) {}
+  const saveMsgs = () => { try { sessionStorage.setItem(CHAT_KEY, JSON.stringify(msgs.slice(-60))); } catch (e) {} };
+  function renderChat() {
+    const list = $('vcChatList'); if (!list) return;
+    list.innerHTML = msgs.length ? msgs.slice(-60).map(m => `<div class="vc-msg${m.me ? ' me' : ''}"><b>${esc(m.name)}</b><span>${esc(m.text)}</span><i>${new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</i></div>`).join('') : '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
+    list.scrollTop = list.scrollHeight;
+  }
+  function onChat(p) {
+    if (!p || p.from === ID || !p.text) return;
+    msgs.push({ name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text).slice(0, 500), ts: p.ts || Date.now(), me: false }); saveMsgs(); renderChat();
+    if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice') say('💬 ' + (p.name || '') + ': ' + String(p.text).slice(0, 40));
+  }
+  function sendChat() {
+    const inp = $('vcChatInput'); if (!inp) return; const text = inp.value.trim().slice(0, 500); if (!text) return;
+    if (!ch || !subscribed) { say('⏳ هنوز وصل نشده؛ چند لحظه دیگه'); return; }
+    const p = { from: ID, name: nm(), text, ts: Date.now() };
+    try { ch.send({ type: 'broadcast', event: 'chat', payload: p }); } catch (e) {}
+    msgs.push({ name: nm(), text, ts: p.ts, me: true }); saveMsgs(); renderChat(); inp.value = ''; inp.focus();
+  }
+
+  function load() { connectChannel(); render(); renderChat(); }
   function init() {
     const box = $('voiceBox'); if (!box) return;
     box.addEventListener('click', e => {
@@ -144,9 +201,10 @@
       const a = b.dataset.vc;
       if (a === 'join') join(); else if (a === 'leave') leave(); else if (a === 'mic') toggleMic(); else if (a === 'deaf') toggleDeaf();
     });
+    const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     window.addEventListener('pagehide', () => leave(true));
-    render();
+    render(); renderChat();
   }
-  window.Voice = { _pc: () => pc, load, join, leave, init, _state: () => ({ joined, state, micOn, deaf, peer: peerId, id: ID }) };
+  window.Voice = { _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
