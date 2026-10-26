@@ -190,6 +190,22 @@
   function toggleMic() { micOn = !micOn; if (local) local.getAudioTracks().forEach(t => { t.enabled = micOn; }); render(); }
   function toggleDeaf() { deaf = !deaf; document.querySelectorAll('#vcAudios audio').forEach(a => { a.muted = deaf; }); render(); }
 
+  /* 🔔 صدای کوچولوی پیام: ارسال = «پاپ» نرم، دریافت = دو نت ملایم */
+  function blip(kind) {
+    try {
+      if (typeof muted !== 'undefined' && muted === true) return;
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume().catch(() => {});
+      const t = actx.currentTime, notes = kind === 'send' ? [[880, 0, .09], [1318, .07, .12]] : [[988, 0, .12], [1318, .11, .16]];
+      notes.forEach(([f, d, len]) => {
+        const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.14, t + d + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + d + len);
+        o.connect(g).connect(actx.destination); o.start(t + d); o.stop(t + d + len + 0.02);
+      });
+      window.__blips = (window.__blips || []).concat(kind);
+    } catch (e) {}
+  }
+
   /* ---------- 💬 چت کوچولو ---------- */
   let msgs = [];
   try { msgs = JSON.parse(sessionStorage.getItem(CHAT_KEY) || '[]'); } catch (e) {}
@@ -201,7 +217,7 @@
   }
   function onChat(p) {
     if (!p || p.from === ID || !p.text) return;
-    msgs.push({ name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text).slice(0, 500), ts: p.ts || Date.now(), me: false }); saveMsgs(); renderChat();
+    msgs.push({ name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text).slice(0, 500), ts: p.ts || Date.now(), me: false }); saveMsgs(); renderChat(); blip('recv');
     if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice') say('💬 ' + (p.name || '') + ': ' + String(p.text).slice(0, 40));
   }
   function sendChat() {
@@ -209,7 +225,7 @@
     if (!ch || !subscribed) { say('⏳ هنوز وصل نشده؛ چند لحظه دیگه'); return; }
     const p = { from: ID, name: nm(), text, ts: Date.now() };
     try { ch.send({ type: 'broadcast', event: 'chat', payload: p }); } catch (e) {}
-    msgs.push({ name: nm(), text, ts: p.ts, me: true }); saveMsgs(); renderChat(); inp.value = ''; inp.focus();
+    msgs.push({ name: nm(), text, ts: p.ts, me: true }); saveMsgs(); renderChat(); blip('send'); inp.value = ''; inp.focus();
   }
 
   function load() { connectChannel(); render(); renderChat(); }
