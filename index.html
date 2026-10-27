@@ -2252,8 +2252,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-27a';
+const SITE_VERSION = '2026-10-27b';
 const SITE_CHANGES = [
+  '💾 آهنگ‌های پلی‌لیست بعد از اولین پخش توی حافظهٔ مرورگر ذخیره می‌شن و دفعه‌های بعد بدون دانلود (حتی بدون اینترنت) پخش می‌شن',
   '📞 اتاق صحبت: لیست همهٔ تماس‌هامون با مدت هر کدوم، «مجموع تا پایان همون تماس»، و جمع کل ساعت‌هایی که با هم حرف زدیم (بلوک ۲۰ SQL لازمه)',
   '🔔 چت اتاق صحبت: موقع فرستادن پیام یه صدای کوچولو می‌ره و موقع رسیدن پیام هم یه صدای ملایم میاد',
   '🖼️ عکس پروفایل هر نفر توی اتاق صحبت نمایش داده می‌شه',
@@ -3508,6 +3509,7 @@ async function removeSong(id) {
     if (storageErr) console.warn('⚠️ خطا در حذف فایل از Storage:', storageErr);
   }
   if (song && song.cover_url) removeCoverFile(song.cover_url);
+  try { if (song && navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'forget-audio', url: song.storage_url }); } catch (e) {}
 
   // بعد رکورد رو از دیتابیس پاک کن
   const ok = await songDelete(id);
@@ -5197,6 +5199,7 @@ document.addEventListener('click', e => {
 try {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}   // تا مرورگر کش آهنگ‌ها رو راحت پاک نکنه
     navigator.serviceWorker.addEventListener('message', e => {
       if (e.data && e.data.type === 'open-notifs' && document.getElementById('app').classList.contains('active')) { fetchNotifications(false); openNotifPanel(); }
     });
