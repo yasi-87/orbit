@@ -245,3 +245,16 @@ alter table public.profiles enable row level security;
 drop policy if exists "profiles_public_all" on public.profiles;
 create policy "profiles_public_all" on public.profiles
   for all to anon, authenticated using (true) with check (true);
+
+-- 20) تاریخچهٔ تماس‌های اتاق صحبت (چند ساعت با هم حرف زدیم)
+create table if not exists public.calls (
+  id           text primary key,
+  started_at   bigint,
+  ended_at     bigint,
+  duration_sec int,
+  names        text
+);
+alter table public.calls enable row level security;
+drop policy if exists "calls_public_all" on public.calls;
+create policy "calls_public_all" on public.calls
+  for all to anon, authenticated using (true) with check (true);

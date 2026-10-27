@@ -102,7 +102,7 @@
       const s = pc.connectionState;
       if (s === 'connected') { if (P.state !== 'connected') say('💞 با ' + P.name + ' وصل شدی! حرف بزنین'); P.state = 'connected'; }
       else if (s === 'failed') P.state = 'failed'; else if (s === 'disconnected' || s === 'connecting') P.state = 'connecting';
-      render();
+      trackCall(); render();
     };
     if (ID < id) makeOffer(id); else send({ t: 'ready' }, id);
     render();
@@ -116,6 +116,7 @@
     const id = p.from;
     try {
       if (p.t === 'bye') { closePeer(id); render(); return; }
+      if (p.t === 'cid') { if (curCall && !curCall.id && p.id) { curCall.id = p.id; curCall.start = Number(p.start) || curCall.start; saveCall(false); } return; }
       if (!peers[id]) { const o = others().find(x => x.id === id); startPeer(id, o ? o.name : 'اون یکی'); }
       const P = peers[id]; if (!P) return;
       if (p.t === 'ready') { if (ID < id && !P.pc.remoteDescription && P.pc.signalingState === 'stable') await makeOffer(id); }
@@ -131,7 +132,7 @@
     const P = peers[id]; if (!P) return;
     try { P.pc.onconnectionstatechange = null; P.pc.close(); } catch (e) {}
     const a = $('vcA_' + id); if (a) a.remove();
-    delete peers[id];
+    delete peers[id]; trackCall();
   }
   function attachAudio(id, stream) {
     let a = $('vcA_' + id);
@@ -180,7 +181,7 @@
   }
   function leave(quiet) {
     if (!joined) return;
-    send({ t: 'bye' }); Object.keys(peers).forEach(closePeer);
+    send({ t: 'bye' }); const fin = curCall ? finishCall() : null; Object.keys(peers).forEach(closePeer);
     try { if (local) local.getTracks().forEach(t => t.stop()); } catch (e) {} local = null;
     joined = false; track();
     clearInterval(tickT); clearInterval(meterT); clearInterval(statT);
@@ -189,6 +190,57 @@
   }
   function toggleMic() { micOn = !micOn; if (local) local.getAudioTracks().forEach(t => { t.enabled = micOn; }); render(); }
   function toggleDeaf() { deaf = !deaf; document.querySelectorAll('#vcAudios audio').forEach(a => { a.muted = deaf; }); render(); }
+
+  /* ---------- 📞 تاریخچهٔ تماس‌ها ---------- */
+  const fa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+  function fmtDur(sec) {
+    sec = Math.max(0, Math.round(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+    if (h) return fa(h) + ' ساعت' + (m ? ' و ' + fa(m) + ' دقیقه' : '');
+    if (m) return fa(m) + ' دقیقه' + (s ? ' و ' + fa(s) + ' ثانیه' : '');
+    return fa(s) + ' ثانیه';
+  }
+  let finishing = false, curCall = null, callPending = false, callT = null, warnedCalls = false, callRows = [];
+  const connectedIds = () => Object.keys(peers).filter(k => peers[k].state === 'connected');
+  function saveCall(final) {
+    const c = curCall; if (!c || !c.id) return Promise.resolve();
+    const now = Date.now(), dur = Math.floor((now - c.start) / 1000);
+    if (final && dur < 5) return Promise.resolve();
+    return dbClient.from('calls').upsert({ id: c.id, started_at: c.start, ended_at: now, duration_sec: dur, names: c.names.join(' و ') }).then(r => {
+      if (r && r.error && /calls|relation|schema cache/i.test(r.error.message || '') && !warnedCalls) { warnedCalls = true; say('⚠️ برای ثبت تاریخچهٔ تماس‌ها، بلوک ۲۰ فایل SQL رو توی Supabase اجرا کن'); }
+    }).catch(() => {});
+  }
+  function trackCall() {
+    const ids = connectedIds();
+    if (ids.length && !curCall && joined) {
+      curCall = { id: null, start: Date.now(), names: [nm()].concat(ids.map(k => peers[k].name)) };
+      const first = ids.slice().sort()[0];
+      if (ID < first) { curCall.id = 'call_' + curCall.start + '_' + ID; send({ t: 'cid', id: curCall.id, start: curCall.start }, first); }
+      clearInterval(callT); callT = setInterval(() => { if (curCall) { curCall.names = Array.from(new Set(curCall.names.concat(connectedIds().map(k => peers[k].name)))); saveCall(false); } }, 30000);
+      setTimeout(() => saveCall(false), 1500);
+    } else if (!ids.length && curCall) finishCall();
+  }
+  async function finishCall() {
+    const c = curCall; clearInterval(callT);
+    if (!c || finishing) return;
+    finishing = true; await saveCall(true); curCall = null; finishing = false;
+    const dur = Math.floor((Date.now() - c.start) / 1000);
+    await loadCalls();
+    if (dur >= 5) { const tot = callRows.reduce((a, r) => a + (r.duration_sec || 0), 0); say('📞 تماس تموم شد: ' + fmtDur(dur) + ' · در مجموع ' + fmtDur(Math.max(tot, dur)) + ' با هم حرف زدیم 💞'); }
+  }
+  async function loadCalls() {
+    const box = $('vcHistory'); if (!box) return;
+    let r; try { r = await dbClient.from('calls').select('*').order('started_at', { ascending: false }).limit(300); } catch (e) { r = { error: e }; }
+    if (r && r.error) { box.innerHTML = '<div class="vc-empty">برای دیدن تاریخچهٔ تماس‌ها، بلوک ۲۰ فایل SQL رو یک بار توی Supabase اجرا کن.</div>'; return; }
+    callRows = (r.data || []).filter(x => x && x.duration_sec > 0);
+    const asc = callRows.slice().sort((a, b) => a.started_at - b.started_at); let cum = 0; const cumById = {};
+    asc.forEach(x => { cum += x.duration_sec; cumById[x.id] = cum; });
+    const items = callRows.map(x => {
+      let when = ''; try { const w = Recur.epochToWall(x.started_at); when = Recur.fmtJalaliShort(w.iso) + ' · ساعت ' + fa(w.hhmm); } catch (e) {}
+      return `<div class="vc-call"><div class="vc-call-t">📞 ${esc(when)}</div><div class="vc-call-d">⏱️ ${esc(fmtDur(x.duration_sec))}${x.names ? ' · ' + esc(x.names) : ''}</div><div class="vc-call-c">📊 مجموع تا پایان این تماس: <b>${esc(fmtDur(cumById[x.id] || 0))}</b></div></div>`;
+    }).join('');
+    box.innerHTML = '<div class="vc-chat-h">📞 تماس‌های ما</div><div class="vc-calls">' + (items || '<div class="vc-empty">هنوز تماسی ثبت نشده 🌙</div>') + '</div>' +
+      (callRows.length ? '<div class="vc-total">در مجموع <b>' + esc(fmtDur(cum)) + '</b> با هم حرف زدیم 💞 <span>(' + fa(callRows.length) + ' تماس)</span></div>' : '');
+  }
 
   /* 🔔 صدای کوچولوی پیام: ارسال = «پاپ» نرم، دریافت = دو نت ملایم */
   function blip(kind) {
@@ -228,7 +280,7 @@
     msgs.push({ name: nm(), text, ts: p.ts, me: true }); saveMsgs(); renderChat(); blip('send'); inp.value = ''; inp.focus();
   }
 
-  function load() { connectChannel(); render(); renderChat(); }
+  function load() { connectChannel(); render(); renderChat(); loadCalls(); }
   function init() {
     const box = $('voiceBox'); if (!box) return;
     box.addEventListener('click', e => {
@@ -240,6 +292,6 @@
     window.addEventListener('pagehide', () => leave(true));
     render(); renderChat();
   }
-  window.Voice = { _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
+  window.Voice = { _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
