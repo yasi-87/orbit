@@ -45,7 +45,7 @@
   function render() {
     const box = $('voiceBox'); if (!box) return;
     const o = inCallOthers();
-    const sec = Math.floor((Date.now() - t0) / 1000), dur = joined && t0 ? String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') : '';
+    const sec = Math.floor((Date.now() - (curCall ? curCall.start : Date.now())) / 1000), dur = joined && curCall ? String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') : '';
     const states = o.map(x => (peers[x.id] || {}).state || 'connecting');
     const allOk = o.length && states.every(s => s === 'connected'), anyBad = states.some(s => s === 'failed');
     const stTxt = !joined ? (o.length ? '💞 ' + esc(o.map(x => x.name).join(' و ')) + ' توی اتاقه؛ بیا تو!' : 'اتاق خالیه')
