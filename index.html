@@ -1576,6 +1576,10 @@ body.reading-mode .reading-content {
 .vc-msg b{font-size:.75rem;color:var(--gold)}.vc-msg i{font-size:.65rem;color:var(--muted);font-style:normal}
 .vc-chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(212,165,255,.2)}
 .vc-chat-form input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(212,165,255,.35);background:rgba(10,10,15,.5);color:inherit;font:inherit}
+.vc-calls{max-height:300px;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+.vc-call{padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;flex-direction:column;gap:3px;font-size:.88rem}
+.vc-call-t{font-weight:600}.vc-call-c{color:var(--gold)}.vc-call-d{color:var(--muted)}
+.vc-total{padding:12px 14px;border-top:1px solid rgba(212,165,255,.2);text-align:center;font-size:1rem}.vc-total span{color:var(--muted);font-size:.8rem}
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
 /* گوش دادن با هم */
 .together-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
@@ -1891,6 +1895,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div class="chapters-header"><h2>🎙️ اتاق صحبتِ ما</h2></div>
     <div id="voiceBox"></div>
     <div id="vcAudios"></div>
+    <div class="vc-chat vc-hist" id="vcHistory"></div>
     <div class="vc-chat"><div class="vc-chat-h">💬 چت کوچولو</div><div class="vc-chat-list" id="vcChatList"></div>
       <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form></div>
   </div>
@@ -2247,8 +2252,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-26d';
+const SITE_VERSION = '2026-10-27a';
 const SITE_CHANGES = [
+  '📞 اتاق صحبت: لیست همهٔ تماس‌هامون با مدت هر کدوم، «مجموع تا پایان همون تماس»، و جمع کل ساعت‌هایی که با هم حرف زدیم (بلوک ۲۰ SQL لازمه)',
   '🔔 چت اتاق صحبت: موقع فرستادن پیام یه صدای کوچولو می‌ره و موقع رسیدن پیام هم یه صدای ملایم میاد',
   '🖼️ عکس پروفایل هر نفر توی اتاق صحبت نمایش داده می‌شه',
   '🎙️💬 اتاق صحبت: نشانگر «صدات داره می‌ره؟» + چت کوچولو زیرش؛ و تماس سه‌نفره (مثلاً گوشی و لپ‌تاپ همزمان) هم درست کار می‌کنه',
