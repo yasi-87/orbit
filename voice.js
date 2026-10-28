@@ -259,28 +259,52 @@
   }
 
   /* ---------- 💬 چت کوچولو ---------- */
-  let msgs = [];
+  let msgs = [], warnedChat = false, chatMissing = false;
   try { msgs = JSON.parse(sessionStorage.getItem(CHAT_KEY) || '[]'); } catch (e) {}
   const saveMsgs = () => { try { sessionStorage.setItem(CHAT_KEY, JSON.stringify(msgs.slice(-60))); } catch (e) {} };
+  const isMine = n => { try { return Recur.sameName(n, nm()); } catch (e) { return n === nm(); } };
+  function addMsg(m) {
+    if (!m || !m.id || msgs.some(x => x.id === m.id)) return false;
+    msgs.push(m); msgs.sort((a, b) => a.ts - b.ts); if (msgs.length > 400) msgs.splice(0, msgs.length - 400); return true;
+  }
+  function dayLabel(ts) { try { return Recur.fmtJalaliLong(Recur.epochToWall(ts).iso); } catch (e) { return ''; } }
   function renderChat() {
     const list = $('vcChatList'); if (!list) return;
-    list.innerHTML = msgs.length ? msgs.slice(-60).map(m => `<div class="vc-msg${m.me ? ' me' : ''}"><b>${esc(m.name)}</b><span>${esc(m.text)}</span><i>${new Date(m.ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</i></div>`).join('') : '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
+    let last = '', html = '';
+    msgs.forEach(m => {
+      const d = dayLabel(m.ts); if (d && d !== last) { last = d; html += `<div class="vc-day">${esc(d)}</div>`; }
+      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}"><b>${esc(m.name)}</b><span>${esc(m.text)}</span><i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}</i></div>`;
+    });
+    list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
+    if (chatMissing) list.innerHTML += '<div class="vc-empty">برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن.</div>';
     list.scrollTop = list.scrollHeight;
+  }
+  async function loadChat() {
+    try {
+      const r = await dbClient.from('voice_chat').select('*').order('ts', { ascending: false }).limit(300);
+      if (r.error) { chatMissing = /voice_chat|relation|schema cache/i.test(r.error.message || ''); renderChat(); return; }
+      chatMissing = false;
+      (r.data || []).forEach(x => addMsg({ id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0 }));
+      saveMsgs(); renderChat();
+    } catch (e) {}
   }
   function onChat(p) {
     if (!p || p.from === ID || !p.text) return;
-    msgs.push({ name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text).slice(0, 500), ts: p.ts || Date.now(), me: false }); saveMsgs(); renderChat(); blip('recv');
-    if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice') say('💬 ' + (p.name || '') + ': ' + String(p.text).slice(0, 40));
+    const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text).slice(0, 500), ts: p.ts || Date.now() };
+    if (addMsg(m)) { saveMsgs(); renderChat(); blip('recv'); if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice') say('💬 ' + m.name + ': ' + m.text.slice(0, 40)); }
   }
   function sendChat() {
     const inp = $('vcChatInput'); if (!inp) return; const text = inp.value.trim().slice(0, 500); if (!text) return;
     if (!ch || !subscribed) { say('⏳ هنوز وصل نشده؛ چند لحظه دیگه'); return; }
-    const p = { from: ID, name: nm(), text, ts: Date.now() };
+    const ts = Date.now(), id = 'm_' + ts + '_' + ID, p = { from: ID, id, name: nm(), text, ts };
     try { ch.send({ type: 'broadcast', event: 'chat', payload: p }); } catch (e) {}
-    msgs.push({ name: nm(), text, ts: p.ts, me: true }); saveMsgs(); renderChat(); blip('send'); inp.value = ''; inp.focus();
+    addMsg({ id, name: p.name, text, ts }); saveMsgs(); renderChat(); blip('send'); inp.value = ''; inp.focus();
+    dbClient.from('voice_chat').upsert({ id, name: p.name, text, ts }).then(r => {
+      if (r && r.error && /voice_chat|relation|schema cache/i.test(r.error.message || '')) { chatMissing = true; renderChat(); if (!warnedChat) { warnedChat = true; say('⚠️ برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو توی Supabase اجرا کن'); } }
+    }).catch(() => {});
   }
 
-  function load() { connectChannel(); render(); renderChat(); loadCalls(); }
+  function load() { connectChannel(); render(); renderChat(); loadCalls(); loadChat(); }
   function init() {
     const box = $('voiceBox'); if (!box) return;
     box.addEventListener('click', e => {
