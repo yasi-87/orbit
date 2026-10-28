@@ -258,3 +258,15 @@ alter table public.calls enable row level security;
 drop policy if exists "calls_public_all" on public.calls;
 create policy "calls_public_all" on public.calls
   for all to anon, authenticated using (true) with check (true);
+
+-- 21) ذخیرهٔ پیام‌های چت اتاق صحبت (با تاریخ)
+create table if not exists public.voice_chat (
+  id   text primary key,
+  name text,
+  text text,
+  ts   bigint
+);
+alter table public.voice_chat enable row level security;
+drop policy if exists "voice_chat_public_all" on public.voice_chat;
+create policy "voice_chat_public_all" on public.voice_chat
+  for all to anon, authenticated using (true) with check (true);
