@@ -195,7 +195,7 @@
 
   /* ---------- کلید یکتای اسم: «عرشیا/ارشیا/Arshia» یکی حساب می‌شن، «یاسی/یاسنا/Yasi» هم ----------
      دو دستگاه (گوشی و لپ‌تاپ) با هر کدوم از این املاها، یک حساب هستن */
-  const NAME_ALIASES = [[/^(عرشیا|ارشیا|arshia|arshya|arsia)$/, 'arshia'], [/^(یاسی|یاسنا|یاسینا|یاس|yasi|yasna|yasina)$/, 'yasna']];
+  const NAME_ALIASES = [[/^(عرشیا|ارشیا|عرشی|ارشی|arshia|arshya|arsia|arshi)$/, 'arshia'], [/^(یاسی|یاسنا|یاسینا|یاس|yasi|yasna|yasina)$/, 'yasna']];
   function nameKey(name) {
     let s = String(name == null ? '' : name).trim().toLowerCase()
       .replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\u200c\u200d\u064b-\u065f\u0640]/g, '').replace(/[ةۀ]/g, 'ه')
