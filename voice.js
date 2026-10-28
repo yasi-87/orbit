@@ -7,7 +7,7 @@
   const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
   const CHAT_KEY = 'vc_chat';
   let ch = null, subscribed = false, joined = false, local = null, micOn = true, deaf = false, t0 = 0, tickT = null, meterT = null, statT = null;
-  let lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
+  let noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
   const peers = {};   // id -> { pc, stream, remoteSet, pending, state, an, lvl, name }
   const $ = id => document.getElementById(id);
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
@@ -53,16 +53,16 @@
       : anyBad ? '🔴 اتصال با یکی‌تون برقرار نشد (شبکه جلوی ارتباط مستقیم رو گرفته)'
       : allOk ? '🟢 وصلید ' + dur : '⏳ در حال وصل شدن…';
     const tile = (id, n, me, muted, bad, av) => `<div class="vc-tile${muted ? ' muted' : ''}" data-who="${me ? 'me' : 'peer'}" data-peer="${id}"><div class="vc-av">${av ? '<img alt="" src="' + esc(av) + '">' : esc((n || '?').trim().slice(0, 1))}</div><div class="vc-nm">${esc(n)}${muted ? ' 🔇' : ''}${bad ? ' ⚠️' : ''}</div>${me ? '<div class="vc-meter"><i id="vcMeter"></i></div>' : ''}</div>`;
-    const sendTxt = joined ? (!micOn ? '🔇 میکروفونت خاموشه؛ صدایی نمی‌ره' : (o.length && allOk ? '<span id="vcOut">🎙️ صدات داره می‌ره…</span>' : '<span id="vcOut">🎙️ میکروفونت روشنه</span>')) : '';
+    const sendTxt = joined ? (noMic ? '🎧 بدون میکروفون؛ فقط صدای اون یکی رو می‌شنوی' : !micOn ? '🔇 میکروفونت خاموشه؛ صدایی نمی‌ره' : (o.length && allOk ? '<span id="vcOut">🎙️ صدات داره می‌ره…</span>' : '<span id="vcOut">🎙️ میکروفونت روشنه</span>')) : '';
     const html = `<div class="vc-room"><div class="vc-st" id="vcSt">${stTxt}</div>
-      <div class="vc-tiles">${joined ? tile(ID, nm(), true, !micOn, false, (typeof userProfile !== 'undefined' && userProfile.avatar) || '') : ''}${o.map(x => tile(x.id, x.name, false, false, (peers[x.id] || {}).state === 'failed', x.av)).join('')}${!joined && !o.length ? '<div class="vc-empty">هنوز کسی توی اتاق نیست 🌙</div>' : ''}</div>
+      <div class="vc-tiles">${joined ? tile(ID, nm(), true, !micOn || noMic, false, (typeof userProfile !== 'undefined' && userProfile.avatar) || '') : ''}${o.map(x => tile(x.id, x.name, false, false, (peers[x.id] || {}).state === 'failed', x.av)).join('')}${!joined && !o.length ? '<div class="vc-empty">هنوز کسی توی اتاق نیست 🌙</div>' : ''}</div>
       ${joined ? '<div class="vc-out" id="vcOutBox">' + sendTxt + '</div>' : ''}
       <div class="vc-ctl">${joined
-        ? `<button class="btn ${micOn ? '' : 'ghost'}" data-vc="mic" type="button">${micOn ? '🎙️ میکروفون روشنه' : '🔇 میکروفون خاموشه'}</button>
+        ? (noMic ? '<button class="btn" data-vc="retrymic" type="button">🎙️ فعال‌کردن میکروفون</button>' : `<button class="btn ${micOn ? '' : 'ghost'}" data-vc="mic" type="button">${micOn ? '🎙️ میکروفون روشنه' : '🔇 میکروفون خاموشه'}</button>`) + `
            <button class="btn ghost" data-vc="deaf" type="button">${deaf ? '🔈 صدا رو باز کن' : '🔊 قطع صدای طرف مقابل'}</button>
            <button class="btn danger" data-vc="leave" type="button">📴 خروج از اتاق</button>`
         : `<button class="btn" data-vc="join" type="button">🎙️ ورود به اتاق صحبت</button>`}</div>
-      <p class="vc-note">برای صحبت، مرورگر اجازهٔ میکروفون می‌خواد. بهتره هدفون بزنید تا صدا برگشت نخوره.</p></div>`;
+      <p class="vc-note">برای صحبت، مرورگر اجازهٔ میکروفون می‌خواد؛ ولی اجباری نیست، بدونش هم می‌تونی گوش بدی و توی چت بنویسی. بهتره هدفون بزنید تا صدا برگشت نخوره.</p></div>`;
     if (html !== lastHtml) { lastHtml = html; box.innerHTML = html; }
     const nb = document.querySelector('.nav-btn[data-screen="voice"]'); if (nb) nb.textContent = joined ? '🎙️ در تماس' : '🎙️ اتاق صحبت';
   }
@@ -92,10 +92,10 @@
   }
 
   function startPeer(id, name) {
-    if (peers[id] || !local) return;
+    if (peers[id] || !joined) return;
     const P = peers[id] = { pc: new RTCPeerConnection(ICE), state: 'connecting', remoteSet: false, pending: [], name, stream: null, an: null, lvl: 0 };
     const pc = P.pc;
-    local.getTracks().forEach(t => pc.addTrack(t, local));
+    if (local) local.getTracks().forEach(t => pc.addTrack(t, local)); else pc.addTransceiver('audio', { direction: 'recvonly' });   // بدون میکروفون: فقط گوش می‌دیم
     pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }, id); };
     pc.ontrack = e => { P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
     pc.onconnectionstatechange = () => {
@@ -150,7 +150,7 @@
   function watch(P) { try { P.an = analyser(P.stream); } catch (e) {} }
   function startMeters() {
     clearInterval(meterT);
-    try { myAn = analyser(local); } catch (e) { myAn = null; }
+    try { myAn = local ? analyser(local) : null; } catch (e) { myAn = null; }
     meterT = setInterval(() => {
       myLvl = myAn && micOn ? level(myAn) : 0;
       const m = $('vcMeter'); if (m) m.style.width = Math.min(100, myLvl * 4) + '%';
@@ -168,9 +168,10 @@
   /* ---------- ورود / خروج ---------- */
   async function join() {
     if (joined) return;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { say('⚠️ این مرورگر از میکروفون پشتیبانی نمی‌کنه (یا سایت امن نیست)'); return; }
-    try { local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
-    catch (e) { say('⚠️ اجازهٔ میکروفون داده نشد؛ از تنظیمات مرورگر بازش کن'); return; }
+    noMic = false;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { noMic = true; say('🎧 این مرورگر میکروفون نداره؛ فقط گوش می‌دی'); }
+    else try { local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); }
+    catch (e) { local = null; noMic = true; say('🎧 بدون میکروفون وارد شدی؛ می‌تونی صدای اون یکی رو بشنوی و تو چت بنویسی'); }
     joined = true; micOn = true; deaf = false; t0 = Date.now(); sentPrev = 0;
     if (!ch) connectChannel();
     if (ch && subscribed) { track(); setTimeout(onPresence, 150); }
@@ -188,7 +189,7 @@
     if (!quiet) say('📴 از اتاق صحبت خارج شدی');
     render();
   }
-  function toggleMic() { micOn = !micOn; if (local) local.getAudioTracks().forEach(t => { t.enabled = micOn; }); render(); }
+  function toggleMic() { if (noMic) return; micOn = !micOn; if (local) local.getAudioTracks().forEach(t => { t.enabled = micOn; }); render(); }
   function toggleDeaf() { deaf = !deaf; document.querySelectorAll('#vcAudios audio').forEach(a => { a.muted = deaf; }); render(); }
 
   /* ---------- 📞 تاریخچهٔ تماس‌ها ---------- */
@@ -310,7 +311,7 @@
     box.addEventListener('click', e => {
       const b = e.target.closest('[data-vc]'); if (!b) return;
       const a = b.dataset.vc;
-      if (a === 'join') join(); else if (a === 'leave') leave(); else if (a === 'mic') toggleMic(); else if (a === 'deaf') toggleDeaf();
+      if (a === 'join') join(); else if (a === 'leave') leave(); else if (a === 'mic') toggleMic(); else if (a === 'retrymic') { leave(true); join(); } else if (a === 'deaf') toggleDeaf();
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     window.addEventListener('pagehide', () => leave(true));
