@@ -2253,8 +2253,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-28d';
+const SITE_VERSION = '2026-10-29a';
 const SITE_CHANGES = [
+  '🔊 صدا برای اعلان‌های سایت، و توی اتاق صحبت: وقتی تماس وصل می‌شه یه صدای شاد و وقتی قطع می‌شه یا نت خراب می‌شه یه صدای افتادن میاد',
   '🎧 اگه اجازهٔ میکروفون ندی هم می‌تونی وارد اتاق صحبت بشی؛ صدای اون یکی رو می‌شنوی و توی چت می‌نویسی (بعداً هم می‌تونی میکروفون رو فعال کنی)',
   '💬 چت اتاق صحبت: پیام‌هامون ذخیره می‌مونن و هر پیام تاریخ و ساعت داره؛ موقع فرستادن و رسیدن پیام هم یه صدای کوچولو میاد',
   '📞 اتاق صحبت: لیست همهٔ تماس‌هامون با مدت هر کدوم، «مجموع تا پایان همون تماس» و جمع کل ساعت‌هایی که با هم حرف زدیم. تایمر تماس از لحظه‌ای شروع می‌شه که هر دومون وصل شدیم',
@@ -5034,6 +5035,8 @@ function alertNotif(n) {
   if (n.type === 'class_rem' && Date.now() - Number(n.created_at) < 15 * 60000) classAlarm(n);
   const { icon, line } = notifText(n);
   toast(icon + ' ' + line + (n.title ? ' — «' + n.title + '»' : ''));
+  // صدای اعلان؛ نه برای آلارم کلاس (که خودش زنگ داره) و نه وقتی توی اتاق صحبتیم و خودش صدا داره
+  if (n.type !== 'class_rem' && !(n.type === 'voice' && window.Voice && Voice.busy())) { try { window.OMSound && OMSound.play('notif'); } catch (e) {} }
   if (document.hidden) showSystemNotification(n);
 }
 
