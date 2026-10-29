@@ -6,14 +6,11 @@
   const ID = Math.random().toString(36).slice(2, 9);
   /* STUN برای پیدا کردن آدرس؛ TURN (سرور واسطه) برای وقتی که شبکه‌ها (مثل اینترنت موبایل یا مودم‌های بسته) اجازهٔ اتصال مستقیم نمی‌دن.
    صدا رمزنگاری‌شده (DTLS-SRTP) رد می‌شه و سرور واسطه فقط داده‌ی رمز می‌بینه. */
-  const ICE = { iceCandidatePoolSize: 4, iceServers: [
-    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:openrelay.metered.ca:80'] },
-    { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }
-  ] };
+  const ICE = { iceCandidatePoolSize: 2, iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
   const CHAT_KEY = 'vc_chat';
   let ch = null, subscribed = false, joined = false, local = null, micOn = true, deaf = false, t0 = 0, tickT = null, meterT = null, statT = null;
   const diag = { sent: {}, recv: {}, errs: [], subs: '' };
-  let relayed = false, noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
+  let relayDelay = 12000, relayed = false, noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
   const peers = {};   // id -> { pc, stream, remoteSet, pending, state, an, lvl, name }
   const $ = id => document.getElementById(id);
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
@@ -52,12 +49,12 @@
     const box = $('voiceBox'); if (!box) return;
     const o = inCallOthers();
     const sec = Math.floor((Date.now() - (curCall ? curCall.start : Date.now())) / 1000), dur = joined && curCall ? String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0') : '';
-    const states = o.map(x => (peers[x.id] || {}).state || 'connecting');
-    const allOk = o.length && states.every(s => s === 'connected'), anyBad = states.some(s => s === 'failed');
+    const states = o.map(x => { const P = peers[x.id] || {}; return P.relay ? 'relay' : (P.state || 'connecting'); });
+    const allOk = o.length && states.every(s => s === 'connected' || s === 'relay'), anyBad = states.some(s => s === 'failed'), viaRelay = states.some(s => s === 'relay');
     const stTxt = !joined ? (o.length ? '💞 ' + esc(o.map(x => x.name).join(' و ')) + ' توی اتاقه؛ بیا تو!' : 'اتاق خالیه')
       : !o.length ? '⏳ منتظر اون یکی هستی…'
       : anyBad ? '🔴 اتصال برقرار نشد؛ یه بار «تلاش دوباره» بزن (اگه هر دو روی اینترنت موبایل هستین، با وای‌فای هم امتحان کن)'
-      : allOk ? '🟢 وصلید ' + dur : '⏳ در حال وصل شدن…';
+      : allOk ? '🟢 وصلید ' + dur + (viaRelay ? ' <small>(مسیر پشتیبان؛ صدا کمی تأخیر داره)</small>' : '') : '⏳ در حال وصل شدن…';
     const tile = (id, n, me, muted, bad, av) => `<div class="vc-tile${muted ? ' muted' : ''}" data-who="${me ? 'me' : 'peer'}" data-peer="${id}"><div class="vc-av">${av ? '<img alt="" src="' + esc(av) + '">' : esc((n || '?').trim().slice(0, 1))}</div><div class="vc-nm">${esc(n)}${muted ? ' 🔇' : ''}${bad ? ' ⚠️' : ''}</div>${me ? '<div class="vc-meter"><i id="vcMeter"></i></div>' : ''}</div>`;
     const sendTxt = joined ? (noMic ? '🎧 بدون میکروفون؛ فقط صدای اون یکی رو می‌شنوی' : !micOn ? '🔇 میکروفونت خاموشه؛ صدایی نمی‌ره' : (o.length && allOk ? '<span id="vcOut">🎙️ صدات داره می‌ره…</span>' : '<span id="vcOut">🎙️ میکروفونت روشنه</span>')) : '';
     const html = `<div class="vc-room"><div class="vc-st" id="vcSt">${stTxt}</div>
@@ -81,6 +78,7 @@
       ch = dbClient.channel('voice-room', { config: { broadcast: { self: false }, presence: { key: ID } } });
       ch.on('broadcast', { event: 'vc' }, m => onSignal(m && m.payload))
         .on('broadcast', { event: 'chat' }, m => onChat(m && m.payload))
+        .on('broadcast', { event: 'au' }, m => onAudio(m && m.payload))
         .on('presence', { event: 'sync' }, onPresence)
         .subscribe(s => { if (s === 'SUBSCRIBED') { subscribed = true; if (joined) track(); setTimeout(onPresence, 200); render(); renderChat(); } });
     } catch (e) { console.warn('voice off', e); ch = null; }
@@ -109,15 +107,16 @@
     pc.ontrack = e => { P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
-      if (s === 'connected') { if (P.state !== 'connected') { say('💞 با ' + P.name + ' وصل شدی! حرف بزنین'); blip('up'); } P.state = 'connected'; P.warned = false; }
+      if (s === 'connected') { if (P.state !== 'connected') { say(P.relay ? '✅ اتصال مستقیم برقرار شد' : '💞 با ' + P.name + ' وصل شدی! حرف بزنین'); if (!P.relay) blip('up'); } P.state = 'connected'; P.warned = false; P.relay = false; clearTimeout(P.rt); stopTxIfIdle(); }
       else if (s === 'failed') {
-        if (P.state !== 'failed') { if (P.tries >= 1) blip('down'); }
-        P.state = 'failed';
+        if (P.state !== 'failed' && P.tries >= 1 && !P.relay) blip('down');
+        P.state = 'failed'; enableRelay(id);
         if (!(P.tries >= 1)) { P.tries = 1; setTimeout(() => { if (peers[id] === P && P.state === 'failed') retryPeer(id, true); }, 800); }   // یک بار خودکار دوباره امتحان می‌کنیم
       }
       else if (s === 'disconnected' || s === 'connecting') { if (P.state === 'connected' && !P.warned) { P.warned = true; say('📶 ارتباط ضعیف شد یا قطع شد…'); blip('down'); } P.state = 'connecting'; }
       trackCall(); render();
     };
+    P.rt = setTimeout(() => { if (peers[id] === P && P.state !== 'connected') enableRelay(id); }, relayDelay);
     if (ID < id) makeOffer(id); else send({ t: 'ready' }, id);
     render();
   }
@@ -154,14 +153,73 @@
   function flushIce(P) { const q = P.pending; P.pending = []; q.forEach(c => P.pc.addIceCandidate(c).catch(() => {})); }
   function closePeer(id) {
     const P = peers[id]; if (!P) return;
+    clearTimeout(P.rt);
     try { P.pc.onconnectionstatechange = null; P.pc.close(); } catch (e) {}
     const a = $('vcA_' + id); if (a) a.remove();
-    delete peers[id]; trackCall();
+    delete peers[id]; stopTxIfIdle(); trackCall();
   }
   function attachAudio(id, stream) {
     let a = $('vcA_' + id);
     if (!a) { a = document.createElement('audio'); a.id = 'vcA_' + id; a.autoplay = true; a.setAttribute('playsinline', ''); ($('vcAudios') || document.body).appendChild(a); }
     a.srcObject = stream; a.muted = deaf; const p = a.play(); if (p && p.catch) p.catch(() => {});
+  }
+
+
+  /* ---------- 🛟 مسیر پشتیبان: وقتی اتصال مستقیم برقرار نمی‌شه (مثلاً فیلتر یا NAT سخت)، صدا فشرده (Opus) و از همون کانال Supabase رد می‌شه ---------- */
+  let tx = null, rxDec = {}, playCtx = null, playGain = null, playAt = 0;
+  const WC = () => typeof AudioEncoder !== 'undefined' && typeof AudioDecoder !== 'undefined' && typeof MediaStreamTrackProcessor !== 'undefined';
+  const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+  function enableRelay(id) {
+    const P = peers[id]; if (!P || P.relay || P.state === 'connected') return;
+    if (!WC()) { diag.errs.push('این مرورگر WebCodecs نداره؛ مسیر پشتیبان کار نمی‌کنه'); return; }
+    P.relay = true; say('🟡 اتصال مستقیم نشد؛ از مسیر پشتیبان وصل شدی (صدا کمی تأخیر داره)'); blip('up');
+    startTx(); trackCall(); render();
+  }
+  function stopTxIfIdle() { if (tx && !Object.values(peers).some(p => p.relay)) { tx.stop = true; tx = null; } }
+  async function startTx() {
+    if (tx || !local || !WC()) return;
+    const track = local.getAudioTracks()[0]; if (!track) return;
+    const me = tx = { stop: false };
+    try {
+      const reader = new MediaStreamTrackProcessor({ track }).readable.getReader();
+      let enc = null, pack = [], seq = 0, last = 0;
+      const flush = () => {
+        if (!pack.length) return;
+        let n = 4; pack.forEach(p => { n += 1 + p.length; }); const u = new Uint8Array(n); const dv = new DataView(u.buffer); dv.setUint32(0, seq++);
+        let o = 4; pack.forEach(p => { u[o++] = p.length; u.set(p, o); o += p.length; }); pack = [];
+        try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'au', payload: { from: ID, s: b64(u) } }); diag.tx = (diag.tx || 0) + 1; } catch (e) {}
+      };
+      while (!me.stop) {
+        const r = await reader.read(); if (r.done) break; const f = r.value;
+        try {
+          if (!enc) { enc = new AudioEncoder({ output: c => { const b = new Uint8Array(c.byteLength); c.copyTo(b); if (b.length < 255) pack.push(b); }, error: e => diag.errs.push('enc ' + e) }); enc.configure({ codec: 'opus', sampleRate: f.sampleRate, numberOfChannels: f.numberOfChannels, bitrate: 24000 }); }
+          if (micOn) enc.encode(f);
+        } catch (e) { diag.errs.push('tx ' + e); }
+        f.close();
+        const now = Date.now(); if (now - last >= 200) { last = now; flush(); }
+      }
+      try { reader.cancel(); if (enc) enc.close(); } catch (e) {}
+    } catch (e) { diag.errs.push('relay tx: ' + e); }
+    if (tx === me) tx = null;
+  }
+  function onAudio(p) {
+    if (!p || p.from === ID || !joined || !p.s || !WC()) return;
+    const P = peers[p.from]; if (!P || P.state === 'connected' || deaf) return;   // اگه مستقیم وصلیم، همون صدای مستقیم رو داریم
+    if (!P.relay) { P.relay = true; trackCall(); render(); }
+    let d = rxDec[p.from];
+    if (!d) {
+      playCtx = playCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (playCtx.state === 'suspended') playCtx.resume().catch(() => {});
+      d = rxDec[p.from] = { ts: 0, dec: new AudioDecoder({ output: a => { try { const n = a.numberOfFrames, buf = playCtx.createBuffer(1, n, a.sampleRate), ar = new Float32Array(n); a.copyTo(ar, { planeIndex: 0, format: 'f32-planar' }); buf.copyToChannel(ar, 0); a.close();
+        let m = 0; for (let i = 0; i < n; i += 8) m = Math.max(m, Math.abs(ar[i])); P.lvl = m;
+        const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(playCtx.destination); const now = playCtx.currentTime; if (playAt < now + 0.05) playAt = now + 0.2; src.start(playAt); playAt += buf.duration; diag.rx = (diag.rx || 0) + 1; } catch (e) { diag.errs.push('dec out ' + e); } }, error: e => diag.errs.push('dec ' + e) }) };
+      d.dec.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
+    }
+    try {
+      const u = unb64(p.s); let o = 4;
+      while (o < u.length) { const l = u[o++]; d.dec.decode(new EncodedAudioChunk({ type: 'key', timestamp: d.ts, data: u.subarray(o, o + l) })); d.ts += 20000; o += l; }
+    } catch (e) { diag.errs.push('rx ' + e); }
   }
 
   /* ---------- نشانگرها: «دارن حرف می‌زنن» و «صدای من داره می‌ره» ---------- */
@@ -179,7 +237,7 @@
       myLvl = myAn && micOn ? level(myAn) : 0;
       const m = $('vcMeter'); if (m) m.style.width = Math.min(100, myLvl * 4) + '%';
       const me = document.querySelector('.vc-tile[data-who="me"]'); if (me) me.classList.toggle('speak', myLvl > 12);
-      Object.keys(peers).forEach(id => { const P = peers[id], t = document.querySelector('.vc-tile[data-peer="' + id + '"]'); if (t && P.an) t.classList.toggle('speak', !deaf && level(P.an) > 12); });
+      Object.keys(peers).forEach(id => { const P = peers[id], t = document.querySelector('.vc-tile[data-peer="' + id + '"]'); if (t) t.classList.toggle('speak', !deaf && ((P.an && level(P.an) > 12) || (P.relay && P.lvl > 0.05))); });
     }, 120);
     clearInterval(statT);
     statT = setInterval(async () => {   // آیا بایت‌های صدای من واقعاً داره ارسال می‌شه؟
@@ -208,13 +266,13 @@
     if (!ch) connectChannel();
     if (ch && subscribed) { track(); setTimeout(onPresence, 150); }
     startMeters();
-    clearInterval(tickT); tickT = setInterval(() => { if (joined && Object.values(peers).some(p => p.state === 'connected')) render(); }, 1000);
+    clearInterval(tickT); tickT = setInterval(() => { if (joined && Object.values(peers).some(p => p.state === 'connected' || p.relay)) render(); }, 1000);
     if (!inCallOthers().length && Date.now() - lastNotify > 10 * 60000) { lastNotify = Date.now(); try { notify('voice', 'اتاق صحبت', ''); } catch (e) {} }
     render();
   }
   function leave(quiet) {
     if (!joined) return;
-    send({ t: 'bye' }); const fin = curCall ? finishCall() : null; Object.keys(peers).forEach(closePeer);
+    if (tx) { tx.stop = true; tx = null; } send({ t: 'bye' }); const fin = curCall ? finishCall() : null; Object.keys(peers).forEach(closePeer);
     try { if (local) local.getTracks().forEach(t => t.stop()); } catch (e) {} local = null;
     joined = false; track();
     clearInterval(tickT); clearInterval(meterT); clearInterval(statT);
@@ -233,7 +291,7 @@
     return fa(s) + ' ثانیه';
   }
   let finishing = false, curCall = null, callPending = false, callT = null, warnedCalls = false, callRows = [];
-  const connectedIds = () => Object.keys(peers).filter(k => peers[k].state === 'connected');
+  const connectedIds = () => Object.keys(peers).filter(k => peers[k].state === 'connected' || peers[k].relay);
   function saveCall(final) {
     const c = curCall; if (!c || !c.id) return Promise.resolve();
     const now = Date.now(), dur = Math.floor((now - c.start) / 1000);
@@ -350,6 +408,7 @@
   function diagText() {
     const L = [];
     L.push('کانال: ' + (subscribed ? 'وصل' : 'وصل نیست') + ' | حضور (presence) دیگران: ' + (ch && subscribed ? others().length : '-') + ' | تو توی تماس: ' + (joined ? 'بله' : 'نه') + (noMic ? ' (بدون میکروفون)' : ''));
+    L.push('مسیر پشتیبان: فرستاده ' + (diag.tx || 0) + ' بسته | دریافت‌شده ' + (diag.rx || 0) + ' تکه صدا | WebCodecs: ' + (WC() ? 'هست' : 'نیست'));
     L.push('پیام‌های سیگنال فرستاده: ' + JSON.stringify(diag.sent) + ' | گرفته: ' + JSON.stringify(diag.recv));
     Object.keys(peers).forEach(id => { const P = peers[id], pc = P.pc;
       L.push('— ' + P.name + ': اتصال=' + pc.connectionState + ' ice=' + pc.iceConnectionState + ' جمع‌آوری=' + pc.iceGatheringState + ' signaling=' + pc.signalingState + ' | کاندیدهای من ' + JSON.stringify(P.lc) + ' | کاندیدهای دریافتی ' + P.rc + ' | تلاش=' + (P.tries || 0)); });
@@ -372,6 +431,6 @@
     render(); renderChat();
     setInterval(() => { const d = $('vcDiag'), box = $('vcDiagBox'); if (d && box && box.open) d.textContent = diagText(); }, 1000);
   }
-  window.Voice = { _diag: diagText, busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
+  window.Voice = { _setRelayDelay: ms => { relayDelay = ms; }, _diag: diagText, busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
