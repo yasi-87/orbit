@@ -12,6 +12,7 @@
   ] };
   const CHAT_KEY = 'vc_chat';
   let ch = null, subscribed = false, joined = false, local = null, micOn = true, deaf = false, t0 = 0, tickT = null, meterT = null, statT = null;
+  const diag = { sent: {}, recv: {}, errs: [], subs: '' };
   let relayed = false, noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
   const peers = {};   // id -> { pc, stream, remoteSet, pending, state, an, lvl, name }
   const $ = id => document.getElementById(id);
@@ -85,7 +86,7 @@
     } catch (e) { console.warn('voice off', e); ch = null; }
   }
   const track = () => makeThumb(() => { try { ch.track({ name: nm(), call: joined, av: myThumb }); } catch (e) {} });
-  function send(p, to) { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'vc', payload: Object.assign({ from: ID, to: to || '' }, p) }); } catch (e) {} }
+  function send(p, to) { diag.sent[p.t] = (diag.sent[p.t] || 0) + 1; try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'vc', payload: Object.assign({ from: ID, to: to || '' }, p) }); } catch (e) {} }
 
   function onPresence() {
     if (!ch) return;
@@ -102,7 +103,9 @@
     const P = peers[id] = { pc: new RTCPeerConnection(ICE), state: 'connecting', remoteSet: false, pending: [], name, stream: null, an: null, lvl: 0 };
     const pc = P.pc;
     if (local) local.getTracks().forEach(t => pc.addTrack(t, local)); else pc.addTransceiver('audio', { direction: 'recvonly' });   // بدون میکروفون: فقط گوش می‌دیم
-    pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }, id); };
+    P.lc = { host: 0, srflx: 0, relay: 0, other: 0 }; P.rc = 0;
+    pc.onicecandidateerror = e => { diag.errs.push((e.url || '') + ' ' + e.errorCode + ' ' + (e.errorText || '')); if (diag.errs.length > 6) diag.errs.shift(); };
+    pc.onicecandidate = e => { if (e.candidate) { const ty = (/ typ (\w+)/.exec(e.candidate.candidate) || [])[1]; P.lc[ty in P.lc ? ty : 'other']++; } if (e.candidate) send({ t: 'ice', c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }, id); };
     pc.ontrack = e => { P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
@@ -130,7 +133,9 @@
     try { const o = await P.pc.createOffer(); await P.pc.setLocalDescription(o); send({ t: 'offer', sdp: sd(P.pc.localDescription) }, id); } catch (e) { console.warn(e); }
   }
   async function onSignal(p) {
-    if (!p || p.from === ID || !joined || (p.to && p.to !== ID)) return;
+    if (!p || p.from === ID || (p.to && p.to !== ID)) return;
+    diag.recv[p.t] = (diag.recv[p.t] || 0) + 1;
+    if (!joined) return;
     const id = p.from;
     try {
       if (p.t === 'reset') { const nm0 = (peers[id] || {}).name || 'اون یکی', tr = (peers[id] || {}).tries || 0; closePeer(id); startPeer(id, nm0); if (peers[id]) peers[id].tries = tr; return; }
@@ -143,7 +148,7 @@
         await P.pc.setRemoteDescription(p.sdp); P.remoteSet = true;
         const a = await P.pc.createAnswer(); await P.pc.setLocalDescription(a); send({ t: 'answer', sdp: sd(P.pc.localDescription) }, id); flushIce(P);
       } else if (p.t === 'answer') { await P.pc.setRemoteDescription(p.sdp); P.remoteSet = true; flushIce(P); }
-      else if (p.t === 'ice') { if (P.remoteSet) await P.pc.addIceCandidate(p.c).catch(() => {}); else P.pending.push(p.c); }
+      else if (p.t === 'ice') { P.rc++; if (P.remoteSet) await P.pc.addIceCandidate(p.c).catch(() => {}); else P.pending.push(p.c); }
     } catch (e) { console.warn('voice signal', e); }
   }
   function flushIce(P) { const q = P.pending; P.pending = []; q.forEach(c => P.pc.addIceCandidate(c).catch(() => {})); }
@@ -342,6 +347,16 @@
     }).catch(() => {});
   }
 
+  function diagText() {
+    const L = [];
+    L.push('کانال: ' + (subscribed ? 'وصل' : 'وصل نیست') + ' | حضور (presence) دیگران: ' + (ch && subscribed ? others().length : '-') + ' | تو توی تماس: ' + (joined ? 'بله' : 'نه') + (noMic ? ' (بدون میکروفون)' : ''));
+    L.push('پیام‌های سیگنال فرستاده: ' + JSON.stringify(diag.sent) + ' | گرفته: ' + JSON.stringify(diag.recv));
+    Object.keys(peers).forEach(id => { const P = peers[id], pc = P.pc;
+      L.push('— ' + P.name + ': اتصال=' + pc.connectionState + ' ice=' + pc.iceConnectionState + ' جمع‌آوری=' + pc.iceGatheringState + ' signaling=' + pc.signalingState + ' | کاندیدهای من ' + JSON.stringify(P.lc) + ' | کاندیدهای دریافتی ' + P.rc + ' | تلاش=' + (P.tries || 0)); });
+    if (diag.errs.length) L.push('خطاهای ICE: ' + diag.errs.join(' ; '));
+    L.push('مرورگر: ' + (navigator.userAgent || '').slice(0, 90));
+    return L.join('\n');
+  }
   function load() { connectChannel(); render(); renderChat(); loadCalls(); loadChat(); }
   function init() {
     const box = $('voiceBox'); if (!box) return;
@@ -355,7 +370,8 @@
     window.addEventListener('offline', () => { if (joined) { say('📶 اینترنتت قطع شد'); blip('down'); } });
     window.addEventListener('online', () => { if (joined) { say('📶 اینترنت برگشت'); blip('up'); } });
     render(); renderChat();
+    setInterval(() => { const d = $('vcDiag'), box = $('vcDiagBox'); if (d && box && box.open) d.textContent = diagText(); }, 1000);
   }
-  window.Voice = { busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
+  window.Voice = { _diag: diagText, busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
