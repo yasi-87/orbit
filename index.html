@@ -1583,6 +1583,14 @@ body.reading-mode .reading-content {
 .vc-call-t{font-weight:600}.vc-call-c{color:var(--gold)}.vc-call-d{color:var(--muted)}
 .vc-total{padding:12px 14px;border-top:1px solid rgba(212,165,255,.2);text-align:center;font-size:1rem}.vc-total span{color:var(--muted);font-size:.8rem}
 .vc-diag{max-width:520px;margin:10px auto 0;font-size:.78rem;color:var(--muted)}.vc-diag pre{white-space:pre-wrap;word-break:break-word;direction:ltr;text-align:left;background:rgba(255,255,255,.05);padding:10px;border-radius:10px;font-size:.72rem;user-select:all}
+.vc-layout{display:grid;grid-template-columns:1fr;gap:12px}
+.vc-layout .vc-chat,.vc-layout .vc-diag{max-width:none;margin:0}
+@media (min-width:900px){
+  .vc-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"room chat" "hist chat" "diag diag";align-items:start}
+  .vc-area-room{grid-area:room}.vc-area-chat{grid-area:chat;align-self:stretch;display:flex;flex-direction:column}
+  .vc-area-chat .vc-chat-list{height:auto;flex:1;min-height:340px;max-height:60vh}
+  .vc-area-hist{grid-area:hist}.vc-area-diag{grid-area:diag}
+}
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
 /* گوش دادن با هم */
 .together-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
@@ -1896,12 +1904,14 @@ input.seek:disabled{opacity:.4;cursor:default}
   <!-- ============ باغ خاطره‌ها ============ -->
   <div class="container screen" id="screen-voice">
     <div class="chapters-header"><h2>🎙️ اتاق صحبتِ ما</h2></div>
-    <div id="voiceBox"></div>
+    <div class="vc-layout">
+    <div id="voiceBox" class="vc-area-room"></div>
     <div id="vcAudios"></div>
-    <details id="vcDiagBox" class="vc-diag"><summary>🔍 اطلاعات فنی اتصال (اگه تماس وصل نشد، این رو برام بفرست)</summary><pre id="vcDiag"></pre></details>
-    <div class="vc-chat vc-hist" id="vcHistory"></div>
-    <div class="vc-chat"><div class="vc-chat-h">💬 چت کوچولو</div><div class="vc-chat-list" id="vcChatList"></div>
+    <div class="vc-chat vc-area-chat"><div class="vc-chat-h">💬 چت کوچولو</div><div class="vc-chat-list" id="vcChatList"></div>
       <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form></div>
+    <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
+    <details id="vcDiagBox" class="vc-diag vc-area-diag"><summary>🔍 اطلاعات فنی اتصال (اگه تماس وصل نشد، این رو برام بفرست)</summary><pre id="vcDiag"></pre></details>
+    </div>
   </div>
 
   <div class="container screen" id="screen-garden">
@@ -2256,8 +2266,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30b';
+const SITE_VERSION = '2026-10-30c';
 const SITE_CHANGES = [
+  '💻 اتاق صحبت توی لپ‌تاپ: چت کنار عکس‌هامون (بالا) میاد و تاریخچهٔ تماس‌ها زیر اتاق می‌مونه',
   '🔊 ولوم آهنگ حالا ۰ تا ۱۰۰ هست و با فلش‌های کیبورد یکی‌یکی کم و زیاد می‌شه (مثل ولوم ویندوز)؛ عدد رو با نگه داشتن موس روی نوار می‌بینی',
   '🛟 اتاق صحبت: اگه اتصال مستقیم دو نفر برقرار نشد (فیلتر/اینترنت)، خودکار از مسیر پشتیبان (از طریق خود سایت) وصل می‌شه؛ صدا کمی تأخیر داره ولی کار می‌کنه',
   '🛠️ اتاق صحبت: وقتی اینترنت‌ها اجازهٔ اتصال مستقیم نمی‌دادن تماس وصل نمی‌شد؛ حالا سرور واسط اضافه شد و اگه وصل نشد خودش یه بار دوباره تلاش می‌کنه (دکمهٔ «تلاش دوباره» هم هست)',
