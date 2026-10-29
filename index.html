@@ -2000,7 +2000,7 @@ input.seek:disabled{opacity:.4;cursor:default}
   </div>
   <button class="mp-btn" id="mpPlay">▶</button>
   <button class="mp-btn mp-next" id="mpNext" onclick="playNext()" title="بعدی" style="display:none">⏭</button>
-  <input type="range" class="mp-vol" id="mpVol" min="0" max="1" step="0.01" value="0.35" />
+  <input type="range" class="mp-vol" id="mpVol" min="0" max="100" step="1" value="35" title="صدا: ۳۵" aria-label="صدا (۰ تا ۱۰۰)" />
 </div>
 
 <div class="notif-panel" id="notifPanel"></div>
@@ -2256,8 +2256,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30a';
+const SITE_VERSION = '2026-10-30b';
 const SITE_CHANGES = [
+  '🔊 ولوم آهنگ حالا ۰ تا ۱۰۰ هست و با فلش‌های کیبورد یکی‌یکی کم و زیاد می‌شه (مثل ولوم ویندوز)؛ عدد رو با نگه داشتن موس روی نوار می‌بینی',
   '🛟 اتاق صحبت: اگه اتصال مستقیم دو نفر برقرار نشد (فیلتر/اینترنت)، خودکار از مسیر پشتیبان (از طریق خود سایت) وصل می‌شه؛ صدا کمی تأخیر داره ولی کار می‌کنه',
   '🛠️ اتاق صحبت: وقتی اینترنت‌ها اجازهٔ اتصال مستقیم نمی‌دادن تماس وصل نمی‌شد؛ حالا سرور واسط اضافه شد و اگه وصل نشد خودش یه بار دوباره تلاش می‌کنه (دکمهٔ «تلاش دوباره» هم هست)',
   '🔊 صدا برای اعلان‌های سایت، و توی اتاق صحبت: وقتی تماس وصل می‌شه یه صدای شاد و وقتی قطع می‌شه یا نت خراب می‌شه یه صدای افتادن میاد',
@@ -4207,7 +4208,9 @@ document.getElementById('mpPlay').addEventListener('click', () => {
 });
 
 document.getElementById('mpVol').addEventListener('input', e => {
-  const v = parseFloat(e.target.value);
+  const lvl = Math.max(0, Math.min(100, Math.round(parseFloat(e.target.value) || 0)));   // ۰ تا ۱۰۰، یکی‌یکی مثل ولوم ویندوز
+  const v = lvl / 100;
+  e.target.title = 'صدا: ' + lvl.toString().replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
   bgAudio.volume = v;
   customAudio.volume = v;
   lastVolume = v;
