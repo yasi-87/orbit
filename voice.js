@@ -4,10 +4,15 @@
 (function () {
   'use strict';
   const ID = Math.random().toString(36).slice(2, 9);
-  const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+  /* STUN برای پیدا کردن آدرس؛ TURN (سرور واسطه) برای وقتی که شبکه‌ها (مثل اینترنت موبایل یا مودم‌های بسته) اجازهٔ اتصال مستقیم نمی‌دن.
+   صدا رمزنگاری‌شده (DTLS-SRTP) رد می‌شه و سرور واسطه فقط داده‌ی رمز می‌بینه. */
+  const ICE = { iceCandidatePoolSize: 4, iceServers: [
+    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:openrelay.metered.ca:80'] },
+    { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }
+  ] };
   const CHAT_KEY = 'vc_chat';
   let ch = null, subscribed = false, joined = false, local = null, micOn = true, deaf = false, t0 = 0, tickT = null, meterT = null, statT = null;
-  let noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
+  let relayed = false, noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
   const peers = {};   // id -> { pc, stream, remoteSet, pending, state, an, lvl, name }
   const $ = id => document.getElementById(id);
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
@@ -50,7 +55,7 @@
     const allOk = o.length && states.every(s => s === 'connected'), anyBad = states.some(s => s === 'failed');
     const stTxt = !joined ? (o.length ? '💞 ' + esc(o.map(x => x.name).join(' و ')) + ' توی اتاقه؛ بیا تو!' : 'اتاق خالیه')
       : !o.length ? '⏳ منتظر اون یکی هستی…'
-      : anyBad ? '🔴 اتصال با یکی‌تون برقرار نشد (شبکه جلوی ارتباط مستقیم رو گرفته)'
+      : anyBad ? '🔴 اتصال برقرار نشد؛ یه بار «تلاش دوباره» بزن (اگه هر دو روی اینترنت موبایل هستین، با وای‌فای هم امتحان کن)'
       : allOk ? '🟢 وصلید ' + dur : '⏳ در حال وصل شدن…';
     const tile = (id, n, me, muted, bad, av) => `<div class="vc-tile${muted ? ' muted' : ''}" data-who="${me ? 'me' : 'peer'}" data-peer="${id}"><div class="vc-av">${av ? '<img alt="" src="' + esc(av) + '">' : esc((n || '?').trim().slice(0, 1))}</div><div class="vc-nm">${esc(n)}${muted ? ' 🔇' : ''}${bad ? ' ⚠️' : ''}</div>${me ? '<div class="vc-meter"><i id="vcMeter"></i></div>' : ''}</div>`;
     const sendTxt = joined ? (noMic ? '🎧 بدون میکروفون؛ فقط صدای اون یکی رو می‌شنوی' : !micOn ? '🔇 میکروفونت خاموشه؛ صدایی نمی‌ره' : (o.length && allOk ? '<span id="vcOut">🎙️ صدات داره می‌ره…</span>' : '<span id="vcOut">🎙️ میکروفونت روشنه</span>')) : '';
@@ -61,7 +66,8 @@
         ? (noMic ? '<button class="btn" data-vc="retrymic" type="button">🎙️ فعال‌کردن میکروفون</button>' : `<button class="btn ${micOn ? '' : 'ghost'}" data-vc="mic" type="button">${micOn ? '🎙️ میکروفون روشنه' : '🔇 میکروفون خاموشه'}</button>`) + `
            <button class="btn ghost" data-vc="deaf" type="button">${deaf ? '🔈 صدا رو باز کن' : '🔊 قطع صدای طرف مقابل'}</button>
            <button class="btn danger" data-vc="leave" type="button">📴 خروج از اتاق</button>`
-        : `<button class="btn" data-vc="join" type="button">🎙️ ورود به اتاق صحبت</button>`}</div>
+        : `<button class="btn" data-vc="join" type="button">🎙️ ورود به اتاق صحبت</button>`}
+        ${joined && anyBad ? '<button class="btn" data-vc="retry" type="button">🔄 تلاش دوباره</button>' : ''}</div>
       <p class="vc-note">برای صحبت، مرورگر اجازهٔ میکروفون می‌خواد؛ ولی اجباری نیست، بدونش هم می‌تونی گوش بدی و توی چت بنویسی. بهتره هدفون بزنید تا صدا برگشت نخوره.</p></div>`;
     if (html !== lastHtml) { lastHtml = html; box.innerHTML = html; }
     const nb = document.querySelector('.nav-btn[data-screen="voice"]'); if (nb) nb.textContent = joined ? '🎙️ در تماس' : '🎙️ اتاق صحبت';
@@ -101,12 +107,23 @@
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
       if (s === 'connected') { if (P.state !== 'connected') { say('💞 با ' + P.name + ' وصل شدی! حرف بزنین'); blip('up'); } P.state = 'connected'; P.warned = false; }
-      else if (s === 'failed') { if (P.state !== 'failed') blip('down'); P.state = 'failed'; }
+      else if (s === 'failed') {
+        if (P.state !== 'failed') { if (P.tries >= 1) blip('down'); }
+        P.state = 'failed';
+        if (!(P.tries >= 1)) { P.tries = 1; setTimeout(() => { if (peers[id] === P && P.state === 'failed') retryPeer(id, true); }, 800); }   // یک بار خودکار دوباره امتحان می‌کنیم
+      }
       else if (s === 'disconnected' || s === 'connecting') { if (P.state === 'connected' && !P.warned) { P.warned = true; say('📶 ارتباط ضعیف شد یا قطع شد…'); blip('down'); } P.state = 'connecting'; }
       trackCall(); render();
     };
     if (ID < id) makeOffer(id); else send({ t: 'ready' }, id);
     render();
+  }
+  /* دوباره‌امتحانی: اتصال این نفر رو از نو می‌سازیم و به طرف مقابل هم خبر می‌دیم */
+  function retryPeer(id, silent) {
+    const P = peers[id]; if (!P) return;
+    const name = P.name, tries = P.tries || 0; send({ t: 'reset' }, id); closePeer(id);
+    if (joined) { startPeer(id, name); if (peers[id]) peers[id].tries = tries + (silent ? 0 : 1); }
+    if (!silent) say('🔄 دوباره تلاش می‌کنم وصل بشم…');
   }
   async function makeOffer(id) {
     const P = peers[id]; if (!P) return;
@@ -116,6 +133,7 @@
     if (!p || p.from === ID || !joined || (p.to && p.to !== ID)) return;
     const id = p.from;
     try {
+      if (p.t === 'reset') { const nm0 = (peers[id] || {}).name || 'اون یکی', tr = (peers[id] || {}).tries || 0; closePeer(id); startPeer(id, nm0); if (peers[id]) peers[id].tries = tr; return; }
       if (p.t === 'bye') { const had = !!peers[id]; closePeer(id); render(); if (had) blip('down'); return; }
       if (p.t === 'cid') { if (curCall && !curCall.id && p.id) { curCall.id = p.id; curCall.start = Number(p.start) || curCall.start; saveCall(false); } return; }
       if (!peers[id]) { const o = others().find(x => x.id === id); startPeer(id, o ? o.name : 'اون یکی'); }
@@ -161,6 +179,14 @@
     clearInterval(statT);
     statT = setInterval(async () => {   // آیا بایت‌های صدای من واقعاً داره ارسال می‌شه؟
       let sent = 0; for (const id of Object.keys(peers)) { try { (await peers[id].pc.getStats()).forEach(r => { if (r.type === 'outbound-rtp' && r.kind === 'audio') sent += r.bytesSent || 0; }); } catch (e) {} }
+      try {
+        let rl = false;
+        for (const id of Object.keys(peers)) {
+          const mp = {}; (await peers[id].pc.getStats()).forEach(r => { mp[r.id] = r; });
+          Object.values(mp).forEach(r => { if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated) { const lc = mp[r.localCandidateId], rc = mp[r.remoteCandidateId]; if ((lc && lc.candidateType === 'relay') || (rc && rc.candidateType === 'relay')) rl = true; } });
+        }
+        if (rl !== relayed) { relayed = rl; render(); }
+      } catch (e) {}
       sending = sent > sentPrev && micOn; sentPrev = sent;
       const o = $('vcOut'); if (o && micOn) o.textContent = Object.keys(peers).length ? (sending ? (myLvl > 12 ? '✅ صدات داره می‌رسه' : '✅ وصلی؛ ولی صدایی از میکروفونت نمیاد (حرف بزن)') : '⚠️ صدایی نمی‌ره') : '🎙️ میکروفونت روشنه';
     }, 1500);
@@ -322,7 +348,7 @@
     box.addEventListener('click', e => {
       const b = e.target.closest('[data-vc]'); if (!b) return;
       const a = b.dataset.vc;
-      if (a === 'join') join(); else if (a === 'leave') leave(); else if (a === 'mic') toggleMic(); else if (a === 'retrymic') { leave(true); join(); } else if (a === 'deaf') toggleDeaf();
+      if (a === 'join') join(); else if (a === 'leave') leave(); else if (a === 'mic') toggleMic(); else if (a === 'retrymic') { leave(true); join(); } else if (a === 'retry') { Object.keys(peers).forEach(id => retryPeer(id, false)); } else if (a === 'deaf') toggleDeaf();
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     window.addEventListener('pagehide', () => leave(true));
