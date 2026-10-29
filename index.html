@@ -1586,10 +1586,16 @@ body.reading-mode .reading-content {
 .vc-layout{display:grid;grid-template-columns:1fr;gap:12px}
 .vc-layout .vc-chat,.vc-layout .vc-diag{max-width:none;margin:0}
 @media (min-width:900px){
-  .vc-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"room chat" "hist chat" "diag diag";align-items:start}
-  .vc-area-room{grid-area:room}.vc-area-chat{grid-area:chat;align-self:stretch;display:flex;flex-direction:column}
-  .vc-area-chat .vc-chat-list{height:auto;flex:1;min-height:340px;max-height:60vh}
-  .vc-area-hist{grid-area:hist}.vc-area-diag{grid-area:diag}
+  /* لپ‌تاپ: تماس سمت چپ (با تاریخچه‌ش زیرش)، چت سمت راست؛ همه توی یک صفحه بدون اسکرول */
+  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"room chat" "hist chat" "diag chat";height:calc(100vh - 215px);min-height:460px;align-items:stretch}
+  .vc-layout > *{direction:rtl}
+  .vc-area-room{grid-area:room;overflow:auto}
+  .vc-area-chat{grid-area:chat;display:flex;flex-direction:column;min-height:0}
+  .vc-area-chat .vc-chat-list{height:auto;flex:1;min-height:0}
+  .vc-area-hist{grid-area:hist;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .vc-area-hist .vc-calls{max-height:none;flex:1;min-height:0}
+  .vc-area-diag{grid-area:diag}
+  .vc-room{padding:0}.vc-tiles{min-height:90px}
 }
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
 /* گوش دادن با هم */
@@ -2266,9 +2272,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30c';
+const SITE_VERSION = '2026-10-30d';
 const SITE_CHANGES = [
-  '💻 اتاق صحبت توی لپ‌تاپ: چت کنار عکس‌هامون (بالا) میاد و تاریخچهٔ تماس‌ها زیر اتاق می‌مونه',
+  '💻 اتاق صحبت توی لپ‌تاپ: تماس سمت چپ، چت سمت راست، و تاریخچهٔ تماس‌ها زیر تماس؛ همه توی یک صفحه بدون اسکرول',
   '🔊 ولوم آهنگ حالا ۰ تا ۱۰۰ هست و با فلش‌های کیبورد یکی‌یکی کم و زیاد می‌شه (مثل ولوم ویندوز)؛ عدد رو با نگه داشتن موس روی نوار می‌بینی',
   '🛟 اتاق صحبت: اگه اتصال مستقیم دو نفر برقرار نشد (فیلتر/اینترنت)، خودکار از مسیر پشتیبان (از طریق خود سایت) وصل می‌شه؛ صدا کمی تأخیر داره ولی کار می‌کنه',
   '🛠️ اتاق صحبت: وقتی اینترنت‌ها اجازهٔ اتصال مستقیم نمی‌دادن تماس وصل نمی‌شد؛ حالا سرور واسط اضافه شد و اگه وصل نشد خودش یه بار دوباره تلاش می‌کنه (دکمهٔ «تلاش دوباره» هم هست)',
