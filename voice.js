@@ -274,7 +274,7 @@
     if (!joined) return;
     if (tx) { tx.stop = true; tx = null; } send({ t: 'bye' }); const fin = curCall ? finishCall() : null; Object.keys(peers).forEach(closePeer);
     try { if (local) local.getTracks().forEach(t => t.stop()); } catch (e) {} local = null;
-    joined = false; track();
+    joined = false; duck(false); track();
     clearInterval(tickT); clearInterval(meterT); clearInterval(statT);
     if (!quiet) { say('📴 از اتاق صحبت خارج شدی'); blip('down'); }
     render();
@@ -300,8 +300,11 @@
       if (r && r.error && /calls|relation|schema cache/i.test(r.error.message || '') && !warnedCalls) { warnedCalls = true; say('⚠️ برای ثبت تاریخچهٔ تماس‌ها، بلوک ۲۰ فایل SQL رو توی Supabase اجرا کن'); }
     }).catch(() => {});
   }
+  let ducked = false;
+  function duck(on) { if (on === ducked) return; ducked = on; try { window.dispatchEvent(new CustomEvent('om-duck', { detail: { on } })); } catch (e) {} }
   function trackCall() {
     const ids = connectedIds();
+    duck(!!(joined && ids.length));
     if (ids.length && !curCall && joined) {
       curCall = { id: null, start: Date.now(), names: [nm()].concat(ids.map(k => peers[k].name)) };
       const first = ids.slice().sort()[0];

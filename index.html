@@ -2272,8 +2272,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30d';
+const SITE_VERSION = '2026-10-30e';
 const SITE_CHANGES = [
+  '🎧 وقتی توی تماس هستیم، صدای آهنگ خودکار خیلی کم می‌شه (در حد گوشهٔ ذهن) تا صدای اون یکی اصلی باشه؛ بعد از تماس به ولوم قبلی برمی‌گرده',
   '💻 اتاق صحبت توی لپ‌تاپ: تماس سمت چپ، چت سمت راست، و تاریخچهٔ تماس‌ها زیر تماس؛ همه توی یک صفحه بدون اسکرول',
   '🔊 ولوم آهنگ حالا ۰ تا ۱۰۰ هست و با فلش‌های کیبورد یکی‌یکی کم و زیاد می‌شه (مثل ولوم ویندوز)؛ عدد رو با نگه داشتن موس روی نوار می‌بینی',
   '🛟 اتاق صحبت: اگه اتصال مستقیم دو نفر برقرار نشد (فیلتر/اینترنت)، خودکار از مسیر پشتیبان (از طریق خود سایت) وصل می‌شه؛ صدا کمی تأخیر داره ولی کار می‌کنه',
@@ -3558,7 +3559,7 @@ function playSong(id, restart) {
   updateMediaSession(song);
   customAudio.src = song.storage_url;
   customAudio.loop = false;              // پایان آهنگ رو خودمون مدیریت می‌کنیم: تکرار یا آهنگ بعدی
-  customAudio.volume = lastVolume;
+  customAudio.volume = effVol();
   customAudio.muted = muted;
   syncPlaylistState();
   customAudio.play().then(() => {
@@ -4125,12 +4126,17 @@ let ambientShown = false;
 let ambientBlocked = false;
 let muted = false;
 let lastVolume = 0.35;
+let voiceDuck = 1;   // وقتی توی تماسیم، آهنگ خیلی کم می‌شه تا صدای طرف مقابل اصلی باشه
+const DUCK_LEVEL = 0.12;
+const effVol = () => Math.max(0, Math.min(1, lastVolume * voiceDuck));
+function applyVolume() { try { bgAudio.volume = effVol(); customAudio.volume = effVol(); } catch (e) {} }
+window.addEventListener('om-duck', e => { const on = !!(e.detail && e.detail.on); if (on === (voiceDuck < 1)) return; voiceDuck = on ? DUCK_LEVEL : 1; applyVolume(); if (typeof toast === 'function') toast(on ? '🎧 صدای آهنگ برای صحبت خیلی کم شد (صدای اون یکی اصلیه)' : '🔊 صدای آهنگ برگشت'); });
 let loopWatchdog = null;
 
 const bgAudio = new Audio();
 bgAudio.src = 'Various Artists - Crows.mp3';
 bgAudio.loop = true;
-bgAudio.volume = lastVolume;
+bgAudio.volume = effVol();
 bgAudio.preload = 'metadata';
 
 bgAudio.addEventListener('ended', () => {
@@ -4197,7 +4203,7 @@ function refreshFloatingPlayer() {
 function playAmbient() {
   if (ambientPlaying) return;
   if (currentSong) return; // اگه کاربر آهنگ پلی کرده، پس‌زمینه رو نزن
-  bgAudio.volume = lastVolume;
+  bgAudio.volume = effVol();
   bgAudio.play().then(() => {
     ambientPlaying = true; ambientShown = true; ambientBlocked = false;
     startLoopWatchdog();
@@ -4228,9 +4234,8 @@ document.getElementById('mpVol').addEventListener('input', e => {
   const lvl = Math.max(0, Math.min(100, Math.round(parseFloat(e.target.value) || 0)));   // ۰ تا ۱۰۰، یکی‌یکی مثل ولوم ویندوز
   const v = lvl / 100;
   e.target.title = 'صدا: ' + lvl.toString().replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
-  bgAudio.volume = v;
-  customAudio.volume = v;
   lastVolume = v;
+  applyVolume();
   if (v > 0 && muted) { bgAudio.muted = false; customAudio.muted = false; muted = false; document.getElementById('muteBtn').textContent = '🔊'; }
 });
 
