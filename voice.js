@@ -86,7 +86,7 @@
     const o = inCallOthers();
     if (joined) {
       o.forEach(x => { if (!peers[x.id]) startPeer(x.id, x.name); else peers[x.id].name = x.name; });
-      Object.keys(peers).forEach(id => { if (!o.some(x => x.id === id)) { const nmx = peers[id].name; closePeer(id); say('📴 ' + nmx + ' از اتاق رفت'); } });
+      Object.keys(peers).forEach(id => { if (!o.some(x => x.id === id)) { const nmx = peers[id].name; closePeer(id); say('📴 ' + nmx + ' از اتاق رفت'); blip('down'); } });
     }
     render();
   }
@@ -100,8 +100,9 @@
     pc.ontrack = e => { P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
-      if (s === 'connected') { if (P.state !== 'connected') say('💞 با ' + P.name + ' وصل شدی! حرف بزنین'); P.state = 'connected'; }
-      else if (s === 'failed') P.state = 'failed'; else if (s === 'disconnected' || s === 'connecting') P.state = 'connecting';
+      if (s === 'connected') { if (P.state !== 'connected') { say('💞 با ' + P.name + ' وصل شدی! حرف بزنین'); blip('up'); } P.state = 'connected'; P.warned = false; }
+      else if (s === 'failed') { if (P.state !== 'failed') blip('down'); P.state = 'failed'; }
+      else if (s === 'disconnected' || s === 'connecting') { if (P.state === 'connected' && !P.warned) { P.warned = true; say('📶 ارتباط ضعیف شد یا قطع شد…'); blip('down'); } P.state = 'connecting'; }
       trackCall(); render();
     };
     if (ID < id) makeOffer(id); else send({ t: 'ready' }, id);
@@ -115,7 +116,7 @@
     if (!p || p.from === ID || !joined || (p.to && p.to !== ID)) return;
     const id = p.from;
     try {
-      if (p.t === 'bye') { closePeer(id); render(); return; }
+      if (p.t === 'bye') { const had = !!peers[id]; closePeer(id); render(); if (had) blip('down'); return; }
       if (p.t === 'cid') { if (curCall && !curCall.id && p.id) { curCall.id = p.id; curCall.start = Number(p.start) || curCall.start; saveCall(false); } return; }
       if (!peers[id]) { const o = others().find(x => x.id === id); startPeer(id, o ? o.name : 'اون یکی'); }
       const P = peers[id]; if (!P) return;
@@ -186,7 +187,7 @@
     try { if (local) local.getTracks().forEach(t => t.stop()); } catch (e) {} local = null;
     joined = false; track();
     clearInterval(tickT); clearInterval(meterT); clearInterval(statT);
-    if (!quiet) say('📴 از اتاق صحبت خارج شدی');
+    if (!quiet) { say('📴 از اتاق صحبت خارج شدی'); blip('down'); }
     render();
   }
   function toggleMic() { if (noMic) return; micOn = !micOn; if (local) local.getAudioTracks().forEach(t => { t.enabled = micOn; }); render(); }
@@ -243,21 +244,31 @@
       (callRows.length ? '<div class="vc-total">در مجموع <b>' + esc(fmtDur(cum)) + '</b> با هم حرف زدیم 💞 <span>(' + fa(callRows.length) + ' تماس)</span></div>' : '');
   }
 
-  /* 🔔 صدای کوچولوی پیام: ارسال = «پاپ» نرم، دریافت = دو نت ملایم */
+  /* 🔔 صداهای کوچولوی سایت (با WebAudio): send/recv = پیام، notif = اعلان سایت، up = تماس وصل شد، down = تماس قطع شد/نت خراب شد */
+  const SND = {
+    send:  [[880, 0, .09], [1318, .07, .12]],
+    recv:  [[988, 0, .12], [1318, .11, .16]],
+    notif: [[784, 0, .12], [988, .1, .12], [1318, .2, .2]],
+    up:    [[523, 0, .12], [659, .1, .12], [784, .2, .12], [1047, .3, .22]],
+    down:  [[784, 0, .16], [622, .14, .16], [466, .3, .16], [349, .46, .3]]
+  };
+  let lastBlip = 0;
   function blip(kind) {
     try {
       if (typeof muted !== 'undefined' && muted === true) return;
+      const now = Date.now(); if (now - lastBlip < 250 && kind !== 'send') return; lastBlip = now;
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
       if (actx.state === 'suspended') actx.resume().catch(() => {});
-      const t = actx.currentTime, notes = kind === 'send' ? [[880, 0, .09], [1318, .07, .12]] : [[988, 0, .12], [1318, .11, .16]];
-      notes.forEach(([f, d, len]) => {
-        const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.14, t + d + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + d + len);
+      const t = actx.currentTime;
+      (SND[kind] || SND.notif).forEach(([f, d, len]) => {
+        const o = actx.createOscillator(), g = actx.createGain(); o.type = kind === 'down' ? 'triangle' : 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(kind === 'down' ? 0.16 : 0.14, t + d + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + d + len);
         o.connect(g).connect(actx.destination); o.start(t + d); o.stop(t + d + len + 0.02);
       });
       window.__blips = (window.__blips || []).concat(kind);
     } catch (e) {}
   }
+  window.OMSound = { play: blip };
 
   /* ---------- 💬 چت کوچولو ---------- */
   let msgs = [], warnedChat = false, chatMissing = false;
@@ -315,8 +326,10 @@
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     window.addEventListener('pagehide', () => leave(true));
+    window.addEventListener('offline', () => { if (joined) { say('📶 اینترنتت قطع شد'); blip('down'); } });
+    window.addEventListener('online', () => { if (joined) { say('📶 اینترنت برگشت'); blip('up'); } });
     render(); renderChat();
   }
-  window.Voice = { _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
+  window.Voice = { busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
