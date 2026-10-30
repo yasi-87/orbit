@@ -1601,17 +1601,15 @@ body.reading-mode .reading-content {
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
 /* لپ‌تاپ: پلیر موسیقی می‌ره بالای صفحه، سمت چپِ اعلان‌ها (که وسط نوار میاد) */
 @media (min-width:900px){
-  .notif-panel{left:50%;transform:translateX(-50%)}
   .topbar{flex-wrap:nowrap;position:sticky}
-  .topbar.has-top-music #bellBtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2}
-  .topbar .music-player.in-top{position:static;bottom:auto;left:auto;max-width:300px;padding:3px 10px;border-radius:999px;gap:8px;box-shadow:none;background:rgba(255,255,255,.05);border-color:rgba(212,165,255,.25);transform:none}
+  .topbar .music-player.in-top{position:static;bottom:auto;left:auto;max-width:420px;padding:3px 12px;border-radius:999px;gap:8px;box-shadow:none;background:rgba(255,255,255,.05);border-color:rgba(212,165,255,.25);transform:none}
   .topbar .music-player.in-top:hover{transform:none}
   .music-player.in-top .mp-disc{width:30px;height:30px;font-size:.9rem}
   .music-player.in-top .mp-disc img{width:100%;height:100%;border-radius:50%;object-fit:cover}
   .music-player.in-top .mp-btn{width:28px;height:28px;font-size:.85rem}
-  .music-player.in-top .mp-title{font-size:.78rem;max-width:110px}
+  .music-player.in-top .mp-title{font-size:.78rem;max-width:150px}
   .music-player.in-top .mp-sub{font-size:.62rem}
-  .music-player.in-top .mp-vol{width:56px}
+  .music-player.in-top .mp-vol{width:80px}
 }
 /* گوش دادن با هم */
 .together-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
@@ -1839,7 +1837,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div class="chapters-header">
       <h2>🎵 پلی‌لیست ما</h2>
     </div>
-    <div class="together-bar"><button class="btn ghost" id="togetherBtn" type="button">🎧 گوش دادن با هم</button><div class="together-st" id="togetherSt" style="display:none"></div></div>
+    <div class="together-bar"><button class="btn ghost" id="togetherBtn" type="button" title="گوش دادن با هم">🎧</button><div class="together-st" id="togetherSt" style="display:none"></div></div>
 
     <div class="playlist-current" id="playlistCurrent" style="display:none;">
       <div class="pc-disc">🎵</div>
@@ -1849,12 +1847,12 @@ input.seek:disabled{opacity:.4;cursor:default}
       </div>
       <div class="pc-actions">
         <button class="btn ghost" onclick="playPrev()" title="قبلی">⏮</button>
-        <button class="btn ghost" onclick="seekBy(-10)" title="۱۰ ثانیه عقب"> ⏩۱۰</button>
-        <button class="btn ghost" onclick="togglePlayPause()" id="pcPlayBtn">⏸ توقف</button>
-        <button class="btn ghost" onclick="seekBy(10)" title="۱۰ ثانیه جلو">۱۰ ⏪</button>
+        <button class="btn ghost" onclick="seekBy(-10)" title="۱۰ ثانیه عقب">⏪</button>
+        <button class="btn ghost" onclick="togglePlayPause()" id="pcPlayBtn" title="پخش / توقف">⏸</button>
+        <button class="btn ghost" onclick="seekBy(10)" title="۱۰ ثانیه جلو">⏩</button>
         <button class="btn ghost" onclick="playNext()" title="بعدی">⏭</button>
-        <button class="btn ghost" onclick="toggleRepeat()" id="pcLoopBtn">🔁 پشت‌سرهم</button>
-        <button class="btn ghost" onclick="toggleShuffle()" id="pcShuffleBtn">🔀 شافل</button>
+        <button class="btn ghost" onclick="toggleRepeat()" id="pcLoopBtn" title="تکرار">🔁</button>
+        <button class="btn ghost" onclick="toggleShuffle()" id="pcShuffleBtn" title="شافل">🔀</button>
       </div>
       <div class="seek-row pc-seek"><span class="seek-t" id="pcCur">۰:۰۰</span><input type="range" class="seek" id="pcSeek" min="0" max="1000" value="0" aria-label="تایم‌لاین آهنگ" /><span class="seek-t" id="pcDur">۰:۰۰</span></div>
     </div>
@@ -1870,7 +1868,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 
     <div class="song-url">
       <input type="url" id="songUrlInput" placeholder="یا لینک مستقیم آهنگ رو اینجا بذار (https://...mp3)" />
-      <button class="btn" id="songUrlBtn" onclick="addSongByUrl()">➕ با لینک</button>
+      <button class="btn" id="songUrlBtn" onclick="addSongByUrl()" title="اضافه کردن با لینک">➕</button>
     </div>
 
     <div id="playlistList"></div>
@@ -2029,6 +2027,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div class="mp-title" id="mpTitle">—</div>
     <div class="mp-sub" id="mpSub">آهنگ آروم دفترچه</div>
   </div>
+  <button class="mp-btn mp-prev" id="mpPrev" onclick="playPrev()" title="قبلی" style="display:none">⏮</button>
   <button class="mp-btn" id="mpPlay">▶</button>
   <button class="mp-btn mp-next" id="mpNext" onclick="playNext()" title="بعدی" style="display:none">⏭</button>
   <input type="range" class="mp-vol" id="mpVol" min="0" max="100" step="1" value="35" title="صدا: ۳۵" aria-label="صدا (۰ تا ۱۰۰)" />
@@ -2287,8 +2286,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30l';
+const SITE_VERSION = '2026-10-30m';
 const SITE_CHANGES = [
+  '🎵 دکمه‌های پلی‌لیست فقط علامت دارن؛ پلیر بالای لپ‌تاپ بزرگ‌تر شد و دکمهٔ قبلی/بعدی داره؛ زنگ اعلان‌ها (با پنلش) برگشت سر جای قبلی',
   '🐱 گربه رو می‌تونید با کشیدن هر جای صفحه که دوست دارید بذارید؛ جاش یادش می‌مونه. توی اتاق صحبت لپ‌تاپ هم کادر «تماس‌های ما» با چت هم‌راستا شد',
   '🔔 توی لپ‌تاپ پنل اعلان‌ها دقیقاً زیر زنگ وسط صفحه باز می‌شه',
   '🎵 توی لپ‌تاپ پلیر موسیقی رفت بالای صفحه: اعلان‌ها وسط و موسیقی سمت چپشون',
@@ -3449,11 +3449,11 @@ function syncPlaylistState() {
     if (disc.dataset.cover !== cover) { disc.dataset.cover = cover; disc.innerHTML = cover ? `<img src="${escapeHtml(cover)}" alt="">` : '🎵'; }
     document.getElementById('pcSub').textContent = (currentSong.artist || 'آهنگ ما') + (paused ? ' · متوقف' : ' · در حال پخش');
     currentEl.classList.toggle('playing', !paused);
-    document.getElementById('pcPlayBtn').textContent = paused ? '▶ پخش' : '⏸ توقف';
+    document.getElementById('pcPlayBtn').textContent = paused ? '▶' : '⏸';
     const lb = document.getElementById('pcLoopBtn');
-    lb.textContent = repeatOne ? '🔂 تکرار این آهنگ' : '🔁 پشت‌سرهم';
+    lb.textContent = repeatOne ? '🔂' : '🔁'; lb.title = repeatOne ? 'تکرار این آهنگ' : 'پشت‌سرهم';
     lb.classList.toggle('on', repeatOne);
-    const sb = document.getElementById('pcShuffleBtn'); if (sb) { sb.textContent = shuffleOn ? '🔀 شافل: روشن' : '🔀 شافل'; sb.classList.toggle('on', shuffleOn); }
+    const sb = document.getElementById('pcShuffleBtn'); if (sb) { sb.textContent = '🔀'; sb.title = shuffleOn ? 'شافل روشن' : 'شافل'; sb.classList.toggle('on', shuffleOn); }
   } else {
     currentEl.style.display = 'none';
   }
@@ -4192,7 +4192,7 @@ window.addEventListener('focus', () => {
 (function () {
   const mq = window.matchMedia('(min-width:900px)');
   function place() {
-    const mp = document.getElementById('musicPlayer'), top = document.querySelector('.topbar'), anchor = document.getElementById('updatesBtn');
+    const mp = document.getElementById('musicPlayer'), top = document.querySelector('.topbar'), anchor = document.getElementById('bellBtn');
     if (!mp || !top || !anchor) return;
     if (mq.matches) { if (mp.parentNode !== top) top.insertBefore(mp, anchor); mp.classList.add('in-top'); top.classList.add('has-top-music'); }
     else { if (mp.parentNode === top) document.body.appendChild(mp); mp.classList.remove('in-top'); top.classList.remove('has-top-music'); }
@@ -4207,7 +4207,7 @@ function refreshFloatingPlayer() {
   if (!mp) return;
   const disc = document.getElementById('mpDisc');
   const title = document.getElementById('mpTitle'), sub = document.getElementById('mpSub');
-  const btn = document.getElementById('mpPlay'), next = document.getElementById('mpNext');
+  const btn = document.getElementById('mpPlay'), next = document.getElementById('mpNext'), prev = document.getElementById('mpPrev');
   if (currentSong) {
     mp.style.display = 'flex';
     const cover = currentSong.cover_url || '';
@@ -4221,7 +4221,7 @@ function refreshFloatingPlayer() {
     sub.textContent = (currentSong.artist || 'آهنگ ما') + (paused ? ' · متوقف' : repeatOne ? ' · 🔂' : '');
     btn.textContent = paused ? '▶' : '⏸';
     mp.classList.toggle('playing', !paused);
-    next.style.display = 'flex';
+    next.style.display = 'flex'; prev.style.display = 'flex';
   } else {
     if (!ambientShown) return;
     mp.style.display = 'flex';
@@ -4231,7 +4231,7 @@ function refreshFloatingPlayer() {
     sub.textContent = playing ? 'در حال پخش...' : ambientBlocked ? 'برای پخش کلیک کن' : 'متوقف';
     btn.textContent = playing ? '⏸' : '▶';
     mp.classList.toggle('playing', playing);
-    next.style.display = 'none';
+    next.style.display = 'none'; prev.style.display = 'none';
   }
 }
 
