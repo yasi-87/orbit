@@ -1587,13 +1587,14 @@ body.reading-mode .reading-content {
 .vc-layout .vc-chat,.vc-layout .vc-diag{max-width:none;margin:0}
 @media (min-width:900px){
   /* لپ‌تاپ: تماس سمت چپ (با تاریخچه‌ش زیرش)، چت سمت راست */
-  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"room chat" "hist chat" "diag chat";align-items:stretch;align-content:start}
+  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr auto;grid-template-areas:"room chat" "hist chat" "diag diag";align-items:stretch;align-content:start}
   .vc-layout > *{direction:rtl}
   .vc-area-room{grid-area:room}
-  .vc-area-chat{grid-area:chat;display:flex;flex-direction:column;min-height:0;max-height:430px}
-  .vc-area-chat .vc-chat-list{height:auto;flex:1;min-height:300px}
+  .vc-area-chat{grid-area:chat;display:flex;flex-direction:column;min-height:0}
+  .vc-area-chat .vc-chat-list{height:auto;flex:1;min-height:200px;overflow-y:auto}
   .vc-area-hist{grid-area:hist}
-  .vc-area-hist .vc-calls{max-height:190px;min-height:130px}
+  .vc-area-hist{display:flex;flex-direction:column}
+  .vc-area-hist .vc-calls{max-height:300px;min-height:130px;flex:1}
   .vc-area-diag{grid-area:diag}
   .vc-room{padding:0;gap:10px}.vc-tiles{min-height:60px}.vc-note{display:none}
 }
@@ -2286,8 +2287,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30k';
+const SITE_VERSION = '2026-10-30l';
 const SITE_CHANGES = [
+  '🐱 گربه رو می‌تونید با کشیدن هر جای صفحه که دوست دارید بذارید؛ جاش یادش می‌مونه. توی اتاق صحبت لپ‌تاپ هم کادر «تماس‌های ما» با چت هم‌راستا شد',
   '🔔 توی لپ‌تاپ پنل اعلان‌ها دقیقاً زیر زنگ وسط صفحه باز می‌شه',
   '🎵 توی لپ‌تاپ پلیر موسیقی رفت بالای صفحه: اعلان‌ها وسط و موسیقی سمت چپشون',
   '📅 توی چت اتاق صحبت، تاریخ موقع اسکرول بالای پنجره می‌مونه و همراهت میاد',
