@@ -1671,7 +1671,8 @@ input.seek:disabled{opacity:.4;cursor:default}
 <div id="gate"><form class="gate-box" id="gateForm" autocomplete="off">
   <div class="g-ico">🔒</div><h2>Our Memories</h2><p>این‌جا فقط مال ماست 💜 رمز رو بزن</p>
   <input id="gatePass" type="password" placeholder="رمز" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" />
-  <button class="btn" type="submit">🔓 ورود</button><div class="gate-err" id="gateErr"></div>
+  <button class="btn" type="submit">🔓 ورود</button>
+  <button class="btn ghost" type="button" id="gateBio" style="display:none">🖐️ ورود با اثر انگشت</button><div class="gate-err" id="gateErr"></div>
 </form></div>
 
 
@@ -2270,14 +2271,53 @@ let gateFails = 0, gateLockUntil = 0;
 function showGate() {
   const g = document.getElementById('gate'); g.classList.add('show');
   setTimeout(() => { const i = document.getElementById('gatePass'); if (i) i.focus(); }, 100);
+  bioShow();
 }
+function gateUnlock() {
+  gateOk = true;
+  const inp = document.getElementById('gatePass'), err = document.getElementById('gateErr');
+  document.getElementById('gate').classList.remove('show'); inp.value = ''; err.textContent = '';
+}
+/* 🖐️ ورود با اثر انگشت / قفل گوشی (WebAuthn): بعد از یک بار ورود با رمز، روی همین دستگاه فعال می‌شه.
+   فقط تأییدِ خودِ دستگاه (اثر انگشت یا قفل صفحه) رو می‌خواد؛ چیزی جایی ذخیره یا فرستاده نمی‌شه. رمز همیشه راه کمکیه. */
+const BIO_KEY = 'diary_bio', BIO_NO = 'diary_bio_no';
+const b64e = b => btoa(String.fromCharCode.apply(null, new Uint8Array(b))), b64d = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+const rndBytes = n => crypto.getRandomValues(new Uint8Array(n));
+async function bioSupported() {
+  try { return !!(window.PublicKeyCredential && window.isSecureContext && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); } catch (e) { return false; }
+}
+const bioId = () => { try { return localStorage.getItem(BIO_KEY) || ''; } catch (e) { return ''; } };
+let bioBusy = false;
+async function bioShow() {
+  const b = document.getElementById('gateBio'); if (!b) return;
+  if (!bioId() || !(await bioSupported())) { b.style.display = 'none'; return; }
+  b.style.display = '';
+  setTimeout(bioLogin, 350);
+}
+async function bioLogin() {
+  const err = document.getElementById('gateErr'); if (bioBusy || gateOk) return; bioBusy = true;
+  try {
+    const cred = await navigator.credentials.get({ publicKey: { challenge: rndBytes(32), allowCredentials: [{ type: 'public-key', id: b64d(bioId()) }], userVerification: 'required', timeout: 60000 } });
+    if (cred) gateUnlock();
+  } catch (e) { if (e && e.name !== 'NotAllowedError' && e.name !== 'AbortError') err.textContent = 'اثر انگشت جواب نداد؛ رمز رو بزن 🙈'; }
+  bioBusy = false;
+}
+async function bioOffer() {
+  try {
+    if (bioId() || localStorage.getItem(BIO_NO) || !(await bioSupported())) return;
+    if (!confirm('می‌خوای دفعه‌های بعد روی این دستگاه با اثر انگشت (یا قفل گوشی) وارد بشی؟ 🖐️')) { localStorage.setItem(BIO_NO, '1'); return; }
+    const cred = await navigator.credentials.create({ publicKey: { challenge: rndBytes(32), rp: { name: 'Our Memories' }, user: { id: rndBytes(16), name: 'om', displayName: 'Our Memories' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }], authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' }, timeout: 60000 } });
+    if (cred) { localStorage.setItem(BIO_KEY, b64e(cred.rawId)); try { toast('🖐️ اثر انگشت فعال شد'); } catch (e) {} }
+  } catch (e) { try { toast('⚠️ فعال نشد؛ با رمز وارد می‌شی'); } catch (_) {} }
+}
+document.getElementById('gateBio').addEventListener('click', bioLogin);
 document.getElementById('gateForm').addEventListener('submit', e => {
   e.preventDefault();
   const inp = document.getElementById('gatePass'), err = document.getElementById('gateErr'), box = document.getElementById('gateForm');
   if (Date.now() < gateLockUntil) { err.textContent = 'کمی صبر کن و دوباره امتحان کن ⏳'; return; }
   if (sha256Hex('om:' + inp.value.trim()) === GATE_HASH) {
-    gateOk = true;
-    document.getElementById('gate').classList.remove('show'); inp.value = ''; err.textContent = '';
+    gateUnlock(); setTimeout(bioOffer, 800);
   } else {
     gateFails++; inp.value = ''; err.textContent = 'رمز درست نیست 🙈';
     box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
@@ -2287,8 +2327,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30n';
+const SITE_VERSION = '2026-10-30o';
 const SITE_CHANGES = [
+  '🖐️ ورود با اثر انگشت (یا قفل گوشی): یک بار با رمز وارد شو و تأیید کن؛ دفعه‌های بعد روی همون دستگاه با اثر انگشت باز می‌شه',
   '📞 توی اتاق صحبت لپ‌تاپ پایین کادر «تماس‌های ما» دقیقاً هم‌تراز پایین چت شد (چت کوتاه موند)',
   '🎵 دکمه‌های پلی‌لیست فقط علامت دارن؛ پلیر بالای لپ‌تاپ بزرگ‌تر شد و دکمهٔ قبلی/بعدی داره؛ زنگ اعلان‌ها (با پنلش) برگشت سر جای قبلی',
   '🐱 گربه رو می‌تونید با کشیدن هر جای صفحه که دوست دارید بذارید؛ جاش یادش می‌مونه. توی اتاق صحبت لپ‌تاپ هم کادر «تماس‌های ما» با چت هم‌راستا شد',
