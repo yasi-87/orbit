@@ -270,3 +270,19 @@ alter table public.voice_chat enable row level security;
 drop policy if exists "voice_chat_public_all" on public.voice_chat;
 create policy "voice_chat_public_all" on public.voice_chat
   for all to anon, authenticated using (true) with check (true);
+
+-- 22) فیلم‌ها و سریال‌هایی که با هم دیدیم (اتاق تماشا)
+create table if not exists public.watched (
+  id           text primary key,
+  item_id      text,
+  title        text,
+  url          text,
+  category     text,
+  watched_at   bigint,
+  names        text,
+  duration_sec int
+);
+alter table public.watched enable row level security;
+drop policy if exists "watched_public_all" on public.watched;
+create policy "watched_public_all" on public.watched
+  for all to anon, authenticated using (true) with check (true);
