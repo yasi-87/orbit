@@ -377,7 +377,9 @@
     let last = '', html = '';
     msgs.forEach(m => {
       const d = dayLabel(m.ts); if (d && d !== last) { last = d; html += `<div class="vc-day">${esc(d)}</div>`; }
-      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}"><b>${esc(m.name)}</b><span>${esc(m.text)}</span><i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}</i></div>`;
+      const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span>${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
+      const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" data-zoom="${esc(m.img)}">` : '';
+      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}" data-mid="${esc(m.id)}"><b>${esc(m.name)}</b>${rp}${im}${m.text ? `<span>${esc(m.text)}</span>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button></i></div>`;
     });
     list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
     if (chatMissing) list.innerHTML += '<div class="vc-empty">برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن.</div>';
@@ -388,23 +390,62 @@
       const r = await dbClient.from('voice_chat').select('*').order('ts', { ascending: false }).limit(300);
       if (r.error) { chatMissing = /voice_chat|relation|schema cache/i.test(r.error.message || ''); renderChat(); return; }
       chatMissing = false;
-      (r.data || []).forEach(x => addMsg({ id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0 }));
+      (r.data || []).forEach(x => addMsg({ id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }));
       saveMsgs(); renderChat();
     } catch (e) {}
   }
   function onChat(p) {
-    if (!p || p.from === ID || !p.text) return;
-    const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text).slice(0, 500), ts: p.ts || Date.now() };
-    if (addMsg(m)) { saveMsgs(); renderChat(); blip('recv'); if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice') say('💬 ' + m.name + ': ' + m.text.slice(0, 40)); }
+    if (!p || p.from === ID || (!p.text && !p.img)) return;
+    const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text || '').slice(0, 500), ts: p.ts || Date.now(),
+      img: /^https?:\/\//.test(p.img || '') ? p.img : '', reply: p.reply && p.reply.id ? { id: String(p.reply.id), name: String(p.reply.name || '').slice(0, 30), text: String(p.reply.text || '').slice(0, 120) } : null };
+    if (addMsg(m)) { saveMsgs(); renderChat(); blip('recv'); if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice') say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); }
   }
-  function sendChat() {
-    const inp = $('vcChatInput'); if (!inp) return; const text = inp.value.trim().slice(0, 500); if (!text) return;
+  /* ---------- 📷 تصویر و ↩︎ ریپلای توی چت ---------- */
+  let pendImg = null, replyTo = null, chatSending = false;
+  function renderComposer() {
+    const el = $('vcComposer'); if (!el) return;
+    let h = '';
+    if (replyTo) h += `<div class="vc-cmp"><span>↩︎ پاسخ به <b>${esc(replyTo.name)}</b>: ${esc((replyTo.text || '📷 تصویر').slice(0, 60))}</span><button type="button" data-cmp="noreply" aria-label="لغو ریپلای">✕</button></div>`;
+    if (pendImg) h += `<div class="vc-cmp"><img src="${esc(pendImg.preview)}" alt=""><span>تصویر آماده ارسال</span><button type="button" data-cmp="noimg" aria-label="حذف تصویر">✕</button></div>`;
+    el.innerHTML = h; el.style.display = h ? '' : 'none';
+  }
+  async function pickImage(file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    try {
+      const url = await resizeImageFile(file, 1600, 0.82);
+      pendImg = { blob: dataUrlToBlob(url), preview: url };
+      renderComposer(); const i = $('vcChatInput'); if (i) i.focus();
+    } catch (e) { say('⚠️ این تصویر باز نشد'); }
+  }
+  function zoom(src) {
+    const d = document.createElement('div'); d.className = 'vc-zoom'; d.innerHTML = '<img src="' + esc(src) + '" alt="">';
+    d.addEventListener('click', () => d.remove()); document.body.appendChild(d);
+  }
+  const REPLY_COLS = /reply_id|reply_name|reply_text|img|column/i;
+  async function sendChat() {
+    const inp = $('vcChatInput'); if (!inp || chatSending) return; const text = inp.value.trim().slice(0, 500); if (!text && !pendImg) return;
     if (!ch || !subscribed) { say('⏳ هنوز وصل نشده؛ چند لحظه دیگه'); return; }
-    const ts = Date.now(), id = 'm_' + ts + '_' + ID, p = { from: ID, id, name: nm(), text, ts };
+    chatSending = true; const sb = $('vcChatForm') && $('vcChatForm').querySelector('button[type=submit]'); if (sb) sb.disabled = true;
+    let img = '';
+    if (pendImg) {
+      try { const up = await uploadMediaFile(pendImg.blob, 'jpg', 'chat.jpg'); img = up.url; }
+      catch (e) { say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'تصویر ارسال نشد')); chatSending = false; if (sb) sb.disabled = false; return; }
+    }
+    const reply = replyTo ? { id: replyTo.id, name: replyTo.name, text: (replyTo.text || '').slice(0, 120) } : null;
+    const ts = Date.now(), id = 'm_' + ts + '_' + ID, p = { from: ID, id, name: nm(), text, ts, img, reply };
     try { ch.send({ type: 'broadcast', event: 'chat', payload: p }); } catch (e) {}
-    addMsg({ id, name: p.name, text, ts }); saveMsgs(); renderChat(); blip('send'); inp.value = ''; inp.focus();
-    dbClient.from('voice_chat').upsert({ id, name: p.name, text, ts }).then(r => {
-      if (r && r.error && /voice_chat|relation|schema cache/i.test(r.error.message || '')) { chatMissing = true; renderChat(); if (!warnedChat) { warnedChat = true; say('⚠️ برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو توی Supabase اجرا کن'); } }
+    addMsg({ id, name: p.name, text, ts, img, reply }); saveMsgs(); pendImg = null; replyTo = null; renderComposer(); renderChat(); blip('send'); inp.value = ''; inp.focus();
+    chatSending = false; if (sb) sb.disabled = false;
+    const full = { id, name: p.name, text, ts, img: img || null, reply_id: reply ? reply.id : null, reply_name: reply ? reply.name : null, reply_text: reply ? reply.text : null };
+    const bad = r => r && r.error && /voice_chat|relation|schema cache/i.test(r.error.message || '');
+    dbClient.from('voice_chat').upsert(full).then(r => {
+      if (r && r.error && REPLY_COLS.test(r.error.message || '') && !/relation/i.test(r.error.message || '')) {   // ستون‌های جدید (SQL شمارهٔ ۲۳) هنوز ساخته نشدن؛ حداقل متن ذخیره بشه
+        if (!warnedChat) { warnedChat = true; say('⚠️ برای ماندگار شدن تصویر و ریپلای، بلوک ۲۳ فایل SQL رو یک بار اجرا کن'); }
+        return dbClient.from('voice_chat').upsert({ id, name: p.name, text: text || (img ? '📷 تصویر' : ''), ts });
+      }
+      return r;
+    }).then(r => {
+      if (bad(r)) { chatMissing = true; renderChat(); if (!warnedChat) { warnedChat = true; say('⚠️ برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن'); } }
     }).catch(() => {});
   }
 
@@ -428,6 +469,15 @@
       if (a === 'join') join(); else if (a === 'leave') leave(); else if (a === 'mic') toggleMic(); else if (a === 'retrymic') { leave(true); join(); } else if (a === 'retry') { Object.keys(peers).forEach(id => retryPeer(id, false)); } else if (a === 'deaf') toggleDeaf();
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
+    const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
+    const cb = $('vcImgBtn'); if (cb && pk) cb.addEventListener('click', () => pk.click());
+    const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else pendImg = null; renderComposer(); });
+    const cl = $('vcChatList'); if (cl) cl.addEventListener('click', e => {
+      const z = e.target.closest('[data-zoom]'); if (z) { zoom(z.dataset.zoom); return; }
+      const rb = e.target.closest('[data-reply]'); if (rb) { const m = msgs.find(x => x.id === rb.dataset.reply); if (m) { replyTo = { id: m.id, name: m.name, text: m.text }; renderComposer(); const i = $('vcChatInput'); if (i) i.focus(); } return; }
+      const g = e.target.closest('[data-goto]'); if (g) { const t = cl.querySelector('[data-mid="' + CSS.escape(g.dataset.goto) + '"]'); if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 1400); } }
+    });
+    renderComposer();
     window.addEventListener('pagehide', () => leave(true));
     window.addEventListener('offline', () => { if (joined) { say('📶 اینترنتت قطع شد'); blip('down'); } });
     window.addEventListener('online', () => { if (joined) { say('📶 اینترنت برگشت'); blip('up'); } });

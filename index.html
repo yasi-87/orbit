@@ -1577,6 +1577,20 @@ body.reading-mode .reading-content {
 .vc-day{align-self:center;font-size:.74rem;color:var(--muted);background:#2a2036;border:1px solid rgba(212,165,255,.18);padding:3px 12px;border-radius:12px;margin:0;position:sticky;top:6px;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .vc-msg b{font-size:.75rem;color:var(--gold)}.vc-msg i{font-size:.65rem;color:var(--muted);font-style:normal}
 .vc-chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid rgba(212,165,255,.2)}
+.vc-imgbtn{padding:8px 12px !important;font-size:1.1rem}
+.vc-img{max-width:100%;max-height:220px;border-radius:10px;cursor:zoom-in;display:block;object-fit:cover}
+.vc-rp{border-right:3px solid var(--accent,#d4a5ff);background:rgba(0,0,0,.2);border-radius:8px;padding:3px 8px;font-size:.78rem;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.vc-rp b{font-size:.7rem}.vc-rp span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vc-re{background:none;border:0;color:var(--muted);cursor:pointer;font-size:.85rem;padding:0 0 0 6px;margin-right:6px;opacity:.7}
+.vc-re:hover{opacity:1;color:var(--accent,#d4a5ff)}
+.vc-msg.flash{animation:vcFlash 1.4s}
+@keyframes vcFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 2px var(--accent,#d4a5ff)}}
+.vc-cmp{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid rgba(212,165,255,.2);font-size:.8rem;background:rgba(0,0,0,.18)}
+.vc-cmp span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.vc-cmp img{width:38px;height:38px;object-fit:cover;border-radius:8px}
+.vc-cmp button{background:none;border:0;color:inherit;cursor:pointer;font-size:1rem}
+.vc-zoom{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+.vc-zoom img{max-width:100%;max-height:100%;border-radius:12px}
 .vc-chat-form input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(212,165,255,.35);background:rgba(10,10,15,.5);color:inherit;font:inherit}
 .vc-calls{max-height:300px;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
 .vc-call{padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.06);display:flex;flex-direction:column;gap:3px;font-size:.88rem}
@@ -1930,7 +1944,8 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div id="voiceBox" class="vc-area-room"></div>
     <div id="vcAudios"></div>
     <div class="vc-chat vc-area-chat"><div class="vc-chat-h">💬 چت کوچولو</div><div class="vc-chat-list" id="vcChatList"></div>
-      <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form></div>
+      <div id="vcComposer" style="display:none"></div>
+      <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><button class="btn ghost vc-imgbtn" type="button" id="vcImgBtn" title="فرستادن تصویر" aria-label="فرستادن تصویر">📷</button><input type="file" id="vcImgPick" accept="image/*" hidden /><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form></div>
     <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
     <div class="vc-chat vc-area-watch" id="watchBox"></div>
     <div class="vc-chat vc-area-share" id="shareBox"></div>
@@ -2374,8 +2389,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30r';
+const SITE_VERSION = '2026-10-30s';
 const SITE_CHANGES = [
+  '📷 توی چت اتاق صحبت می‌تونی تصویر بفرستی (با کلیک روی عکس بزرگ می‌شه) و روی هر پیام ریپلای بزنی ↩︎',
   '🖥️ اشتراک صفحه: توی اتاق صحبت می‌تونی صفحه، پنجره یا تب لپ‌تاپت رو برای اون یکی شیر کنی (با صدای دلخواه)؛ دیدنش روی گوشی هم جواب می‌ده',
   '🔐 توی پروفایل بخش «قفل سایت» اضافه شد: اثر انگشت همین دستگاه (گوشی) رو ثبت کن، امتحان کن یا حذفش کن؛ موقع ورود یا با اثر انگشت یا با رمز سایت وارد می‌شی',
   '🍿 اتاق تماشا: فیلم یا سریال رو از آرشیو سرگرمی انتخاب کنید تا اتاق برای هر دو باز بشه؛ پخش/توقف همزمان، وضعیت هر نفر، واکنش‌های شناور و ثبت توی دیده‌شده‌ها',
