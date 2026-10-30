@@ -199,8 +199,9 @@
     if (document.getElementById('catStyle')) return;
     const st = document.createElement('style'); st.id = 'catStyle';
     st.textContent = `
-.catpal{position:fixed;z-index:120;width:88px;height:93px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .55s cubic-bezier(.3,1.4,.5,1),opacity .35s;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5));outline:none}
+.catpal{position:fixed;z-index:120;width:88px;height:93px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent;transition:transform .55s cubic-bezier(.3,1.4,.5,1),opacity .35s;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5));outline:none}
 .catpal.hidden{opacity:0;pointer-events:none}
+.catpal.dragging{cursor:grabbing;transition:none !important;transform:scale(1.06) !important}
 .catpal.out{transform:translateY(130%) !important;opacity:0}
 .catpal .cp-body{width:100%;height:100%;transform-origin:50% 90%;animation:cpIdle 4.5s ease-in-out infinite}
 .catpal.face-l .cp-body svg{transform:scaleX(-1)}
@@ -282,13 +283,53 @@ body.reading-mode .catpal:hover{opacity:1}`;
     root.innerHTML = '<div class="cp-body"></div><div class="cp-bubble" role="status"></div>';
     body = root.firstChild; bubble = root.lastChild;
     document.body.appendChild(root);
-    root.addEventListener('click', e => { if (bubble.contains(e.target)) return; poke(); });
+    root.addEventListener('click', e => { if (bubble.contains(e.target)) return; if (Date.now() < noClickUntil) return; poke(); });
+    initDrag();
     root.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !bubble.contains(e.target)) { e.preventDefault(); poke(); } });
     bubble.addEventListener('mouseenter', () => clearTimeout(hideT));
     bubble.addEventListener('mouseleave', () => armHide(4000));
     document.addEventListener('pointerdown', e => { if (root && !root.contains(e.target)) closeBubble(); }, true);
     window.addEventListener('resize', () => { if (spot) place(spot, true); });
     redraw();
+  }
+  /* ✋ جابه‌جا کردن گربه با کشیدن؛ جا ذخیره می‌شه و گربه دیگه خودش جابه‌جا نمی‌شه */
+  const POS_KEY = 'diary_cat_pos'; let noClickUntil = 0, pinned = false;
+  function savedPos() { try { const o = JSON.parse(localStorage.getItem(POS_KEY) || 'null'); if (o && (o.side === 'l' || o.side === 'r') && isFinite(o.x) && isFinite(o.b)) return o; } catch (e) {} return null; }
+  function clampSpot(s) {
+    const w = window.innerWidth, h = window.innerHeight;
+    return { side: s.side, x: Math.max(0, Math.min(w - 88, s.x)), b: Math.max(0, Math.min(h - 93, s.b)), drag: true };
+  }
+  function initDrag() {
+    let st = null;
+    root.addEventListener('pointerdown', e => {
+      if (bubble.contains(e.target) || (e.button != null && e.button > 0)) return;
+      const r = root.getBoundingClientRect(); st = { id: e.pointerId, sx: e.clientX, sy: e.clientY, l: r.left, t: r.top, on: false };
+    });
+    window.addEventListener('pointermove', e => {
+      if (!st || e.pointerId !== st.id) return;
+      const dx = e.clientX - st.sx, dy = e.clientY - st.sy;
+      if (!st.on) {
+        if (Math.hypot(dx, dy) < 7) return;
+        st.on = true; busy = true; closeBubble(); root.classList.add('dragging'); root.classList.remove('peek');
+        try { root.setPointerCapture(st.id); } catch (_) {}
+      }
+      e.preventDefault();
+      const w = window.innerWidth, h = window.innerHeight;
+      const left = Math.max(0, Math.min(w - 88, st.l + dx)), top = Math.max(0, Math.min(h - 93, st.t + dy));
+      root.style.right = ''; root.style.left = left + 'px'; root.style.bottom = (h - top - 93) + 'px';
+      st.cur = { left, top };
+    }, { passive: false });
+    const end = e => {
+      if (!st || (e && e.pointerId !== st.id)) return;
+      const d = st; st = null;
+      if (!d.on) return;
+      noClickUntil = Date.now() + 350; root.classList.remove('dragging'); busy = false;
+      const w = window.innerWidth, h = window.innerHeight, c = d.cur || { left: d.l, top: d.t };
+      const s = c.left + 44 < w / 2 ? { side: 'l', x: c.left, b: h - c.top - 93 } : { side: 'r', x: w - c.left - 88, b: h - c.top - 93 };
+      pinned = true; place(clampSpot(s));
+      try { localStorage.setItem(POS_KEY, JSON.stringify({ side: spot.side, x: spot.x, b: spot.b })); } catch (_) {}
+    };
+    window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
   }
   const redraw = () => { if (!body) return; body.innerHTML = svg(asleep ? Object.assign({}, S, { asleep: true }) : S); root.classList.toggle('sleepy', asleep); };
 
@@ -313,7 +354,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
     root.classList.toggle('below', top < 250);
   }
   function relocate() {
-    if (!root || busy || asleep || bubble.classList.contains('show') || document.hidden) return;
+    if (!root || busy || pinned || asleep || bubble.classList.contains('show') || document.hidden) return;
     const open = document.querySelector('.lightbox[style*="flex"], .fv');
     if (open) return;
     busy = true; root.classList.add('out');
@@ -561,7 +602,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
     }
     const fresh = checkUnlocks(); save();
     build();
-    const mob = window.innerWidth < 640; place({ side: 'r', x: 14, b: mob ? 96 : 18 });
+    const mob = window.innerWidth < 640, sp = savedPos(); if (sp) pinned = true; place(sp ? clampSpot(sp) : { side: 'r', x: 14, b: mob ? 96 : 18 });
     setTimeout(() => { root.classList.remove('hidden'); }, 800);
     setTimeout(() => { if (fresh.length) announce(fresh); else say(greeting(), 6500); save(); }, 3200);
     scheduleMove();
