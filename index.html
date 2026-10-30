@@ -1369,7 +1369,7 @@ body.reading-mode .reading-content {
 @media (max-width: 700px) { .playlist-current { flex-wrap: wrap; } .playlist-current .pc-info { flex-basis: 60%; } .playlist-current .pc-actions { width: 100%; justify-content: center; } }
 .whats-new { max-width: 420px; width: 100%; max-height: 85vh; overflow: auto; padding: 20px; border-radius: 20px; background: #17101f; border: 1px solid rgba(212,165,255,0.35); }
 .whats-new h3 { margin: -20px -20px 10px; padding: 18px 20px 10px; color: var(--accent); position: sticky; top: -20px; background: #17101f; z-index: 1; }
-.whats-new > .btn { position: sticky; bottom: -20px; width: 100%; margin-top: 4px; box-shadow: 0 -14px 12px 4px #17101f; z-index: 1; }
+.whats-new > .btn { position: sticky; bottom: -12px; display: block; width: auto; min-width: 110px; margin: 6px auto 0; padding: 7px 22px; font-size: .9rem; box-shadow: 0 0 0 10px #17101f, 0 -10px 14px 8px #17101f; z-index: 1; }
 .whats-new ul { list-style: none; display: grid; gap: 8px; margin-bottom: 14px; font-size: 0.9rem; line-height: 1.7; }
 #printArea { display: none; }
 @page { size: A4; margin: 14mm; }
@@ -2272,7 +2272,7 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30h';
+const SITE_VERSION = '2026-10-30i';
 const SITE_CHANGES = [
   '📅 توی چت اتاق صحبت، تاریخ موقع اسکرول بالای پنجره می‌مونه و همراهت میاد',
   '📞 بخش «تماس‌های ما» توی اتاق صحبت بزرگ‌تر و خواناتر شد',
