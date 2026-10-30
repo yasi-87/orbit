@@ -12,7 +12,7 @@
   function status() {
     const b = $('togetherBtn'), s = $('togetherSt'); if (!b) return;
     b.classList.toggle('on', on);
-    b.textContent = on ? '🎧 گوش دادن با هم: روشن' : '🎧 گوش دادن با هم';
+    b.textContent = '🎧'; b.title = on ? 'گوش دادن با هم: روشن' : 'گوش دادن با هم';
     if (!s) return;
     if (!on) { s.textContent = ''; s.style.display = 'none'; return; }
     s.style.display = '';
