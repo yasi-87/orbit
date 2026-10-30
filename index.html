@@ -1587,7 +1587,7 @@ body.reading-mode .reading-content {
 .vc-layout .vc-chat,.vc-layout .vc-diag{max-width:none;margin:0}
 @media (min-width:900px){
   /* لپ‌تاپ: تماس سمت چپ (با تاریخچه‌ش زیرش)، چت سمت راست */
-  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"room chat" "hist chat" "watch watch" "diag diag";align-items:stretch;align-content:start}
+  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto auto;grid-template-areas:"room chat" "hist chat" "watch watch" "share share" "diag diag";align-items:stretch;align-content:start}
   .vc-layout > *{direction:rtl}
   .vc-area-room{grid-area:room}
   .vc-area-chat{grid-area:chat;display:flex;flex-direction:column;min-height:0;height:430px}
@@ -1933,6 +1933,7 @@ input.seek:disabled{opacity:.4;cursor:default}
       <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form></div>
     <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
     <div class="vc-chat vc-area-watch" id="watchBox"></div>
+    <div class="vc-chat vc-area-share" id="shareBox"></div>
     <details id="vcDiagBox" class="vc-diag vc-area-diag"><summary>🔍 اطلاعات فنی اتصال (اگه تماس وصل نشد، این رو برام بفرست)</summary><pre id="vcDiag"></pre></details>
     </div>
   </div>
@@ -2065,6 +2066,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 <script src="./together.js" defer></script>
 <script src="./voice.js" defer></script>
 <script src="./watch.js" defer></script>
+<script src="./screen.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -2219,6 +2221,7 @@ function showScreen(name) {
   if (name === 'profile') bioRefresh();
   if (name === 'voice' && window.Voice) Voice.load();
   if (name === 'voice' && window.Watch) Watch.load();
+  if (name === 'voice' && window.Screen2) Screen2.load();
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
   if (name === 'calendar') loadCalendar();
@@ -2371,8 +2374,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30q';
+const SITE_VERSION = '2026-10-30r';
 const SITE_CHANGES = [
+  '🖥️ اشتراک صفحه: توی اتاق صحبت می‌تونی صفحه، پنجره یا تب لپ‌تاپت رو برای اون یکی شیر کنی (با صدای دلخواه)؛ دیدنش روی گوشی هم جواب می‌ده',
   '🔐 توی پروفایل بخش «قفل سایت» اضافه شد: اثر انگشت همین دستگاه (گوشی) رو ثبت کن، امتحان کن یا حذفش کن؛ موقع ورود یا با اثر انگشت یا با رمز سایت وارد می‌شی',
   '🍿 اتاق تماشا: فیلم یا سریال رو از آرشیو سرگرمی انتخاب کنید تا اتاق برای هر دو باز بشه؛ پخش/توقف همزمان، وضعیت هر نفر، واکنش‌های شناور و ثبت توی دیده‌شده‌ها',
   '🖐️ ورود با اثر انگشت (یا قفل گوشی): یک بار با رمز وارد شو و تأیید کن؛ دفعه‌های بعد روی همون دستگاه با اثر انگشت باز می‌شه',
