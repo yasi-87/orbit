@@ -1586,16 +1586,16 @@ body.reading-mode .reading-content {
 .vc-layout{display:grid;grid-template-columns:1fr;gap:12px}
 .vc-layout .vc-chat,.vc-layout .vc-diag{max-width:none;margin:0}
 @media (min-width:900px){
-  /* لپ‌تاپ: تماس سمت چپ (با تاریخچه‌ش زیرش)، چت سمت راست؛ همه توی یک صفحه بدون اسکرول */
-  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"room chat" "hist chat" "diag chat";height:calc(100vh - 325px);min-height:380px;align-items:stretch}
+  /* لپ‌تاپ: تماس سمت چپ (با تاریخچه‌ش زیرش)، چت سمت راست */
+  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"room chat" "hist chat" "diag chat";align-items:stretch;align-content:start}
   .vc-layout > *{direction:rtl}
-  .vc-area-room{grid-area:room;overflow:auto}
-  .vc-area-chat{grid-area:chat;display:flex;flex-direction:column;min-height:0}
-  .vc-area-chat .vc-chat-list{height:auto;flex:1;min-height:0}
-  .vc-area-hist{grid-area:hist;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-  .vc-area-hist .vc-calls{max-height:none;flex:1;min-height:0}
+  .vc-area-room{grid-area:room}
+  .vc-area-chat{grid-area:chat;display:flex;flex-direction:column;min-height:0;max-height:430px}
+  .vc-area-chat .vc-chat-list{height:auto;flex:1;min-height:300px}
+  .vc-area-hist{grid-area:hist}
+  .vc-area-hist .vc-calls{max-height:190px;min-height:130px}
   .vc-area-diag{grid-area:diag}
-  .vc-room{padding:0}.vc-tiles{min-height:90px}
+  .vc-room{padding:0;gap:10px}.vc-tiles{min-height:60px}.vc-note{display:none}
 }
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
 /* گوش دادن با هم */
@@ -2272,8 +2272,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30f';
+const SITE_VERSION = '2026-10-30g';
 const SITE_CHANGES = [
+  '📞 بخش «تماس‌های ما» توی اتاق صحبت بزرگ‌تر و خواناتر شد',
   '💬 پنجرهٔ چت اتاق صحبت کوتاه‌تر شد',
   '🎧 وقتی توی تماس هستیم، صدای آهنگ خودکار خیلی کم می‌شه (در حد گوشهٔ ذهن) تا صدای اون یکی اصلی باشه؛ بعد از تماس به ولوم قبلی برمی‌گرده',
   '💻 اتاق صحبت توی لپ‌تاپ: تماس سمت چپ، چت سمت راست، و تاریخچهٔ تماس‌ها زیر تماس؛ همه توی یک صفحه بدون اسکرول',
