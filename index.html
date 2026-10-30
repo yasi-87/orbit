@@ -1587,7 +1587,7 @@ body.reading-mode .reading-content {
 .vc-layout .vc-chat,.vc-layout .vc-diag{max-width:none;margin:0}
 @media (min-width:900px){
   /* لپ‌تاپ: تماس سمت چپ (با تاریخچه‌ش زیرش)، چت سمت راست */
-  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"room chat" "hist chat" "diag diag";align-items:stretch;align-content:start}
+  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"room chat" "hist chat" "watch watch" "diag diag";align-items:stretch;align-content:start}
   .vc-layout > *{direction:rtl}
   .vc-area-room{grid-area:room}
   .vc-area-chat{grid-area:chat;display:flex;flex-direction:column;min-height:0;height:430px}
@@ -1597,6 +1597,7 @@ body.reading-mode .reading-content {
   .vc-area-hist{min-height:0;overflow:hidden}
   .vc-area-hist .vc-calls{max-height:none;min-height:70px;flex:1 1 0;overflow-y:auto}
   .vc-area-diag{grid-area:diag}
+  .vc-area-watch{grid-area:watch}
   .vc-room{padding:0;gap:10px}.vc-tiles{min-height:60px}.vc-note{display:none}
 }
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
@@ -1931,6 +1932,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div class="vc-chat vc-area-chat"><div class="vc-chat-h">💬 چت کوچولو</div><div class="vc-chat-list" id="vcChatList"></div>
       <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form></div>
     <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
+    <div class="vc-chat vc-area-watch" id="watchBox"></div>
     <details id="vcDiagBox" class="vc-diag vc-area-diag"><summary>🔍 اطلاعات فنی اتصال (اگه تماس وصل نشد، این رو برام بفرست)</summary><pre id="vcDiag"></pre></details>
     </div>
   </div>
@@ -2052,6 +2054,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 <script src="./sync.js" defer></script>
 <script src="./together.js" defer></script>
 <script src="./voice.js" defer></script>
+<script src="./watch.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -2204,6 +2207,7 @@ function showScreen(name) {
   if (name === 'notes') loadNotes();
   if (name === 'daily') loadDaily();
   if (name === 'voice' && window.Voice) Voice.load();
+  if (name === 'voice' && window.Watch) Watch.load();
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
   if (name === 'calendar') loadCalendar();
@@ -2327,8 +2331,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30o';
+const SITE_VERSION = '2026-10-30p';
 const SITE_CHANGES = [
+  '🍿 اتاق تماشا: فیلم یا سریال رو از آرشیو سرگرمی انتخاب کنید تا اتاق برای هر دو باز بشه؛ پخش/توقف همزمان، وضعیت هر نفر، واکنش‌های شناور و ثبت توی دیده‌شده‌ها',
   '🖐️ ورود با اثر انگشت (یا قفل گوشی): یک بار با رمز وارد شو و تأیید کن؛ دفعه‌های بعد روی همون دستگاه با اثر انگشت باز می‌شه',
   '📞 توی اتاق صحبت لپ‌تاپ پایین کادر «تماس‌های ما» دقیقاً هم‌تراز پایین چت شد (چت کوتاه موند)',
   '🎵 دکمه‌های پلی‌لیست فقط علامت دارن؛ پلیر بالای لپ‌تاپ بزرگ‌تر شد و دکمهٔ قبلی/بعدی داره؛ زنگ اعلان‌ها (با پنلش) برگشت سر جای قبلی',
@@ -4071,6 +4076,7 @@ function renderFun() {
       <span class="fc-ico">${FUN_CATS[funCat].ico}</span>
       <span class="fc-info"><b>${escapeHtml(x.title)}</b><small dir="ltr">${escapeHtml(hostOf(x.url))}</small></span>
       <span class="fc-go">↗</span>
+      ${(funCat === 'movie' || funCat === 'series') && window.Watch ? `${Watch.isSeen(x.url) ? '<span class="fc-seen">✅ دیده‌شده</span>' : ''}<button type="button" class="fc-btn fc-watch" title="ساخت اتاق تماشا با این" onclick="event.preventDefault();event.stopPropagation();Watch.create(funList.find(l => l.id === '${x.id}'))">🍿</button>` : ''}
       <button type="button" class="fc-btn" title="ویرایش اسم" onclick="event.preventDefault();event.stopPropagation();renameFunLink('${x.id}')">✏️</button>
       <button type="button" class="fc-btn fc-del" title="حذف" onclick="event.preventDefault();event.stopPropagation();removeFunLink('${x.id}')">✕</button>
     </a>`).join('');
