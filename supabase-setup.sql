@@ -286,3 +286,9 @@ alter table public.watched enable row level security;
 drop policy if exists "watched_public_all" on public.watched;
 create policy "watched_public_all" on public.watched
   for all to anon, authenticated using (true) with check (true);
+
+-- 23) تصویر و ریپلای توی چت اتاق صحبت (اگه بلوک ۲۱ رو قبلاً اجرا کردی، فقط همین رو اجرا کن)
+alter table public.voice_chat add column if not exists img         text;
+alter table public.voice_chat add column if not exists reply_id    text;
+alter table public.voice_chat add column if not exists reply_name  text;
+alter table public.voice_chat add column if not exists reply_text  text;
