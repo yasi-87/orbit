@@ -1598,6 +1598,19 @@ body.reading-mode .reading-content {
   .vc-room{padding:0;gap:10px}.vc-tiles{min-height:60px}.vc-note{display:none}
 }
 .vc-note{font-size:.8rem;color:var(--muted);max-width:340px}
+/* لپ‌تاپ: پلیر موسیقی می‌ره بالای صفحه، سمت چپِ اعلان‌ها (که وسط نوار میاد) */
+@media (min-width:900px){
+  .topbar{flex-wrap:nowrap;position:sticky}
+  .topbar.has-top-music #bellBtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2}
+  .topbar .music-player.in-top{position:static;bottom:auto;left:auto;max-width:300px;padding:3px 10px;border-radius:999px;gap:8px;box-shadow:none;background:rgba(255,255,255,.05);border-color:rgba(212,165,255,.25);transform:none}
+  .topbar .music-player.in-top:hover{transform:none}
+  .music-player.in-top .mp-disc{width:30px;height:30px;font-size:.9rem}
+  .music-player.in-top .mp-disc img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+  .music-player.in-top .mp-btn{width:28px;height:28px;font-size:.85rem}
+  .music-player.in-top .mp-title{font-size:.78rem;max-width:110px}
+  .music-player.in-top .mp-sub{font-size:.62rem}
+  .music-player.in-top .mp-vol{width:56px}
+}
 /* گوش دادن با هم */
 .together-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
 .together-bar .btn.on{background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1a1030;border-color:transparent}
@@ -2272,8 +2285,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30i';
+const SITE_VERSION = '2026-10-30j';
 const SITE_CHANGES = [
+  '🎵 توی لپ‌تاپ پلیر موسیقی رفت بالای صفحه: اعلان‌ها وسط و موسیقی سمت چپشون',
   '📅 توی چت اتاق صحبت، تاریخ موقع اسکرول بالای پنجره می‌مونه و همراهت میاد',
   '📞 بخش «تماس‌های ما» توی اتاق صحبت بزرگ‌تر و خواناتر شد',
   '💬 پنجرهٔ چت اتاق صحبت کوتاه‌تر شد',
@@ -4168,6 +4182,20 @@ window.addEventListener('focus', () => {
     bgAudio.play().catch(()=>{});
   }
 });
+
+
+/* جابه‌جایی پلیر: روی لپ‌تاپ توی نوار بالا (سمت چپِ اعلان‌ها)، روی گوشی شناور پایین */
+(function () {
+  const mq = window.matchMedia('(min-width:900px)');
+  function place() {
+    const mp = document.getElementById('musicPlayer'), top = document.querySelector('.topbar'), anchor = document.getElementById('updatesBtn');
+    if (!mp || !top || !anchor) return;
+    if (mq.matches) { if (mp.parentNode !== top) top.insertBefore(mp, anchor); mp.classList.add('in-top'); top.classList.add('has-top-music'); }
+    else { if (mp.parentNode === top) document.body.appendChild(mp); mp.classList.remove('in-top'); top.classList.remove('has-top-music'); }
+  }
+  place();
+  if (mq.addEventListener) mq.addEventListener('change', place); else if (mq.addListener) mq.addListener(place);
+})();
 
 /* پلیر شناور: اگه آهنگی از پلی‌لیست انتخاب شده اون رو (با کاورش) نشون می‌ده، وگرنه موسیقی پس‌زمینه رو */
 function refreshFloatingPlayer() {
