@@ -292,3 +292,35 @@ alter table public.voice_chat add column if not exists img         text;
 alter table public.voice_chat add column if not exists reply_id    text;
 alter table public.voice_chat add column if not exists reply_name  text;
 alter table public.voice_chat add column if not exists reply_text  text;
+
+-- 24) Our Canvas: بوم نقاشی مشترک (بوم فعلی + گالری نقاشی‌ها)
+create table if not exists public.canvas_live (
+  id         text primary key,
+  strokes    text,
+  meta       text,
+  updated_at bigint
+);
+alter table public.canvas_live enable row level security;
+drop policy if exists "canvas_live_public_all" on public.canvas_live;
+create policy "canvas_live_public_all" on public.canvas_live
+  for all to anon, authenticated using (true) with check (true);
+
+create table if not exists public.canvas_art (
+  id         text primary key,
+  title      text,
+  url        text,
+  path       text,
+  strokes    text,
+  bg         text,
+  author     text,
+  created_at bigint,
+  fav        boolean default false,
+  comments   text default '[]',
+  reveal_at  bigint,
+  topic      text,
+  mode       text
+);
+alter table public.canvas_art enable row level security;
+drop policy if exists "canvas_art_public_all" on public.canvas_art;
+create policy "canvas_art_public_all" on public.canvas_art
+  for all to anon, authenticated using (true) with check (true);

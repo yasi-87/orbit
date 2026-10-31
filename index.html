@@ -1725,6 +1725,7 @@ input.seek:disabled{opacity:.4;cursor:default}
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
     <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
     <button class="nav-btn" data-screen="fun" onclick="showScreen('fun')">🎬 سرگرمی</button>
+    <button class="nav-btn" data-screen="canvas" onclick="showScreen('canvas')">🎨 بوم</button>
     <button class="nav-btn" data-screen="voice" onclick="showScreen('voice')">🎙️ اتاق صحبت</button>
     <button class="nav-btn" data-screen="garden" onclick="showScreen('garden')">🌳 باغ</button>
     <button class="nav-btn" data-screen="puzzle" onclick="showScreen('puzzle')">🧩 پازل</button>
@@ -1931,6 +1932,12 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div class="fun-grid" id="funGrid"></div>
   </div>
 
+  <!-- ============ Our Canvas: بوم نقاشی مشترک ============ -->
+  <div class="container screen" id="screen-canvas">
+    <div class="cv-title"><h2>🎨 Our Canvas</h2><small>دو نفر، یک شاهکار</small></div>
+    <div id="canvasBox"></div>
+  </div>
+
   <!-- ============ پازل عکس ============ -->
   <div class="container screen" id="screen-puzzle">
     <div class="chapters-header"><h2>🧩 پازل عکس‌های ما</h2></div>
@@ -2082,6 +2089,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 <script src="./voice.js" defer></script>
 <script src="./watch.js" defer></script>
 <script src="./screen.js" defer></script>
+<script src="./canvas.js" defer></script>
 <script>
 /* ============================================================
    Supabase
@@ -2234,6 +2242,7 @@ function showScreen(name) {
   if (name === 'notes') loadNotes();
   if (name === 'daily') loadDaily();
   if (name === 'profile') bioRefresh();
+  if (name === 'canvas' && window.Canvas2) Canvas2.load();
   if (name === 'voice' && window.Voice) Voice.load();
   if (name === 'voice' && window.Watch) Watch.load();
   if (name === 'voice' && window.Screen2) Screen2.load();
@@ -2389,8 +2398,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-10-30s';
+const SITE_VERSION = '2026-10-31a';
 const SITE_CHANGES = [
+  '🎨 Our Canvas: بوم نقاشی مشترک و زنده برای هر دو نفر؛ قلم، قلم‌مو، هایلایتر، پاک‌کن، استیکر، متن، امضا، حالت‌های بازی (کاملش کن، نیمه‌نیمه، حدس بزن، زمان‌دار، مخفی)، گالری، پخش دوبارهٔ نقاشی و دانلود PNG',
   '📷 توی چت اتاق صحبت می‌تونی تصویر بفرستی (با کلیک روی عکس بزرگ می‌شه) و روی هر پیام ریپلای بزنی ↩︎',
   '🖥️ اشتراک صفحه: توی اتاق صحبت می‌تونی صفحه، پنجره یا تب لپ‌تاپت رو برای اون یکی شیر کنی (با صدای دلخواه)؛ دیدنش روی گوشی هم جواب می‌ده',
   '🔐 توی پروفایل بخش «قفل سایت» اضافه شد: اثر انگشت همین دستگاه (گوشی) رو ثبت کن، امتحان کن یا حذفش کن؛ موقع ورود یا با اثر انگشت یا با رمز سایت وارد می‌شی',
