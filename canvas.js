@@ -495,6 +495,7 @@
   const BG_CSS = { white: '#fff', cream: '#fff8ec', night: '#14122a', grid: 'repeating-linear-gradient(0deg,#fff8ec 0 7px,#d9cfe6 7px 8px),#fff8ec', dots: 'radial-gradient(#9b8bb8 1.2px,#fff8ec 1.4px) 0 0/8px 8px', lines: 'repeating-linear-gradient(0deg,#fff8ec 0 9px,#a9c3ee 9px 10px)', sky: 'linear-gradient(#9bd1ff,#fff3d6)', pink: 'linear-gradient(135deg,#ffd6e8,#e6d4ff)' };
   const MODES = [['free', 'pen', 'آزاد'], ['turn', 'redo', 'کاملش کن (نوبتی)'], ['half', 'gal', 'نیمه‌نیمه'], ['guess', 'bulb', 'حدس بزن'], ['timed', 'cal', 'زمان‌دار'], ['secret', 'sig', 'نقاشی مخفی']];
   let pop = null, timedMin = 2, filterSel = '';
+  const toolSizes = { pen: 6, brush: 16, hl: 14, eraser: 24 };
 
   function CSS2() {
     return `
@@ -530,6 +531,7 @@
 .cv-prow{display:flex;gap:8px;align-items:center;margin:8px 0}.cv-prow input[type=range]{flex:1}
 .cv-prow input[type=color]{width:100%;height:34px;border:0;background:none;padding:0;cursor:pointer}
 .cv-pv{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.07);display:grid;place-items:center}.cv-pv i{display:block;border-radius:50%}
+.cv-sizes{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:6px}.cv-sizes button{aspect-ratio:1;border-radius:12px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);cursor:pointer;display:grid;place-items:center;padding:0}.cv-sizes button.on{background:rgba(212,165,255,.4);border-color:var(--cvA)}.cv-sizes i{display:block;border-radius:50%}
 .cv-mg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .cv-mg button{height:46px;border-radius:12px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer;display:grid;place-items:center}.cv-mg button.on{background:linear-gradient(135deg,var(--cvA),var(--cvB));color:#1a1030}
 .cv-chips{display:flex;gap:6px;margin-top:8px}.cv-chips button{flex:1;padding:6px 0;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer;font:inherit;font-size:.78rem}.cv-chips button.on{background:var(--cvA);color:#1a1030}
@@ -608,7 +610,13 @@
       const t = b.dataset.t;
       if (t === 'undo') undo(); else if (t === 'redo') redoOp(); else if (t === 'clear') clearAll();
       else if (t === 'sig') { const c0 = jget('diary_cv_sig', '') || nm(); const v = prompt('امضات چی باشه؟ (بعد روی بوم بزن تا جاش مشخص بشه)', c0); if (v !== null && v.trim()) { jset('diary_cv_sig', v.trim().slice(0, 30)); sigMode = true; pop = null; renderRail(); renderPop(); toast2('✍️ روی بوم بزن تا امضا بشینه'); } }
-      else { tool = t; sigMode = false; pop = t === 'sticker' ? 'stk' : (pop === 'stk' ? null : pop); renderRail(); renderPop(); }
+      else {
+        const draws = ['pen', 'brush', 'hl', 'eraser'], was = tool === t && !sigMode;
+        if (tool !== t) { toolSizes[tool] = size; if (toolSizes[t]) size = toolSizes[t]; }
+        tool = t; sigMode = false;
+        pop = t === 'sticker' ? 'stk' : draws.includes(t) ? (was && pop === 'size' ? null : 'size') : (pop === 'stk' || pop === 'size' ? null : pop);
+        renderRail(); renderPop();
+      }
     });
     el.querySelectorAll('[data-pop]').forEach(b => b.onclick = e => { e.stopPropagation(); pop = pop === b.dataset.pop ? null : b.dataset.pop; renderRail(); renderPop(); });
     redoUi();
@@ -617,8 +625,10 @@
   function popHtml(n) {
     if (n === 'color') return `<h6>رنگ</h6><div class="cv-grid2">${COLORS.map(c => `<button type="button" data-c="${c}" style="background:${c}" class="${color.toLowerCase() === c ? 'on' : ''}" aria-label="${c}"></button>`).join('')}</div>
       <div class="cv-prow"><input type="color" id="cvPick" value="${/^#[0-9a-f]{6}$/i.test(color) ? color : '#ff4d6d'}" title="رنگ دلخواه"><button type="button" class="cv-ib" data-pal="1" title="پالت هماهنگ با این رنگ">${ico('wand')}</button></div><div class="cv-grid2" id="cvSug"></div>`;
-    if (n === 'size') return `<h6>ضخامت</h6><div class="cv-prow"><div class="cv-pv"><i id="cvPvDot" style="width:${Math.min(40, size)}px;height:${Math.min(40, size)}px;background:${esc(color)};opacity:${alpha}"></i></div><input type="range" id="cvSize" min="1" max="60" value="${size}"></div>
-      <h6>شفافیت</h6><div class="cv-prow"><input type="range" id="cvAlpha" min="5" max="100" value="${Math.round(alpha * 100)}"></div>`;
+    if (n === 'size') { const PRE = tool === 'eraser' ? [8, 14, 24, 36, 50, 60] : [2, 4, 8, 14, 24, 40]; const pv = tool === 'eraser' ? '#999' : esc(color);
+      return `<h6>اندازه</h6><div class="cv-sizes">${PRE.map(v => `<button type="button" data-sz="${v}" class="${size === v ? 'on' : ''}" title="${fa(v)}"><i style="width:${Math.max(3, Math.min(30, v * (tool === 'hl' ? 1.6 : tool === 'eraser' ? 0.7 : 1)))}px;height:${Math.max(3, Math.min(30, v * (tool === 'hl' ? 1.6 : tool === 'eraser' ? 0.7 : 1)))}px;background:${pv}"></i></button>`).join('')}</div>
+      <div class="cv-prow"><div class="cv-pv"><i id="cvPvDot" style="width:${Math.min(40, size)}px;height:${Math.min(40, size)}px;background:${pv};opacity:${tool === 'eraser' ? 1 : alpha}"></i></div><input type="range" id="cvSize" min="1" max="60" value="${size}"></div>
+      ${tool === 'eraser' ? '' : `<h6>شفافیت</h6><div class="cv-prow"><input type="range" id="cvAlpha" min="5" max="100" value="${Math.round(alpha * 100)}"></div>`}`; }
     if (n === 'stk') return `<h6>استیکر</h6><div class="cv-grid2 em">${STICKERS.map(s => `<button type="button" data-s="${s}" class="${s === stickerPick ? 'on' : ''}">${s}</button>`).join('')}</div>`;
     if (n === 'bg') return `<h6>پس‌زمینه</h6><div class="cv-grid2 sq">${Object.keys(BGS).map(k => `<button type="button" data-bg="${k}" title="${BGS[k]}" style="background:${BG_CSS[k]}" class="${meta.bg === k ? 'on' : ''}"></button>`).join('')}</div>`;
     if (n === 'mode') return `<h6>حالت بازی</h6><div class="cv-mg">${MODES.map(m => `<button type="button" data-md="${m[0]}" title="${m[2]}" aria-label="${m[2]}" class="${(m[0] === 'secret' ? secret : (!secret && meta.mode === m[0])) ? 'on' : ''}">${ico(m[1], 22)}</button>`).join('')}</div>
@@ -636,7 +646,8 @@
     el.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { color = b.dataset.c; renderRail(); renderPop(); });
     const pk = $('cvPick'); if (pk) pk.oninput = e => { color = e.target.value; const d = $('cvPvDot'); if (d) d.style.background = color; renderRail(); };
     el.querySelectorAll('[data-pal]').forEach(b => b.onclick = suggestPalette);
-    const sz = $('cvSize'); if (sz) sz.oninput = e => { size = +e.target.value; const d = $('cvPvDot'); if (d) { d.style.width = d.style.height = Math.min(40, size) + 'px'; } renderRailDot(); };
+    el.querySelectorAll('[data-sz]').forEach(b => b.onclick = () => { size = +b.dataset.sz; toolSizes[tool] = size; renderPop(); renderRailDot(); });
+    const sz = $('cvSize'); if (sz) sz.oninput = e => { size = +e.target.value; toolSizes[tool] = size; el.querySelectorAll('[data-sz]').forEach(b => b.classList.toggle('on', +b.dataset.sz === size)); const d = $('cvPvDot'); if (d) { d.style.width = d.style.height = Math.min(40, size) + 'px'; } renderRailDot(); };
     const al = $('cvAlpha'); if (al) al.oninput = e => { alpha = +e.target.value / 100; const d = $('cvPvDot'); if (d) d.style.opacity = alpha; renderRailDot(); };
     el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { stickerPick = b.dataset.s; pop = null; renderPop(); renderRail(); });
     el.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => setMeta({ bg: b.dataset.bg }));

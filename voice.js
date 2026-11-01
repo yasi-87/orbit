@@ -398,7 +398,7 @@
     if (!p || p.from === ID || (!p.text && !p.img)) return;
     const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text || '').slice(0, 500), ts: p.ts || Date.now(),
       img: /^https?:\/\//.test(p.img || '') ? p.img : '', reply: p.reply && p.reply.id ? { id: String(p.reply.id), name: String(p.reply.name || '').slice(0, 30), text: String(p.reply.text || '').slice(0, 120) } : null };
-    if (addMsg(m)) { saveMsgs(); renderChat(); blip('recv'); if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice') say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); }
+    if (addMsg(m)) { saveMsgs(); renderChat(); blip('recv'); if (window.ChatDock && !ChatDock.isOpen()) { ChatDock.bump(); say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); } }
   }
   /* ---------- 📷 تصویر و ↩︎ ریپلای توی چت ---------- */
   let pendImg = null, replyTo = null, chatSending = false;
