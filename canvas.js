@@ -106,9 +106,9 @@
   function pDown(e) {
     if (e.button != null && e.button > 0) return; e.preventDefault();
     const p = pos(e), d = deny(p[0]); if (d) { toast2(d); return; }
-    if (sigMode) { sigMode = false; place({ t: 'tx', text: jget('diary_cv_sig', '') || nm(), x: p[0], y: p[1], size: Math.max(40, size * 5), color, sig: true }); renderTools(); return; }
-    if (tool === 'sticker') { place({ t: 'st', e: stickerPick, x: p[0], y: p[1], size: Math.max(40, size * 6) }); return; }
-    if (tool === 'text') { const t = prompt('چی بنویسم روی نقاشی؟'); if (t && t.trim()) place({ t: 'tx', text: t.trim().slice(0, 60), x: p[0], y: p[1], size: Math.max(28, size * 4), color }); return; }
+    if (sigMode) { sigMode = false; place({ t: 'tx', text: jget('diary_cv_sig', '') || nm(), x: p[0], y: p[1], size: Math.max(64, size * 6), color, sig: true }); renderTools(); return; }
+    if (tool === 'sticker') { place({ t: 'st', e: stickerPick, x: p[0], y: p[1], size: Math.max(96, size * 9) }); return; }
+    if (tool === 'text') { const t = prompt('چی بنویسم روی نقاشی؟'); if (t && t.trim()) place({ t: 'tx', text: t.trim().slice(0, 60), x: p[0], y: p[1], size: Math.max(52, size * 5), color }); return; }
     try { work.setPointerCapture(e.pointerId); } catch (_) {}
     mine = { id: 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), by: nm(), t: 'p', tool, color, size, alpha, pts: [p], ts: Date.now() };
     pend = [p]; dirty = true; sendSeg(true);
@@ -275,7 +275,9 @@
     opts = opts || {};
     if (!cur().length) { toast2('بوم خالیه؛ اول یه چیزی بکش 🎨'); return; }
     const filter = filterSel || '';
-    let title = opts.title; if (title == null) { title = prompt('اسم این نقاشی چی باشه؟', titleIdea()); if (title === null) return; }
+    const ex = editId && !secret ? gallery.find(x => x.id === editId) : null;
+    const replace = !!ex && confirm('نسخهٔ قبلی «' + ex.title + '» با این نسخه جایگزین بشه؟ (لغو = ذخیره به‌عنوان نقاشی جدید)');
+    let title = opts.title; if (title == null) { title = prompt('اسم این نقاشی چی باشه؟', replace ? ex.title : titleIdea()); if (title === null) return; }
     title = (title.trim() || titleIdea()).slice(0, 80);
     let reveal = 0;
     if (secret) { const h = prompt('چند ساعت دیگه برای نفر مقابل نمایش داده بشه؟', '24'); if (h === null) return; reveal = Date.now() + Math.max(0.05, Number(h) || 24) * 3600000; }
@@ -283,10 +285,10 @@
     try {
       const blob = await blobOf(await exportCanvas(filter));
       const up = await uploadMediaFile(blob, 'png', 'canvas.png');
-      const row = { id: opts.id || ('cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5)), title, url: up.url, path: up.path, strokes: JSON.stringify(cur()), bg: meta.bg, author: secret ? nm() : (partnerName() ? nm() + ' و ' + partnerName() : nm()), created_at: Date.now(), fav: false, comments: '[]', reveal_at: reveal || null, topic: meta.topic || '', mode: secret ? 'secret' : meta.mode };
+      const row = { id: replace ? ex.id : (opts.id || ('cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5))), title, url: up.url, path: up.path, strokes: JSON.stringify(cur()), bg: meta.bg, author: secret ? nm() : (partnerName() ? nm() + ' و ' + partnerName() : nm()), created_at: replace ? ex.created_at : Date.now(), fav: replace ? !!ex.fav : false, comments: replace ? (ex.comments || '[]') : '[]', reveal_at: reveal || null, topic: meta.topic || '', mode: secret ? 'secret' : meta.mode };
       const { error } = await dbClient.from('canvas_art').upsert(row);
       if (error) { artMissing = /canvas_art|relation|schema cache/i.test(error.message || ''); try { await dbClient.storage.from('songs').remove([up.path]); } catch (e) {} throw error; }
-      artMissing = false; gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined }));
+      artMissing = false; if (replace && ex.path && ex.path !== up.path) { try { dbClient.storage.from('songs').remove([ex.path]); } catch (e) {} } gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined })); if (replace || opts.finish) { editId = null; renderMode(); }
       fx(opts.finish ? 40 : 18); toast2(secret ? '🔒 نقاشی مخفی ذخیره شد و سر وقتش نمایش داده می‌شه' : (opts.finish ? '🏁 نقاشی تموم شد و توی گالری ذخیره شد 💞' : '💾 توی گالری ذخیره شد ✨'));
       if (!secret) send({ t: 'saved' });
       if (secret) { secret = false; secretStrokes = []; rebuild(); renderMode(); renderTools(); renderAct(); }
@@ -319,7 +321,7 @@
       let cm = 0; try { cm = JSON.parse(g.comments || '[]').length; } catch (e) {}
       return `<div class="cv-card" data-id="${esc(g.id)}">${lk ? `<div class="cv-lock">🔒<small>غافلگیری! حدود ${fa(left)} ساعت دیگه</small></div>` : `<img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" data-open="${esc(g.id)}">`}
         <div class="cv-ct"><b>${esc(lk ? 'نقاشی مخفی' : g.title)}</b><small>${esc(g.author || '')} · ${esc(dateOf(g.created_at))}</small></div>
-        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button>`}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
+        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button>`}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
     }).join('') + '</div>';
     const fo = $('cvFavOnly'); if (fo) fo.onchange = () => { galFav = fo.checked; renderGallery(); };
   }
@@ -337,7 +339,7 @@
     const g = gallery.find(x => x.id === id); if (!g || locked(g)) return;
     const d = document.createElement('div'); d.className = 'cv-modal'; d.innerHTML = `<div class="cv-mbox"><button type="button" class="cv-x" aria-label="بستن">✕</button><h3>${esc(g.title)}</h3><small>${esc(g.author || '')} · ${esc(dateOf(g.created_at))}${g.topic ? ' · موضوع: ' + esc(g.topic) : ''}</small>
       <div class="cv-mstage"><img src="${esc(g.url)}" alt=""><canvas width="${W}" height="${H}" class="cv-rp" style="display:none"></canvas></div>
-      <div class="cv-row"><button type="button" class="btn" data-m="replay">▶️ پخش دوبارهٔ نقاشی</button><button type="button" class="btn ghost" data-m="dl">⬇️ دانلود</button></div>
+      <div class="cv-row"><button type="button" class="cv-ib pri" data-m="replay" title="پخش دوبارهٔ نقاشی" aria-label="پخش دوباره">${ico('play')}</button><button type="button" class="cv-ib" data-m="edit" title="ویرایش دوباره" aria-label="ویرایش">${ico('pen')}</button><button type="button" class="cv-ib" data-m="dl" title="دانلود" aria-label="دانلود">${ico('dl')}</button></div>
       <div class="cv-cm" id="cvCm"></div><form class="cv-cmf"><input type="text" maxlength="200" placeholder="یه نظر قشنگ بنویس…"><button class="btn" type="submit">ارسال</button></form></div>`;
     document.body.appendChild(d);
     const close = () => { clearTimeout(rpTimer); d.remove(); };
@@ -346,11 +348,25 @@
     renderCm();
     d.querySelector('.cv-cmf').onsubmit = async e => { e.preventDefault(); const i = e.target.querySelector('input'), t = i.value.trim(); if (!t) return; let l = []; try { l = JSON.parse(g.comments || '[]'); } catch (_) {} l.push({ by: nm(), text: t.slice(0, 200), ts: Date.now() }); g.comments = JSON.stringify(l); i.value = ''; renderCm(); try { await dbClient.from('canvas_art').update({ comments: g.comments }).eq('id', id); } catch (_) {} renderGallery(); };
     d.querySelector('[data-m=dl]').onclick = () => dlArt(id);
+    d.querySelector('[data-m=edit]').onclick = () => editArt(id);
     d.querySelector('[data-m=replay]').onclick = async () => {
       let sts = null; try { const r = await dbClient.from('canvas_art').select('strokes').eq('id', id).maybeSingle(); sts = r.data && JSON.parse(r.data.strokes || '[]'); } catch (e) {}
       if (!sts || !sts.length) { toast2('مراحل این نقاشی ذخیره نشده'); return; }
       const cv = d.querySelector('.cv-rp'), img = d.querySelector('.cv-mstage img'); img.style.display = 'none'; cv.style.display = 'block'; replay(cv, sts, g.bg || 'cream', () => { img.style.display = ''; cv.style.display = 'none'; });
     };
+  }
+  /* ✏️ ویرایش دوبارهٔ یک نقاشی ذخیره‌شده: مراحلش روی بوم مشترک بارگذاری می‌شه و با ذخیره، همون نقاشی (یا یک نسخهٔ جدید) به‌روز می‌شه */
+  let editId = null;
+  async function editArt(id) {
+    const g = gallery.find(x => x.id === id); if (!g || locked(g)) return;
+    if (strokes.length && !confirm('بوم فعلی با این نقاشی جایگزین می‌شه. ادامه بدم؟ (اگه بوم فعلی رو می‌خوای، اول ذخیره‌اش کن)')) return;
+    let sts = null; try { const r = await dbClient.from('canvas_art').select('strokes').eq('id', id).maybeSingle(); sts = r.data && JSON.parse(r.data.strokes || '[]'); } catch (e) {}
+    if (!sts || !sts.length) { toast2('مراحل این نقاشی ذخیره نشده؛ نمی‌شه ویرایشش کرد'); return; }
+    document.querySelectorAll('.cv-modal').forEach(x => x.remove()); clearTimeout(rpTimer);
+    secret = false; strokes = sts; redo = []; editId = id; tab = 'draw'; pop = null;
+    applyMeta(Object.assign({}, meta, { mode: 'free', turn: '', half: null, drawer: '', timerEnd: 0, bg: g.bg || 'cream', topic: g.topic || '' }), false);
+    rebuild(); render(); send({ t: 'meta', meta }); clearTimeout(saveT); await saveLive(); send({ t: 'reload' });
+    toast2('✏️ «' + g.title + '» روی بوم باز شد؛ ویرایشش کن و ذخیره بزن');
   }
   function replay(cv, sts, bg, done) {
     clearTimeout(rpTimer);
@@ -472,6 +488,7 @@
     wand: '<path d="m15 4 5 5L9 20l-5-5z"/><path d="M5 3v4M3 5h4M19 15v4M17 17h4"/>',
     brushes: '<circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/>',
     gal: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+    play: '<polygon points="5 3 19 12 5 21 5 3"/>',
     canvas: '<path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/>'
   };
   const ico = (n, s) => `<svg viewBox="0 0 24 24" width="${s || 20}" height="${s || 20}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || ''}</svg>`;
@@ -522,10 +539,12 @@
 .cv-stage{margin:0}
 .cv-save{display:none}
 @media (max-width:760px){
-  .cv-main{flex-direction:column-reverse}
+  .cv-main{flex-direction:column-reverse;align-items:stretch}
+  .cv-wrap{flex:none;width:100%}
   .cv-rail{flex-direction:row;overflow-x:auto;width:100%;position:static;padding:6px;gap:4px;border-radius:16px;scrollbar-width:none}
   .cv-rail::-webkit-scrollbar{display:none}.cv-rail .div{width:1px;height:26px;margin:4px 2px;flex:none}.cv-rail .cv-ib{flex:none}
-  .cv-pop{position:fixed;left:8px;right:8px;bottom:70px;top:auto;width:auto;z-index:2300}
+  .cv-pop{left:0;right:0;top:0;width:auto}
+  .cv-stage{touch-action:none}
 }`;
   }
   function buildCanvases2() { if (!$('cvCss2')) { const st = document.createElement('style'); st.id = 'cvCss2'; st.textContent = CSS2(); document.head.appendChild(st); } }
@@ -619,7 +638,7 @@
     el.querySelectorAll('[data-pal]').forEach(b => b.onclick = suggestPalette);
     const sz = $('cvSize'); if (sz) sz.oninput = e => { size = +e.target.value; const d = $('cvPvDot'); if (d) { d.style.width = d.style.height = Math.min(40, size) + 'px'; } renderRailDot(); };
     const al = $('cvAlpha'); if (al) al.oninput = e => { alpha = +e.target.value / 100; const d = $('cvPvDot'); if (d) d.style.opacity = alpha; renderRailDot(); };
-    el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { stickerPick = b.dataset.s; renderPop(); });
+    el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { stickerPick = b.dataset.s; pop = null; renderPop(); renderRail(); });
     el.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => setMeta({ bg: b.dataset.bg }));
     el.querySelectorAll('[data-md]').forEach(b => b.onclick = () => { const m = b.dataset.md; if (m === 'secret') toggleSecret(); else modeSet(m); pop = null; renderRail(); renderPop(); });
     el.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { timedMin = +b.dataset.tm; modeSet('timed'); pop = null; renderRail(); renderPop(); });
@@ -629,12 +648,12 @@
   }
   const refreshPop = () => { if (pop === 'mode' || pop === 'bg') renderPop(); };
   function renderRailDot() { const b = document.querySelector('#cvRail [data-pop=size] span'); if (b) { const d = Math.max(4, Math.min(18, size / 3 + 4)); b.style.width = b.style.height = d + 'px'; b.style.opacity = .35 + alpha * .65; } }
-  document.addEventListener('click', e => { if (pop && !e.target.closest('#cvRail') && !e.target.closest('#cvPop')) { pop = null; renderPop(); renderRail(); } });
+  document.addEventListener('click', e => { if (!pop) return; const path = e.composedPath ? e.composedPath() : []; if (path.some(n => n && (n.id === 'cvRail' || n.id === 'cvPop'))) return; pop = null; renderPop(); renderRail(); });
   function renderAct() {
     const el = $('cvAct'); if (!el) return;
     el.innerHTML = secret ? ib('data-x="save"', 'save', 'ذخیره و ارسال مخفی', 'pri') + ib('data-x="exit"', 'x', 'خروج از حالت مخفی')
       : ib('data-x="save"', 'save', 'ذخیره در گالری') + ib('data-x="finish"', 'flag', 'تموم شد!', 'pri') + ib('data-x="dl"', 'dl', 'دانلود PNG') + ib('data-x="new"', 'plus', 'بوم تازه');
-    el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { const a = b.dataset.x; if (a === 'save') saveToGallery(); else if (a === 'finish') saveToGallery({ finish: true }); else if (a === 'dl') download(); else if (a === 'exit') toggleSecret(); else if (a === 'new') { if (confirm('بوم تازه شروع بشه؟ (نقاشی فعلی پاک می‌شه؛ اگه می‌خوای نگهش داری اول ذخیره کن)')) { strokes = []; redo = []; rebuild(); send({ t: 'clear' }); setMeta({ mode: 'free', turn: '', half: null, drawer: '', timerEnd: 0, topic: '' }); } } });
+    el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { const a = b.dataset.x; if (a === 'save') saveToGallery(); else if (a === 'finish') saveToGallery({ finish: true }); else if (a === 'dl') download(); else if (a === 'exit') toggleSecret(); else if (a === 'new') { if (confirm('بوم تازه شروع بشه؟ (نقاشی فعلی پاک می‌شه؛ اگه می‌خوای نگهش داری اول ذخیره کن)')) { editId = null; strokes = []; redo = []; rebuild(); send({ t: 'clear' }); setMeta({ mode: 'free', turn: '', half: null, drawer: '', timerEnd: 0, topic: '' }); } } });
   }
   const renderBgs = refreshPop, renderSw = () => { renderRail(); };
   function suggestPalette() {
@@ -658,8 +677,9 @@
       h = `<div class="cv-banner">🤔 <b>حدس بزن</b> — نقاش: <b>${esc(meta.drawer)}</b>${dr ? `<br>🤫 چیزی که باید بکشی: <b>${esc(guessWord)}</b> <button type="button" class="cv-ib" data-a="newword" title="کلمهٔ دیگه">🎲</button>` : '<div class="cv-gg"><input id="cvGuessIn" placeholder="چی کشیده؟ حدس بزن…"><button type="button" class="cv-ib" data-a="guess" title="ارسال حدس">➤</button></div>'}</div><div class="cv-feed">${guessFeed.map(g => `<div class="${g.ok ? 'ok' : ''}">${esc(g.name)}: ${esc(g.text)} ${g.ok ? '✅' : ''}</div>`).join('')}</div>`;
     }
     else if (meta.mode === 'timed' && meta.timerEnd) h = '<div class="cv-banner">⏱️ <b>زمان‌دار</b> — <span class="cv-timer" id="cvTimer">…</span></div>';
+    if (editId && !secret) { const eg = gallery.find(x => x.id === editId); h = '<div class="cv-banner">✏️ در حال ویرایش «' + esc(eg ? eg.title : '') + '» <button type="button" class="cv-ib sm" data-a="noedit" title="لغو ویرایش">' + ico('x', 14) + '</button></div>' + h; }
     el.innerHTML = h;
-    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pass') passTurn(); else if (a === 'guess') myGuess(); else if (a === 'newword') { guessWord = rnd(WORDS); renderMode(); } });
+    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pass') passTurn(); else if (a === 'guess') myGuess(); else if (a === 'newword') { guessWord = rnd(WORDS); renderMode(); } else if (a === 'noedit') { editId = null; renderMode(); } });
     const gi = $('cvGuessIn'); if (gi) gi.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); myGuess(); } };
     tickTimer();
   }
@@ -695,6 +715,7 @@
     const g = $('canvasBox'); if (g) g.addEventListener('click', e => {
       const f = e.target.closest('[data-fav]'); if (f) return toggleFav(f.dataset.fav);
       const o = e.target.closest('[data-open]'); if (o) return openArt(o.dataset.open);
+      const ed = e.target.closest('[data-edit]'); if (ed) return editArt(ed.dataset.edit);
       const d = e.target.closest('[data-dl]'); if (d) return dlArt(d.dataset.dl);
       const x = e.target.closest('[data-del]'); if (x) return delArt(x.dataset.del);
     });
