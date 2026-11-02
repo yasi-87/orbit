@@ -1591,6 +1591,10 @@ body.reading-mode .reading-content {
 .vc-bot{display:flex;gap:5px;overflow-x:auto;padding:4px 10px;scrollbar-width:none;align-items:center}.vc-bot::-webkit-scrollbar{display:none}
 .vc-bot span{font-size:.72rem;color:var(--gold);white-space:nowrap;font-weight:700}
 .vc-bot button{flex:none;border:1px solid rgba(255,200,120,.35);background:rgba(255,200,120,.08);color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-size:.74rem;cursor:pointer;white-space:nowrap}
+.bot-tg{margin-inline-start:auto;margin-inline-end:6px;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:.8rem;cursor:pointer;opacity:.7}
+.bot-tg i{width:26px;height:14px;border-radius:8px;background:#555;position:relative;transition:.2s}.bot-tg i::after{content:"";position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:.2s}
+.bot-tg.on{opacity:1;border-color:rgba(255,200,120,.6)}.bot-tg.on i{background:#4cd964}.bot-tg.on i::after{right:14px}
+.vc-ed{font-size:.62rem;opacity:.7}
 .vc-msg.flash{animation:vcFlash 1.4s}
 @keyframes vcFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 2px var(--accent,#d4a5ff)}}
 .vc-cmp{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid rgba(212,165,255,.2);font-size:.8rem;background:rgba(0,0,0,.18)}
@@ -2099,7 +2103,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 
 <!-- ============ چت کنار صفحه (همه‌جا دم دسته) ============ -->
 <button type="button" id="chatLauncher" aria-label="باز کردن چت" title="چت"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><i id="chatBadge" style="display:none">0</i></button>
-<aside id="chatDock" class="vc-chat" aria-label="چت"><div class="vc-chat-h"><span>💬 چت کوچولو</span><button type="button" id="chatClose" aria-label="بستن چت" title="بستن"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+<aside id="chatDock" class="vc-chat" aria-label="چت"><div class="vc-chat-h"><span>💬 چت کوچولو</span><button type="button" id="botToggle" class="bot-tg on" aria-pressed="true" title="پفیلا روشنه">🧸 <i></i></button><button type="button" id="chatClose" aria-label="بستن چت" title="بستن"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
 <div class="vc-chat-list" id="vcChatList"></div>
       <div id="vcTyping" class="vc-typing" aria-live="polite"></div>
       <div class="vc-bot" id="vcBot" title="پفیلا، دستیار کوچولوی مشترک"><span>🧸 پفیلا</span><button type="button" data-bot="جوک بگو">😂 جوک</button><button type="button" data-bot="فال">✨ فال</button><button type="button" data-bot="یه سوال بپرس">❓ سوال</button><button type="button" data-bot="ایده برای دیت">💡 ایده</button><button type="button" data-bot="سکه بنداز">🪙 سکه</button><button type="button" data-bot="تاس بنداز">🎲 تاس</button><button type="button" data-bot="راهنما">؟</button></div>
@@ -2460,8 +2464,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-02b';
+const SITE_VERSION = '2026-11-02c';
 const SITE_CHANGES = [
+  '💬 چت: ویرایش ✏️ و حذف 🗑️ پیام‌های خودت (برای هر دو)، و کلید روشن/خاموش پفیلا 🧸 بالای چت',
   '💬 چت: ✓ ارسال‌شده و ✓✓ دیده‌شد، «داره می‌نویسه…» و دستیار مشترک کوچولو به اسم پفیلا 🧸 (بنویس «پفیلا، جوک بگو» یا از دکمه‌های بالای کادر پیام استفاده کن)',
   '🎨 بوم: طرح‌های آماده برای رنگ‌آمیزی (با هم یا دو نیمه)، سطل رنگ 🪣، ذخیره به‌صورت PDF، زوم و جابجایی (چرخ ماوس / دو انگشت)، کلمات بیشتر و سطح‌های آسان/متوسط/سخت برای بازی حدس بزن (با راهنما) و کلی ایموجی دسته‌بندی‌شده',
   '💬 چت از اتاق صحبت اومد کنار صفحه و همه‌جا همراهمونه (توی لپ‌تاپ ستون کناری، توی موبایل دکمهٔ شناور)؛ تعداد پیام‌های ندیده هم نشون داده می‌شه. توی بوم هم با کلیک روی قلم/قلم‌مو/پاک‌کن اندازه‌ها میان',
