@@ -38,7 +38,7 @@
   /* ---------- وضعیت ---------- */
   let ch = null, subscribed = false, inited = false, built = false, tab = 'draw';
   let strokes = [], secretStrokes = [], redo = [], secret = false;
-  const META0 = () => ({ mode: 'free', topic: '', bg: 'cream', turn: '', half: null, timerEnd: 0, drawer: '', tpl: '', level: 'med', wlen: 0, hint: '' });
+  const META0 = () => ({ mode: 'free', topic: '', bg: 'cream', turn: '', half: null, timerEnd: 0, drawer: '', tpl: '', level: 'med', wlen: 0, hint: '', rid: '', gEnd: 0 });
   let meta = META0(), stkCat = 0, tplHow = 'solo', z = { s: 1, x: 0, y: 0 }, zoomEl = null, tplc = null, guessWrong = 0;
   let tool = 'pen', color = '#ff4d6d', size = 6, alpha = 1, stickerPick = '❤️', sigMode = false;
   let peers = {}, cursors = {}, remote = {}, mine = null, guessWord = '', guessFeed = [];
@@ -400,7 +400,11 @@
     else if (p.t === 'meta') { applyMeta(p.meta, true); }
     else if (p.t === 'cur') { showCursor(p); }
     else if (p.t === 'guess') { onGuess(p); }
-    else if (p.t === 'gres') { guessFeed.push({ name: p.name, text: p.text, ok: p.ok }); guessFeed = guessFeed.slice(-6); if (p.ok) { win(p.word); } renderMode(); }
+    else if (p.t === 'gres') {
+      if (p.en) recG(p.en); if (tab === 'gs') renderGuesses();
+      if (p.en && (p.en.kind === 't' || p.en.kind === 's')) { guessFeed.push({ name: p.en.kind === 't' ? '⏰ وقت تموم شد' : '⏭️ رد شد', text: '«' + p.word + '» بود', ok: false }); toast2((p.en.kind === 't' ? '⏰ وقت تموم شد؛ ' : '⏭️ ') + 'کلمه «' + p.word + '» بود'); }
+      else guessFeed.push({ name: p.name, text: p.text, ok: p.ok });
+      guessFeed = guessFeed.slice(-6); if (p.ok) { win(p.word); } renderMode(); }
     else if (p.t === 'saved') { if (galleryLoaded) loadGallery(); toast2('💾 ' + p.name + ' نقاشی رو توی گالری ذخیره کرد'); fx(24); }
     else if (p.t === 'reload') { loadLive(true); }
   }
@@ -419,7 +423,7 @@
     if (bgctx && meta.bg !== prevBg) { bgctx.clearRect(0, 0, W, H); paintBg(bgctx, meta.bg); }
     paintTpl();
     if (meta.mode !== 'guess') { guessWord = ''; }
-    if (meta.mode === 'guess' && same(meta.drawer, nm()) && !guessWord) { guessWord = pickWord(); const L = wordLen(guessWord); if (meta.wlen !== L || meta.hint) { meta.wlen = L; meta.hint = ''; setTimeout(() => send({ t: 'meta', meta }), 0); } }
+    if (meta.mode === 'guess' && same(meta.drawer, nm()) && !guessWord) { guessWord = pickWord(); const L = wordLen(guessWord); if (meta.wlen !== L || meta.hint || !meta.gEnd) { meta.wlen = L; meta.hint = ''; Object.assign(meta, roundMeta()); setTimeout(() => send({ t: 'meta', meta }), 0); } }
     if (meta.mode === 'half' && meta.half && !meta.half.R && meta.half.L && !same(meta.half.L, nm()) && fromRemote) { meta.half = Object.assign({}, meta.half, { R: nm() }); send({ t: 'meta', meta }); }
     dirty = true; renderMode(); renderHeader(); renderBgs();
   }
@@ -430,26 +434,63 @@
     if (mode === 'free') setMeta({ mode, turn: '', half: null, drawer: '', timerEnd: 0 });
     else if (mode === 'turn') { setMeta({ mode, turn: nm(), half: null, drawer: '', timerEnd: 0 }); toast2('🖌️ نوبتی شد؛ اول تو بکش و بعد «نوبتم تموم شد» رو بزن'); }
     else if (mode === 'half') { setMeta({ mode, half: { L: nm(), R: pn || '' }, turn: '', drawer: '', timerEnd: 0 }); toast2('↔️ تو نیمهٔ چپ، اون یکی نیمهٔ راست'); }
-    else if (mode === 'guess') { if (strokes.length && !confirm('برای بازی حدس بزن، بوم پاک بشه؟')) return; strokes = []; rebuild(); send({ t: 'clear' }); guessWord = pickWord(); guessFeed = []; guessWrong = 0; setMeta({ mode, drawer: nm(), turn: '', half: null, timerEnd: 0, tpl: '', wlen: wordLen(guessWord), hint: '' }); }
+    else if (mode === 'guess') { if (strokes.length && !confirm('برای بازی حدس بزن، بوم پاک بشه؟')) return; strokes = []; rebuild(); send({ t: 'clear' }); guessWord = pickWord(); guessFeed = []; guessWrong = 0; setMeta(Object.assign({ mode, drawer: nm(), turn: '', half: null, timerEnd: 0, tpl: '', wlen: wordLen(guessWord), hint: '' }, roundMeta())); }
     else if (mode === 'timed') { const m = timedMin || 2; timerDone = 0; setMeta({ mode: 'timed', timerEnd: Date.now() + m * 60000, turn: '', half: null, drawer: '' }); toast2('⏱️ ' + fa(m) + ' دقیقه وقت داریم؛ بکشیم!'); }
   }
   function passTurn() { const pn = partnerName(); if (!pn) { toast2('اون یکی توی بوم نیست'); return; } setMeta({ turn: pn }); toast2('✅ نوبت به ' + pn + ' رسید'); }
   function onGuess(p) {
     if (meta.mode !== 'guess' || !same(meta.drawer, nm()) || !guessWord) return;
+    if (meta.gEnd && Date.now() > meta.gEnd + 2500) return;
     const ok = guessWord.split('|').some(a => wNorm(a) === wNorm(p.text)), shown = guessWord.split('|')[0];
     guessFeed.push({ name: p.name, text: p.text, ok }); guessFeed = guessFeed.slice(-6);
-    send({ t: 'gres', text: p.text, ok, word: ok ? shown : '' });
+    const en = { id: 'g_' + Date.now().toString(36) + '_' + ID, who: p.name, text: String(p.text || '').slice(0, 60), ok, word: shown, rid: meta.rid, lvl: meta.level, kind: ok ? 'ok' : 'g', ts: Date.now() };
+    logGuess(en); send({ t: 'gres', text: p.text, ok, word: ok ? shown : '', en: Object.assign({}, en, { word: ok ? shown : '' }) });
     if (ok) win(shown); else { guessWrong++; if (guessWrong >= 3 && !meta.hint) { setMeta({ hint: firstLetter() }); toast2('💡 حرف اول به راهنما اضافه شد'); } }
     renderMode();
   }
   const wNorm = s => String(s || '').replace(/[\s‌ـ]/g, '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[آأإ]/g, 'ا').replace(/ة/g, 'ه').toLowerCase();
   const wordLen = w => wNorm(String(w).split('|')[0]).length, firstLetter = () => String(guessWord).split('|')[0].charAt(0);
   const pickWord = () => { const l = WORDS[meta.level] || WORDS.med; let w = rnd(l), t = 0; while (w === guessWord && t++ < 5) w = rnd(l); return w; };
-  function newWord() { guessWord = pickWord(); guessWrong = 0; setMeta({ wlen: wordLen(guessWord), hint: '' }); }
+  const LSEC = { easy: 120, med: 90, hard: 75 };
+  const roundMeta = () => ({ rid: 'r' + Date.now().toString(36), gEnd: Date.now() + (LSEC[meta.level] || 90) * 1000 });
+  function newWord() { guessWord = pickWord(); guessWrong = 0; setMeta(Object.assign({ wlen: wordLen(guessWord), hint: '' }, roundMeta())); }
+  function finishRound(kind) {
+    if (!guessWord) return; const shown = String(guessWord).split('|')[0];
+    const en = { id: 'g_' + Date.now().toString(36) + '_' + ID, who: '', text: '', ok: false, word: shown, rid: meta.rid, lvl: meta.level, kind, ts: Date.now() };
+    logGuess(en); send({ t: 'gres', text: '', ok: false, word: shown, en }); guessFeed.push({ name: kind === 't' ? '⏰ وقت تموم شد' : '⏭️ رد شد', text: '«' + shown + '» بود', ok: false }); guessFeed = guessFeed.slice(-6);
+    toast2((kind === 't' ? '⏰ وقت تموم شد؛ ' : '⏭️ ') + 'کلمه «' + shown + '» بود'); newWord();
+  }
+  /* 🕘 تاریخچهٔ حدس‌ها (جدول canvas_guesses ← SQL شمارهٔ ۲۶؛ بدون جدول فقط روی همین دستگاه) */
+  let gh = jget('diary_cv_guesses', []), ghMissing = false;
+  function recG(e) { if (!e || !e.id || gh.some(x => x.id === e.id)) return; gh.push(e); gh.sort((a, b) => a.ts - b.ts); if (gh.length > 500) gh.splice(0, gh.length - 500); jset('diary_cv_guesses', gh); }
+  function logGuess(e) {
+    recG(e); try { dbClient.from('canvas_guesses').upsert({ id: e.id, who: e.who, text: e.text, ok: !!e.ok, word: e.word || '', rid: e.rid || '', lvl: e.lvl || '', kind: e.kind, ts: e.ts }).then(r => { if (r && r.error) ghMissing = /canvas_guesses|relation|schema cache/i.test(r.error.message || ''); }, () => {}); } catch (x) {}
+    if (tab === 'gs') renderGuesses();
+  }
+  async function loadGH() {
+    try { const r = await dbClient.from('canvas_guesses').select('*').order('ts', { ascending: false }).limit(400); if (r.error) ghMissing = /canvas_guesses|relation|schema cache/i.test(r.error.message || ''); else { ghMissing = false; (r.data || []).forEach(x => recG({ id: x.id, who: x.who || '', text: x.text || '', ok: !!x.ok, word: x.word || '', rid: x.rid || '', lvl: x.lvl || '', kind: x.kind || 'g', ts: Number(x.ts) || 0 })); } } catch (e) {}
+    renderGuesses();
+  }
+  function renderGuesses() {
+    const el = $('cvGs'); if (!el) return;
+    const per = {}; gh.forEach(e => { if (e.kind === 'g' || e.kind === 'ok') { const k = e.who || '؟'; (per[k] = per[k] || { n: 0, ok: 0 }).n++; if (e.kind === 'ok') per[k].ok++; } });
+    const R2 = {};
+    gh.forEach(e => { const k = e.rid || ('old' + e.id); const r = R2[k] = R2[k] || { ts: 0, es: [], res: null, lvl: e.lvl }; r.ts = Math.max(r.ts, e.ts); if (e.kind === 'g') r.es.push(e); else { r.res = e; r.es.push(e); } });
+    const list = Object.keys(R2).map(k => R2[k]).filter(r => r.res || r.es.length).sort((a, b) => b.ts - a.ts);
+    const lab = { ok: '✅', t: '⏰', s: '⏭️' };
+    const stat = Object.keys(per).map(k => `<div class="cv-st"><b>${esc(k)}</b><span>${fa(per[k].n)} حدس</span><span>✅ ${fa(per[k].ok)} درست</span><span>${fa(per[k].n ? Math.round(per[k].ok / per[k].n * 100) : 0)}٪ دقت</span></div>`).join('');
+    el.innerHTML = (ghMissing ? '<div class="cv-empty">🛠️ برای اینکه حدس‌ها روی هر دو دستگاه ذخیره بمونن، SQL شمارهٔ ۲۶ رو یک بار اجرا کن؛ فعلاً فقط روی همین دستگاه ثبت می‌شن.</div>' : '')
+      + (list.length ? `<div class="cv-sts">${stat}</div>` + list.map(r => {
+        const res = r.res, word = res ? res.word : '', head = res ? `${lab[res.kind] || ''} <b>${esc(word)}</b>` : '🤫 دور در جریان…';
+        const gs = r.es.filter(e => e.kind === 'g' || e.kind === 'ok').map(e => `<span class="${e.ok ? 'ok' : ''}">${esc(e.who)}: ${esc(e.text)} ${e.ok ? '✅' : '❌'}</span>`).join('');
+        return `<div class="cv-rd"><div class="h">${head}<small>${esc(LVL[r.lvl] || '')} · ${esc(dateOf(r.ts))}${res && res.kind === 't' ? ' · وقت تموم شد' : res && res.kind === 's' ? ' · رد شد' : ''}</small></div><div class="gl">${gs || '<small>حدسی زده نشد</small>'}</div></div>`;
+      }).join('') : '<div class="cv-empty">هنوز حدسی ثبت نشده؛ یه دور «حدس بزن» بازی کنید 🤔</div>');
+  }
   const LVL = { easy: 'آسان', med: 'متوسط', hard: 'سخت' };
   function win(word) { toast2('🎉 درست حدس زده شد: «' + word + '»'); fx(36); try { OMSound.play('up'); } catch (e) {} if (same(meta.drawer, nm())) newWord(); }
   function myGuess() {
     const i = $('cvGuessIn'); const t = i && i.value.trim(); if (!t) return;
+    if (meta.gEnd && Date.now() > meta.gEnd) { toast2('⏰ وقت این دور تموم شده؛ منتظر کلمهٔ بعدی باش'); return; }
     guessFeed.push({ name: nm(), text: t, ok: false }); guessFeed = guessFeed.slice(-6); send({ t: 'guess', text: t }); i.value = ''; renderMode();
   }
 
@@ -783,6 +824,11 @@
 .cv-grid2.em.scr{max-height:210px;overflow-y:auto;padding:2px}
 .cv-tpls{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-height:300px;overflow-y:auto}.cv-tpls button{border:2px solid transparent;border-radius:10px;background:#fff;padding:0;cursor:pointer;overflow:hidden;position:relative}.cv-tpls button.on{border-color:var(--cvA)}.cv-tpls img{width:100%;display:block}.cv-tpls small{position:absolute;bottom:0;left:0;right:0;background:rgba(27,21,48,.75);color:#fff;font-size:.62rem;padding:1px 0;text-align:center}
 .cv-wd{display:flex;gap:6px;justify-content:center;margin:6px 0;font-weight:700;font-size:1.15rem;flex-wrap:wrap}.cv-wd span{min-width:26px;border-bottom:3px solid var(--cvA);text-align:center;line-height:1.5}
+.cv-sts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.cv-st{padding:12px;border-radius:16px;background:var(--cvP);border:1px solid rgba(212,165,255,.25);display:flex;flex-direction:column;gap:3px;font-size:.84rem}.cv-st b{font-size:1rem}
+.cv-rd{padding:10px 14px;border-radius:14px;background:var(--cvP);border:1px solid rgba(212,165,255,.2);margin-bottom:8px}
+.cv-rd .h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.cv-rd .h b{font-size:1.05rem}.cv-rd small{color:var(--muted,#aaa);font-size:.72rem}
+.cv-rd .gl{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.cv-rd .gl span{padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.07);font-size:.8rem}.cv-rd .gl span.ok{background:rgba(76,217,100,.22)}
 @media (max-width:760px){
   .cv-main{flex-direction:column-reverse;align-items:stretch}
   .cv-wrap{flex:none;width:100%}
@@ -799,7 +845,8 @@
     const root = $('canvasBox'); if (!root) return;
     buildCanvases(); buildCanvases2();
     const scr = $('screen-canvas'); if (scr) { scr.dataset.cvt = theme; scr.classList.toggle('cv-light', !!light); }
-    const seg = `<div class="cv-seg"><button type="button" class="${tab === 'draw' ? 'on' : ''}" data-tab="draw" title="بوم" aria-label="بوم">${ico('canvas', 18)}</button><button type="button" class="${tab === 'gal' ? 'on' : ''}" data-tab="gal" title="گالری" aria-label="گالری">${ico('gal', 18)}</button></div>`;
+    const seg = `<div class="cv-seg"><button type="button" class="${tab === 'draw' ? 'on' : ''}" data-tab="draw" title="بوم" aria-label="بوم">${ico('canvas', 18)}</button><button type="button" class="${tab === 'gal' ? 'on' : ''}" data-tab="gal" title="گالری" aria-label="گالری">${ico('gal', 18)}</button><button type="button" class="${tab === 'gs' ? 'on' : ''}" data-tab="gs" title="تاریخچهٔ حدس‌ها" aria-label="حدس‌ها">${ico('bulb', 18)}</button></div>`;
+    if (tab === 'gs') { root.innerHTML = `<div class="cv-app"><div class="cv-top">${seg}</div><div id="cvGs"></div></div>`; bindTabs(); renderGuesses(); return; }
     if (tab === 'gal') { root.innerHTML = `<div class="cv-app"><div class="cv-top">${seg}</div><div id="cvGal"></div></div>`; bindTabs(); renderGallery(); return; }
     root.innerHTML = `<div class="cv-app">
       <div class="cv-top">${seg}<div class="cv-avs" id="cvHead"></div><span id="cvTopic" class="cv-top" style="margin:0;gap:6px"></span><span class="sp"></span><span class="cv-dot" id="cvSaveDot" title="ذخیرهٔ خودکار"></span><span id="cvAct" style="display:flex;gap:6px"></span></div>
@@ -818,7 +865,7 @@
     setTimeout(() => stage && stage.classList.remove('intro'), 1100);
     renderHeader(); renderTopic(); renderMode(); renderRail(); renderAct(); renderPop(); dirty = true; startFrame();
   }
-  function bindTabs() { document.querySelectorAll('#canvasBox [data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; pop = null; render(); if (tab === 'gal') loadGallery(); }); }
+  function bindTabs() { document.querySelectorAll('#canvasBox [data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; pop = null; render(); if (tab === 'gal') loadGallery(); if (tab === 'gs') loadGH(); }); }
   function avHtml(name, av, on) { const ini = esc((name || '؟').trim().charAt(0)); return `<div class="cv-av${on ? ' on' : ''}" title="${esc(name || '')}">${av ? `<img src="${esc(av)}" alt="">` : ini}<i></i></div>`; }
   function renderHeader() {
     const el = $('cvHead'); if (!el) return;
@@ -948,14 +995,24 @@
     else if (meta.mode === 'half') h = `<div class="cv-banner">↔️ <b>نیمه‌نیمه</b> — چپ: <b>${esc(meta.half && meta.half.L || '—')}</b> · راست: <b>${esc(meta.half && meta.half.R || 'منتظر نفر دوم')}</b></div>`;
     else if (meta.mode === 'guess') {
       const dr = same(meta.drawer, nm());
-      h = `<div class="cv-banner">🤔 <b>حدس بزن</b> · ${LVL[meta.level] || ''} — نقاش: <b>${esc(meta.drawer)}</b>${dr ? `<br>🤫 چیزی که باید بکشی: <b>${esc(String(guessWord).split('|')[0])}</b> <button type="button" class="cv-ib" data-a="newword" title="کلمهٔ دیگه">🎲</button><button type="button" class="cv-ib" data-a="hint" title="حرف اول رو به راهنما اضافه کن">💡</button>` : '<div class="cv-wd" dir="rtl">' + wordBoxes() + '</div><div class="cv-gg"><input id="cvGuessIn" placeholder="چی کشیده؟ حدس بزن…"><button type="button" class="cv-ib" data-a="guess" title="ارسال حدس">➤</button></div>'}</div><div class="cv-feed">${guessFeed.map(g => `<div class="${g.ok ? 'ok' : ''}">${esc(g.name)}: ${esc(g.text)} ${g.ok ? '✅' : ''}</div>`).join('')}</div>`;
+      h = `<div class="cv-banner">🤔 <b>حدس بزن</b> · ${LVL[meta.level] || ''} · ⏳ <span class="cv-timer" id="cvGT">…</span> — نقاش: <b>${esc(meta.drawer)}</b>${dr ? `<br>🤫 چیزی که باید بکشی: <b>${esc(String(guessWord).split('|')[0])}</b> <button type="button" class="cv-ib" data-a="newword" title="کلمهٔ دیگه">🎲</button><button type="button" class="cv-ib" data-a="hint" title="حرف اول رو به راهنما اضافه کن">💡</button>` : '<div class="cv-wd" dir="rtl">' + wordBoxes() + '</div><div class="cv-gg"><input id="cvGuessIn" placeholder="چی کشیده؟ حدس بزن…"><button type="button" class="cv-ib" data-a="guess" title="ارسال حدس">➤</button></div>'}</div><div class="cv-feed">${guessFeed.map(g => `<div class="${g.ok ? 'ok' : ''}">${esc(g.name)}: ${esc(g.text)} ${g.ok ? '✅' : ''}</div>`).join('')}</div>`;
     }
     else if (meta.mode === 'timed' && meta.timerEnd) h = '<div class="cv-banner">⏱️ <b>زمان‌دار</b> — <span class="cv-timer" id="cvTimer">…</span></div>';
     if (editId && !secret) { const eg = gallery.find(x => x.id === editId); h = '<div class="cv-banner">✏️ در حال ویرایش «' + esc(eg ? eg.title : '') + '» <button type="button" class="cv-ib sm" data-a="noedit" title="لغو ویرایش">' + ico('x', 14) + '</button></div>' + h; }
     el.innerHTML = h;
-    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pass') passTurn(); else if (a === 'guess') myGuess(); else if (a === 'newword') newWord(); else if (a === 'hint') { if (!meta.hint) setMeta({ hint: firstLetter() }); } else if (a === 'notpl') setMeta({ tpl: '' }); else if (a === 'noedit') { editId = null; renderMode(); } });
+    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pass') passTurn(); else if (a === 'guess') myGuess(); else if (a === 'newword') finishRound('s'); else if (a === 'hint') { if (!meta.hint) setMeta({ hint: firstLetter() }); } else if (a === 'notpl') setMeta({ tpl: '' }); else if (a === 'noedit') { editId = null; renderMode(); } });
     const gi = $('cvGuessIn'); if (gi) gi.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); myGuess(); } };
-    tickTimer();
+    tickTimer(); tickGuess();
+  }
+  let gI = null, gEnded = '';
+  function tickGuess() {
+    clearInterval(gI); gI = null; if (!(meta.mode === 'guess' && meta.gEnd)) return;
+    const upd = () => {
+      const left = meta.gEnd - Date.now(), e = $('cvGT');
+      if (left <= 0) { if (e) e.textContent = '⏰ ۰۰:۰۰'; if (same(meta.drawer, nm()) && guessWord && gEnded !== meta.rid) { gEnded = meta.rid; clearInterval(gI); gI = null; finishRound('t'); } return; }
+      if (e) { const s = Math.ceil(left / 1000); e.textContent = fa(String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0')); if (left < 15000) e.style.color = '#ff6b81'; }
+    };
+    upd(); gI = setInterval(upd, 500);
   }
   function tickTimer() {
     clearInterval(timerI); timerI = null; if (!(meta.mode === 'timed' && meta.timerEnd)) return;
@@ -980,7 +1037,7 @@
     join();
     if (!$('canvasBox')) return;
     if (!$('cvCss')) buildCanvases();
-    render(); if (tab === 'gal') loadGallery();
+    render(); if (tab === 'gal') loadGallery(); if (tab === 'gs') loadGH();
     loadLive(); if (!galleryLoaded) loadGallery();
     if (subscribed) track();
   }
@@ -995,6 +1052,6 @@
       const x = e.target.closest('[data-del]'); if (x) return delArt(x.dataset.del);
     });
   }
-  window.Canvas2 = { load, init, saveToGallery, _state: () => ({ strokes, secretStrokes, meta, tool, peers, secret, gallery, remote: Object.keys(remote), liveMissing }), _id: ID, W, H };
+  window.Canvas2 = { _gEnd: ms => setMeta({ gEnd: Date.now() + ms }), _gh: () => gh, load, init, saveToGallery, _state: () => ({ strokes, secretStrokes, meta, tool, peers, secret, gallery, remote: Object.keys(remote), liveMissing }), _id: ID, W, H };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

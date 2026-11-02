@@ -328,3 +328,20 @@ create policy "canvas_art_public_all" on public.canvas_art
 
 -- 25) علامت «ویرایش‌شده» برای پیام‌های چت (اختیاری؛ بدونش هم ویرایش کار می‌کنه)
 alter table public.voice_chat add column if not exists edited boolean;
+
+-- 26) تاریخچهٔ حدس‌های بازی «حدس بزن» توی بوم
+create table if not exists public.canvas_guesses (
+  id   text primary key,
+  who  text,
+  text text,
+  ok   boolean,
+  word text,
+  rid  text,
+  lvl  text,
+  kind text,
+  ts   bigint
+);
+alter table public.canvas_guesses enable row level security;
+drop policy if exists "canvas_guesses_public_all" on public.canvas_guesses;
+create policy "canvas_guesses_public_all" on public.canvas_guesses
+  for all to anon, authenticated using (true) with check (true);
