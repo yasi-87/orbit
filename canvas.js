@@ -15,17 +15,31 @@
   const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
   const COLORS = ['#1a1a1a', '#ffffff', '#ff4d6d', '#ff8fb8', '#ff9f43', '#ffd93d', '#6bcB77', '#2ec4b6', '#4d96ff', '#9b5de5', '#d4a5ff', '#8b5a2b'];
-  const STICKERS = ['❤️', '💜', '⭐', '✨', '🌸', '🌷', '🌻', '🐰', '🐱', '🐻', '🦋', '🌙', '☀️', '☁️', '🎀', '🍓', '🎈', '😍', '🥰', '😂', '😎', '🔥'];
+  const STK = [
+    ['😀', 'صورتک‌ها', '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🤫 🤔 🤐 😐 😑 😶 😏 😒 🙄 😬 🤥 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🥵 🥶 🥴 😵 🤯 🤠 🥳 😎 🤓 🧐 😕 😟 🙁 😮 😲 🥺 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 👻 👽 🤖 💩 🙈 🙉 🙊'],
+    ['💖', 'دل و نماد', '❤️ 🧡 💛 💚 💙 💜 🤎 🖤 🤍 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 💟 💌 💋 💍 💎 🌹 ✨ ⭐ 🌟 💫 ⚡ 🔥 💥 💯 ✅ ❌ ❓ ❗ 🎵 🎶 ♾️ 🔔 🎉 🎊 🎁 🏆 🥇 👑'],
+    ['🐱', 'حیوون‌ها', '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🐤 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🐝 🐛 🦋 🐌 🐞 🐜 🐢 🐍 🦎 🐙 🦑 🦐 🦀 🐠 🐟 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦒 🐘 🦏 🐪 🐫 🦘 🐑 🐐 🦌 🐕 🐈 🐇 🦔 🦜 🦢 🦩 🕊️ 🐾 🦥 🦦 🦨'],
+    ['🌸', 'طبیعت', '🌸 🌷 🌹 🌺 🌻 🌼 🌱 🌿 🍀 🍁 🍂 🍃 🌴 🌵 🌲 🌳 🎄 🍄 🌾 💐 🌙 🌛 🌜 ☀️ 🌤️ ⛅ ☁️ 🌧️ ⛈️ ❄️ ☃️ ⛄ 🌈 ☔ 💧 🌊 🌍 🪐 ☄️ 🌋 🏔️ ⛰️ 🏝️ 🌅 🌄 🌌'],
+    ['🍓', 'خوراکی', '🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🥑 🍆 🥕 🌽 🌶️ 🥒 🥦 🍞 🥐 🥖 🧀 🥚 🍳 🥞 🧇 🥓 🍔 🍟 🍕 🌭 🥪 🌮 🌯 🍝 🍜 🍲 🍣 🍱 🍤 🍙 🍚 🍦 🍧 🍨 🍩 🍪 🎂 🍰 🧁 🍫 🍬 🍭 🍮 🍯 ☕ 🍵 🧋 🥤 🍷 🍹 🥂 🍼'],
+    ['🎈', 'وسایل و بازی', '🎈 🎀 🎁 🎤 🎧 🎸 🎹 🥁 🎨 🖌️ ✏️ 📚 📖 📷 🎬 🎮 🎲 🧩 ⚽ 🏀 🏐 🎾 🏓 🏸 ⛳ 🎯 🎳 🛹 🚲 🛴 💡 🔮 🧸 🪄 🎭 🔑 🕯️ 📱 💻 ⌚ ☎️ ✉️ 💼 🎒 👓 🕶️ 👒 🎩 👗 👠 💄 🧣 🧤 🧦'],
+    ['🚗', 'سفر و جا', '🚗 🚕 🚌 🚎 🏎️ 🚓 🚑 🚒 🚚 🚜 🏍️ ✈️ 🛫 🚀 🛸 🚁 ⛵ 🚤 🛳️ 🚂 🚆 🚇 🚉 🏠 🏡 🏰 🏯 🗼 🗽 ⛪ 🕌 🎡 🎢 🎠 ⛺ 🏖️ 🗺️ 🧭 🌉 🌃 🌆 🌇'],
+    ['👍', 'آدم‌ها و دست', '👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 🖖 👋 🤝 👏 🙌 👐 🙏 💪 ✍️ 💅 🤳 👀 👣 🧠 👶 🧒 👦 👧 🧑 👨 👩 🧓 👸 🤴 🧙 🧚 🧜 🧞 🦸 🦹 💃 🕺 👫 👭 👬 💑 💏']
+  ].map(c => ({ ic: c[0], n: c[1], l: c[2].split(' ') }));
   const BGS = { white: 'سفید', cream: 'کرم', night: 'شب', grid: 'شطرنجی', dots: 'نقطه‌ای', lines: 'خط‌دار', sky: 'آسمان', pink: 'صورتی' };
   const TOPICS = ['خونهٔ رویایی ما', 'سفر بعدی ما', 'یه گربهٔ بامزه', 'غروب کنار دریا', 'شهر بالای ابرها', 'پیک‌نیک توی باغ', 'ربات مهربون', 'جنگل جادویی', 'کافهٔ دنج', 'شب پر ستاره', 'حیوون خونگی رویایی', 'قلعهٔ شیرینی', 'باغ گل‌ها', 'فضانورد عاشق', 'بارون و چتر', 'ماشین قدیمی', 'کوه و برف', 'جزیرهٔ دنج', 'پرنده‌ای که حرف می‌زنه', 'اتاق مطالعهٔ ما', 'سوپرمن بامزه', 'کیک تولد', 'دوچرخه‌سواری', 'کوچه‌ای توی پاییز', 'اژدهای مهربون', 'غذای مورد علاقه‌مون', 'خواب‌های ما', 'عروسک بزرگ', 'ماهی‌های رنگی', 'دفتر خاطرات'];
-  const WORDS = ['گربه', 'خرگوش', 'خونه', 'ماه', 'ستاره', 'قلب', 'گل', 'درخت', 'ماشین', 'کیک', 'چتر', 'پروانه', 'دوچرخه', 'بستنی', 'قایق', 'کوه', 'موز', 'هواپیما', 'ساعت', 'کتاب', 'گیتار', 'کفش', 'ابر', 'خورشید', 'ماهی', 'مداد', 'عینک', 'تاج', 'پیتزا', 'بادکنک'];
+  const WORDS = {
+    easy: 'گربه خرگوش خونه|خانه ماه ستاره قلب گل درخت ماشین کیک چتر پروانه دوچرخه بستنی قایق کوه موز هواپیما ساعت کتاب گیتار کفش ابر خورشید ماهی مداد عینک تاج پیتزا بادکنک سیب مرغ فیل پنگوئن|پنگوین لیوان کلاه دندون|دندان انگشتر هندونه|هندوانه توپ صندلی تلفن|موبایل کلید پاپیون جوراب شمع کیف'.split(' '),
+    med: 'فضانورد زرافه کوسه چراغ‌قوه|چراغقوه دوربین چادر قطار بالن اسکی پیانو ویولن روباه شترمرغ عنکبوت لاک‌پشت|لاکپشت عروسک برج قلعه کشتی زیردریایی هلیکوپتر|بالگرد چتر‌نجات|چترنجات مارمولک دایناسور اژدها جادوگر دلقک آدم‌برفی|آدمبرفی کاکتوس گردنبند فرش سماور پنجره نردبان قیچی آینه آسیاب|آسیاببادی ستاره‌دریایی|ستارهدریایی هشت‌پا|هشتپا شمشیر سطل‌آشغال|سطلآشغال تاب‌بازی|تاب فواره مجسمه ماسک|نقاب بلبل خفاش شیپور'.split(' '),
+    hard: 'عشق آزادی دوستی رویا|خواب تنهایی خاطره شادی کابوس سورپرایز بی‌خوابی|بیخوابی رقص عروسی طوفان خورشیدگرفتگی|گرفتگیخورشید فانوس‌دریایی|فانوسدریایی|فانوس تخت‌جمشید|تختجمشید ماشین‌زمان|ماشینزمان کوله‌پشتی|کولهپشتی آتشفشان رنگین‌کمان|رنگینکمان|قوسقزح کهکشان تعطیلات سفر پیک‌نیک|پیکنیک تولد انتظار دلتنگی بوسه آغوش ستاره‌شناس|ستارهشناس سیرک آسانسور اینترنت ماراتن حباب گردباد سایه پژواک|اکو معما گنج نقشهٔ‌گنج|نقشه‌گنج|نقشهگنج کاروان پل غروب بیدار‌شدن|بیدارشدن شکلات‌داغ|شکلاتداغ آغاز مهمانی ناراحتی ترس خجالت کنجکاوی'.split(' ')
+  };
   const ADJ = ['رویایی', 'بامزه', 'عاشقانه', 'آسمونی', 'شیرین', 'جادویی', 'کوچولو', 'بی‌نظیر', 'خنده‌دار', 'دنج'];
   const NOUN = ['شاهکارِ ما', 'خاطرهٔ رنگی', 'قصهٔ یه روز', 'لبخندِ دو نفره', 'نقاشیِ دونفره', 'رنگینِ کمونِ ما', 'دنیای کوچولوی ما', 'باغِ خیال'];
 
   /* ---------- وضعیت ---------- */
   let ch = null, subscribed = false, inited = false, built = false, tab = 'draw';
   let strokes = [], secretStrokes = [], redo = [], secret = false;
-  let meta = { mode: 'free', topic: '', bg: 'cream', turn: '', half: null, timerEnd: 0, drawer: '' };
+  const META0 = () => ({ mode: 'free', topic: '', bg: 'cream', turn: '', half: null, timerEnd: 0, drawer: '', tpl: '', level: 'med', wlen: 0, hint: '' });
+  let meta = META0(), stkCat = 0, tplHow = 'solo', z = { s: 1, x: 0, y: 0 }, zoomEl = null, tplc = null, guessWrong = 0;
   let tool = 'pen', color = '#ff4d6d', size = 6, alpha = 1, stickerPick = '❤️', sigMode = false;
   let peers = {}, cursors = {}, remote = {}, mine = null, guessWord = '', guessFeed = [];
   let base, bctx, work, wctx, bgc, bgctx, stage;
@@ -52,8 +66,9 @@
     }
     ctx.restore();
   }
-  function drawStroke(ctx, s) {
+  function drawStroke(ctx, s, env) {
     ctx.save();
+    if (s.t === 'fl') { ctx.restore(); fillRegion(ctx, s, env || { tpl: meta.tpl, bg: meta.bg }); return; }
     if (s.t === 'st') { ctx.font = s.size + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s.e, s.x, s.y); ctx.restore(); return; }
     if (s.t === 'tx') {
       ctx.font = (s.sig ? 'italic ' : 'bold ') + s.size + 'px ' + (s.sig ? '"Brush Script MT","Segoe Script",cursive' : '"Vazirmatn",Tahoma,sans-serif');
@@ -71,6 +86,205 @@
     for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2; ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); }
     const l = pts[pts.length - 1]; ctx.lineTo(l[0], l[1]); ctx.stroke(); ctx.restore();
   }
+  /* ---------- 🖍️ طرح‌های آماده + سطل رنگ + PDF ---------- */
+  const LW = 5;
+  const starPath = (cx, cy, r) => { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; d += (i ? 'L' : 'M') + (cx + Math.cos(a) * rr).toFixed(1) + ' ' + (cy + Math.sin(a) * rr).toFixed(1); } return d + 'Z'; };
+  const HEART = 'M600 700 C250 480 230 220 420 190 C520 175 580 230 600 290 C620 230 680 175 780 190 C970 220 950 480 600 700 Z';
+  const TPLS = [
+    { id: 'heart', n: 'قلب', d: g => { g.sh(HEART); g.T(600, 440, .62, () => g.sh(HEART)); g.T(600, 440, .3, () => g.sh(HEART)); [[170, 150], [1030, 150], [150, 720], [1050, 720]].forEach(p => g.T(p[0], p[1], .16, () => g.sh(HEART))); } },
+    { id: 'flower', n: 'گل', d: g => {
+      g.sh('M585 430 C580 560 590 680 580 810 L620 810 C610 680 620 560 615 430 Z');
+      g.sh('M600 640 C500 570 430 590 400 650 C470 705 560 695 600 640 Z'); g.sh('M610 560 C700 500 770 520 800 580 C730 630 650 620 610 560 Z');
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.el(600 + Math.cos(a) * 165, 330 + Math.sin(a) * 165, 50, 105, a + Math.PI / 2); }
+      g.ci(600, 330, 85); g.ci(600, 330, 45); g.ln('M120 810 L1080 810'); } },
+    { id: 'cat', n: 'گربه', d: g => {
+      g.sh('M820 740 C960 740 1020 640 980 540 C960 500 920 520 940 560 C970 620 930 690 820 700 Z');
+      g.sh('M390 560 C340 680 340 790 440 800 L760 800 C860 790 860 680 810 560 Z');
+      g.sh('M390 300 L360 100 L560 210 Z'); g.sh('M810 300 L840 100 L640 210 Z'); g.sh('M410 250 L390 160 L500 215 Z'); g.sh('M790 250 L810 160 L700 215 Z');
+      g.el(600, 400, 230, 200); g.el(520, 380, 34, 44); g.el(680, 380, 34, 44); g.ci(520, 392, 15); g.ci(680, 392, 15);
+      g.sh('M575 450 L625 450 L600 482 Z'); g.ln('M600 482 L600 512'); g.ln('M600 512 C580 545 550 545 535 515'); g.ln('M600 512 C620 545 650 545 665 515');
+      g.ln('M420 450 L300 430'); g.ln('M420 485 L300 495'); g.ln('M780 450 L900 430'); g.ln('M780 485 L900 495'); g.el(600, 640, 90, 60); } },
+    { id: 'rabbit', n: 'خرگوش', d: g => {
+      g.el(500, 170, 55, 150, -0.08); g.el(700, 170, 55, 150, 0.08); g.el(500, 180, 26, 108, -0.08); g.el(700, 180, 26, 108, 0.08);
+      g.el(600, 700, 175, 125); g.el(480, 805, 75, 30); g.el(720, 805, 75, 30); g.el(600, 720, 90, 70);
+      g.el(600, 420, 205, 175); g.ci(530, 400, 30); g.ci(670, 400, 30); g.ci(534, 404, 12); g.ci(666, 404, 12); g.ci(455, 480, 36); g.ci(745, 480, 36);
+      g.sh('M577 455 L623 455 L600 482 Z'); g.ln('M600 482 L600 512'); g.ln('M600 512 C580 540 555 536 545 516'); g.ln('M600 512 C620 540 645 536 655 516'); } },
+    { id: 'butterfly', n: 'پروانه', d: g => {
+      g.sh('M580 380 C450 120 150 150 170 350 C185 470 400 480 580 430 Z'); g.sh('M620 380 C750 120 1050 150 1030 350 C1015 470 800 480 620 430 Z');
+      g.sh('M585 450 C430 480 250 560 300 700 C350 780 520 700 585 520 Z'); g.sh('M615 450 C770 480 950 560 900 700 C850 780 680 700 615 520 Z');
+      g.ci(320, 300, 70); g.ci(880, 300, 70); g.ci(380, 640, 45); g.ci(820, 640, 45); g.ci(320, 300, 30); g.ci(880, 300, 30);
+      g.ln('M590 205 C570 150 540 120 520 110'); g.ln('M610 205 C630 150 660 120 680 110'); g.el(600, 440, 24, 190); g.ci(600, 225, 30); } },
+    { id: 'house', n: 'خونه', d: g => {
+      g.rc(730, 230, 60, 110); g.rc(330, 380, 540, 350); g.sh('M290 390 L600 160 L910 390 Z');
+      g.sh('M555 730 L555 560 C555 500 645 500 645 560 L645 730 Z'); g.rc(400, 450, 100, 100); g.ln('M450 450 L450 550'); g.ln('M400 500 L500 500');
+      g.rc(700, 450, 100, 100); g.ln('M750 450 L750 550'); g.ln('M700 500 L800 500');
+      g.ci(1010, 140, 60); g.sh('M130 230 C100 230 90 190 120 180 C120 140 180 130 195 165 C230 145 270 170 260 205 C290 210 285 245 250 245 Z');
+      g.rc(965, 600, 30, 130); g.ci(980, 540, 90); g.ln('M60 730 L1140 730'); g.ci(630, 640, 7); } },
+    { id: 'mandala', n: 'ماندالا', d: g => {
+      const C = (n, r, rx, ry) => { for (let i = 0; i < n; i++) { const a = i * 2 * Math.PI / n; g.el(600 + Math.cos(a) * r, 420 + Math.sin(a) * r, rx, ry, a + Math.PI / 2); } };
+      g.ci(600, 420, 392); C(16, 300, 42, 78); g.ci(600, 420, 232); C(12, 165, 32, 58); g.ci(600, 420, 100); C(8, 62, 18, 32); g.ci(600, 420, 28); } },
+    { id: 'sunset', n: 'غروب', d: g => {
+      g.rc(8, 8, 1184, 824); g.ci(600, 470, 140);
+      for (let i = 0; i < 9; i++) { const a = Math.PI + (i + .5) * Math.PI / 9; g.ln('M' + (600 + Math.cos(a) * 170) + ' ' + (470 + Math.sin(a) * 170) + ' L' + (600 + Math.cos(a) * 235) + ' ' + (470 + Math.sin(a) * 235)); }
+      g.sh('M8 470 L140 330 L260 400 L390 470 Z'); g.sh('M810 470 L960 300 L1080 400 L1192 340 L1192 470 Z');
+      g.rc(8, 470, 1184, 362); g.ln('M100 560 q30 -20 60 0 t60 0 t60 0 t60 0'); g.ln('M820 580 q30 -20 60 0 t60 0 t60 0 t60 0'); g.ln('M460 760 q30 -20 60 0 t60 0 t60 0 t60 0');
+      g.sh('M560 650 L760 650 L720 705 L600 705 Z'); g.ln('M660 650 L660 540'); g.sh('M668 548 L668 640 L750 640 Z');
+      g.sh('M130 150 C100 150 90 110 120 100 C120 60 180 50 195 85 C230 65 270 90 260 125 C290 130 285 165 250 165 Z'); } },
+    { id: 'fish', n: 'ماهی', d: g => {
+      g.sh('M830 420 L1050 280 C1000 400 1000 440 1050 560 Z'); g.sh('M480 270 C520 190 640 190 680 270 Z'); g.sh('M500 570 C530 645 600 655 640 575 Z');
+      g.el(560, 420, 300, 170); g.ci(400, 380, 34); g.ci(405, 382, 14); g.ln('M470 300 C430 380 430 460 470 540'); g.ln('M262 430 C300 452 330 452 350 436');
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { const x = 560 + c * 62 + (r % 2) * 30, y = 330 + r * 70; g.ln('M' + x + ' ' + y + ' a32 32 0 0 1 0 64'); }
+      g.ci(200, 260, 30); g.ci(160, 170, 20); g.ci(235, 115, 14); g.ci(900, 700, 24); g.ci(950, 640, 15); } },
+    { id: 'cupcake', n: 'کاپ‌کیک', d: g => {
+      g.el(600, 800, 340, 30); g.sh('M400 520 L460 780 L740 780 L800 520 Z');
+      g.ln('M480 520 L516 780'); g.ln('M560 520 L572 780'); g.ln('M640 520 L628 780'); g.ln('M720 520 L684 780');
+      g.sh('M360 520 C340 440 400 400 440 410 C440 340 520 310 560 340 C590 280 700 280 730 340 C780 310 850 350 840 410 C880 410 870 470 840 520 Z');
+      g.ci(630, 240, 42); g.ln('M630 198 C640 160 670 140 700 130'); [[500, 450], [610, 410], [720, 440], [560, 360], [690, 350], [790, 480]].forEach(p => g.ci(p[0], p[1], 15)); } },
+    { id: 'rocket', n: 'موشک', d: g => {
+      const body = 'M600 100 C720 200 760 380 740 560 L460 560 C440 380 480 200 600 100 Z';
+      g.sh('M520 560 C500 680 560 740 600 810 C640 740 700 680 680 560 Z'); g.sh('M560 560 C555 630 585 670 600 705 C615 670 645 630 640 560 Z');
+      g.sh('M465 440 C400 500 350 580 350 690 L475 595 Z'); g.sh('M735 440 C800 500 850 580 850 690 L725 595 Z');
+      g.sh(body); g.clip(body, () => { g.ln('M400 450 L800 450'); g.ln('M400 505 L800 505'); }); g.ci(600, 320, 62); g.ci(600, 320, 38);
+      [[150, 140, 40], [1050, 120, 34], [220, 400, 26], [1000, 420, 30], [160, 700, 34], [1040, 730, 28]].forEach(p => g.sh(starPath(p[0], p[1], p[2])));
+      g.ci(980, 250, 0.1); } }
+  ];
+  const tplCache = {};
+  function tplData(id) {
+    if (!id) return null; if (tplCache[id]) return tplCache[id];
+    const def = TPLS.find(t => t.id === id); if (!def) return null;
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    x.lineWidth = LW; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#201a30'; x.fillStyle = '#fff';
+    const sh = p => { const P = new Path2D(p); x.fill(P); x.stroke(P); };
+    const g = {
+      sh, ln: p => x.stroke(new Path2D(p)), star: (cx, cy, r) => sh(starPath(cx, cy, r)),
+      el: (cx, cy, rx, ry, rot) => { if (rx < 1) return; x.beginPath(); x.ellipse(cx, cy, rx, ry, rot || 0, 0, Math.PI * 2); x.fill(); x.stroke(); },
+      ci: (cx, cy, r) => g.el(cx, cy, r, r), rc: (a, b, w, h) => { x.beginPath(); x.rect(a, b, w, h); x.fill(); x.stroke(); },
+      T: (cx, cy, k, fn) => { x.save(); x.translate(cx, cy); x.scale(k, k); x.translate(-600, -440); x.lineWidth = LW / k; fn(); x.restore(); },
+      clip: (p, fn) => { x.save(); x.clip(new Path2D(p)); fn(); x.restore(); }
+    };
+    def.d(g);
+    const dt = x.getImageData(0, 0, W, H).data, mask = new Uint8Array(W * H);
+    for (let i = 0, j = 0; i < dt.length; i += 4, j++) if (dt[i + 3] >= 110 && dt[i] < 120) mask[j] = 1;
+    return tplCache[id] = { canvas: c, mask, inv: null };
+  }
+  function tplInv(t) {
+    if (t.inv) return t.inv;
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(t.canvas, 0, 0);
+    const d = x.getImageData(0, 0, W, H), a = d.data; for (let i = 0; i < a.length; i += 4) { a[i] = 255 - a[i]; a[i + 1] = 255 - a[i + 1]; a[i + 2] = 255 - a[i + 2]; } x.putImageData(d, 0, 0);
+    return t.inv = c;
+  }
+  function drawTplOn(ctx, id, bg) {
+    const t = tplData(id); if (!t) return; ctx.save();
+    if (bg === 'night') { ctx.globalCompositeOperation = 'screen'; ctx.drawImage(tplInv(t), 0, 0); } else { ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(t.canvas, 0, 0); }
+    ctx.restore();
+  }
+  function paintTpl() {
+    if (!tplc) return; const x = tplc.getContext('2d'); x.clearRect(0, 0, W, H); const t = tplData(meta.tpl);
+    if (t) x.drawImage(meta.bg === 'night' ? tplInv(t) : t.canvas, 0, 0);
+    tplc.className = meta.bg === 'night' ? 'night' : '';
+  }
+  const hexRgb = h => { h = String(h || '#000').replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); const n = parseInt(h, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  /* سطل رنگ: داخل طرح آماده فقط تا خط‌ها پر می‌کنه؛ روی بوم ساده، ناحیهٔ هم‌رنگ رو پر می‌کنه */
+  function fillRegion(ctx, s, env) {
+    const sx = Math.round(s.x), sy = Math.round(s.y); if (!(sx >= 0 && sy >= 0 && sx < W && sy < H)) return;
+    const lo = s.lo == null ? 0 : Math.max(0, s.lo), hi = s.hi == null ? W : Math.min(W, s.hi); if (sx < lo || sx >= hi) return;
+    const T = env && env.tpl ? tplData(env.tpl) : null; let barrier = null, px = null, sr = 0, sg = 0, sb = 0;
+    if (T) { barrier = T.mask; if (barrier[sy * W + sx]) return; }
+    else { const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); paintBg(x, (env && env.bg) || 'cream'); x.drawImage(ctx.canvas, 0, 0); px = x.getImageData(0, 0, W, H).data; const k = (sy * W + sx) * 4; sr = px[k]; sg = px[k + 1]; sb = px[k + 2]; }
+    const ok = (x, y) => { const i = y * W + x; if (vis[i]) return false; if (barrier) return !barrier[i]; const k = i * 4; return Math.abs(px[k] - sr) + Math.abs(px[k + 1] - sg) + Math.abs(px[k + 2] - sb) <= 96; };
+    const vis = new Uint8Array(W * H), st = [sy * W + sx]; let x0 = W, x1 = 0, y0 = H, y1 = 0;
+    while (st.length) {
+      const i = st.pop(), x = i % W, y = (i / W) | 0; if (vis[i] || !ok(x, y)) continue;
+      let a = x, b = x; while (a > lo && ok(a - 1, y)) a--; while (b < hi - 1 && ok(b + 1, y)) b++;
+      for (let k = a; k <= b; k++) vis[y * W + k] = 1;
+      if (a < x0) x0 = a; if (b > x1) x1 = b; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      [y - 1, y + 1].forEach(yy => { if (yy < 0 || yy >= H) return; let run = false; for (let k = a; k <= b; k++) { const g = ok(k, yy); if (g && !run) { st.push(yy * W + k); run = true; } else if (!g) run = false; } });
+    }
+    if (x1 < x0) return;
+    x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(W - 1, x1 + 1); y1 = Math.min(H - 1, y1 + 1);
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, img = new ImageData(w, h), d = img.data, [r, g2, b2] = hexRgb(s.color);
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const i = y * W + x; let on = vis[i];
+      if (!on && x >= lo && x < hi) on = (x > 0 && vis[i - 1]) || (x < W - 1 && vis[i + 1]) || (y > 0 && vis[i - W]) || (y < H - 1 && vis[i + W]);
+      if (on) { const k = ((y - y0) * w + (x - x0)) * 4; d[k] = r; d[k + 1] = g2; d[k + 2] = b2; d[k + 3] = 255; }
+    }
+    const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h; tmp.getContext('2d').putImageData(img, 0, 0); ctx.drawImage(tmp, x0, y0);
+  }
+
+  /* 📄 ساخت فایل PDF (بدون کتابخونه): یک صفحهٔ A4 افقی با تصویر نقاشی */
+  async function pdfBlob(c) {
+    const jb = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)); const jpg = new Uint8Array(await jb.arrayBuffer());
+    const PW = 842, PH = 595, m = 24, sc = Math.min((PW - 2 * m) / c.width, (PH - 2 * m) / c.height), w = +(c.width * sc).toFixed(2), h = +(c.height * sc).toFixed(2), x = +((PW - w) / 2).toFixed(2), y = +((PH - h) / 2).toFixed(2);
+    const enc = s => new TextEncoder().encode(s), parts = [], off = []; let len = 0; const add = u => { parts.push(u); len += u.length; };
+    add(new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 226, 227, 207, 211, 10]));
+    const o = (n, body) => { off[n] = len; add(enc(n + ' 0 obj\n' + body + '\nendobj\n')); };
+    o(1, '<< /Type /Catalog /Pages 2 0 R >>'); o(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    o(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + PW + ' ' + PH + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+    off[4] = len; add(enc('4 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + c.width + ' /Height ' + c.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n')); add(jpg); add(enc('\nendstream\nendobj\n'));
+    const cs = 'q ' + w + ' 0 0 ' + h + ' ' + x + ' ' + y + ' cm /Im0 Do Q'; o(5, '<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream');
+    const xr = len; let t = 'xref\n0 6\n0000000000 65535 f \n'; for (let i = 1; i <= 5; i++) t += String(off[i]).padStart(10, '0') + ' 00000 n \n';
+    add(enc(t + 'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF\n'));
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+  function saveBlob(b, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800); }
+  async function downloadPdf() {
+    if (!cur().length) { toast2('بوم خالیه؛ اول یه چیزی بکش 🎨'); return; }
+    try { toast2('📄 در حال ساخت PDF…'); saveBlob(await pdfBlob(await exportCanvas(filterSel || '')), 'our-canvas-' + Date.now() + '.pdf'); } catch (e) { console.error(e); toast2('⚠️ ساخت PDF نشد'); }
+  }
+  async function pdfArt(id) {
+    const g = gallery.find(x => x.id === id); if (!g) return;
+    try {
+      toast2('📄 در حال ساخت PDF…'); const r = await fetch(g.url), bm = await createImageBitmap(await r.blob());
+      const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(bm, 0, 0);
+      saveBlob(await pdfBlob(c), (g.title || 'canvas') + '.pdf');
+    } catch (e) { console.error(e); toast2('⚠️ ساخت PDF نشد'); }
+  }
+
+  /* 🔍 زوم و جابجایی */
+  const zClamp = () => { if (!stage) return; z.s = Math.max(1, Math.min(6, z.s)); z.x = Math.min(0, Math.max(stage.clientWidth * (1 - z.s), z.x)); z.y = Math.min(0, Math.max(stage.clientHeight * (1 - z.s), z.y)); };
+  function zApply() {
+    if (!zoomEl) return; zClamp(); zoomEl.style.transform = z.s === 1 ? '' : 'translate(' + z.x.toFixed(1) + 'px,' + z.y.toFixed(1) + 'px) scale(' + z.s.toFixed(3) + ')';
+    stage.style.setProperty('--iz', (1 / z.s).toFixed(3)); stage.classList.toggle('zoomed', z.s > 1.001); const l = $('cvZl'); if (l) l.textContent = fa(Math.round(z.s * 100)) + '٪';
+  }
+  function zoomAt(cx, cy, ns) { ns = Math.max(1, Math.min(6, ns)); z.x = cx - (cx - z.x) * ns / z.s; z.y = cy - (cy - z.y) * ns / z.s; z.s = ns; zApply(); }
+  const zoomBy = f => { if (!stage) return; zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, z.s * f); };
+  function zoomReset() { z = { s: 1, x: 0, y: 0 }; zApply(); }
+  const ptrs = new Map(); let pinch = null, panDrag = null, pinchLock = false;
+  function cancelMine() { if (!mine) return; clearTimeout(sendT); sendT = null; send({ t: 'cancel', id: mine.id }); mine = null; pend = []; dirty = true; }
+  function pinchStart() {
+    cancelMine(); pinchLock = true; panDrag = null; const [a, b] = [...ptrs.values()], r = stage.getBoundingClientRect();
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, cx: (a.x + b.x) / 2 - r.left, cy: (a.y + b.y) / 2 - r.top, z: Object.assign({}, z) };
+  }
+  function pinchMove() {
+    if (!pinch || ptrs.size < 2) return; const [a, b] = [...ptrs.values()], r = stage.getBoundingClientRect(), d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top, ns = Math.max(1, Math.min(6, pinch.z.s * d / pinch.d));
+    const qx = (pinch.cx - pinch.z.x) / pinch.z.s, qy = (pinch.cy - pinch.z.y) / pinch.z.s; z.s = ns; z.x = cx - qx * ns; z.y = cy - qy * ns; zApply();
+  }
+  function wireStage() {
+    work.addEventListener('pointerdown', e => {
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size >= 2) { pinchStart(); return; }
+      if (pinchLock) return;
+      if (pop) { pop = null; renderPop(); renderRail(); }
+      if (tool === 'pan' || e.button === 1) { e.preventDefault(); try { work.setPointerCapture(e.pointerId); } catch (_) {} panDrag = { x: e.clientX, y: e.clientY, zx: z.x, zy: z.y }; return; }
+      pDown(e);
+    });
+    work.addEventListener('pointermove', e => {
+      if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch) { e.preventDefault(); pinchMove(); return; }
+      if (panDrag) { e.preventDefault(); z.x = panDrag.zx + e.clientX - panDrag.x; z.y = panDrag.zy + e.clientY - panDrag.y; zApply(); return; }
+      pMove(e);
+    });
+    const up = e => {
+      ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 0) pinchLock = false; panDrag = null;
+      if (!pinchLock || !pinch) pUp();
+    };
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => work.addEventListener(ev, up));
+    stage.addEventListener('wheel', e => { e.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, z.s * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018))); }, { passive: false });
+    stage.querySelectorAll('[data-z]').forEach(b => b.onclick = e => { e.stopPropagation(); const k = b.dataset.z; if (k === 'in') zoomBy(1.4); else if (k === 'out') zoomBy(1 / 1.4); else zoomReset(); });
+    zApply();
+  }
+
   function rebuild() { bctx.clearRect(0, 0, W, H); cur().forEach(s => drawStroke(bctx, s)); dirty = true; }
   function frame() {
     if (dirty && wctx) {
@@ -107,6 +321,7 @@
     if (e.button != null && e.button > 0) return; e.preventDefault();
     const p = pos(e), d = deny(p[0]); if (d) { toast2(d); return; }
     if (sigMode) { sigMode = false; place({ t: 'tx', text: jget('diary_cv_sig', '') || nm(), x: p[0], y: p[1], size: Math.max(64, size * 6), color, sig: true }); renderTools(); return; }
+    if (tool === 'fill') { let lo = null, hi = null; if (meta.mode === 'half' && meta.half) { if (same(meta.half.L, nm())) hi = W / 2; else if (same(meta.half.R, nm())) lo = W / 2; } place({ t: 'fl', x: p[0], y: p[1], color, lo, hi }); return; }
     if (tool === 'sticker') { place({ t: 'st', e: stickerPick, x: p[0], y: p[1], size: Math.max(96, size * 9) }); return; }
     if (tool === 'text') { const t = prompt('چی بنویسم روی نقاشی؟'); if (t && t.trim()) place({ t: 'tx', text: t.trim().slice(0, 60), x: p[0], y: p[1], size: Math.max(52, size * 5), color }); return; }
     try { work.setPointerCapture(e.pointerId); } catch (_) {}
@@ -179,6 +394,7 @@
       (p.pts || []).forEach(q => s.pts.push(q)); s.at = Date.now(); dirty = true;
     } else if (p.t === 'end') { const s = remote[p.id]; if (s) { delete remote[p.id]; commit(s); } }
     else if (p.t === 'add') { if (p.s) { commit(p.s); } }
+    else if (p.t === 'cancel') { if (remote[p.id]) { delete remote[p.id]; dirty = true; } }
     else if (p.t === 'undo') { const n = strokes.length; strokes = strokes.filter(s => s.id !== p.id); if (strokes.length !== n && !secret) { rebuild(); changed(true); } else if (strokes.length !== n) { changed(true); } }
     else if (p.t === 'clear') { strokes = []; if (!secret) rebuild(); changed(true); toast2('🧹 ' + p.name + ' بوم رو پاک کرد'); }
     else if (p.t === 'meta') { applyMeta(p.meta, true); }
@@ -191,7 +407,7 @@
   setInterval(() => { const n = Date.now(); Object.keys(remote).forEach(k => { if (n - remote[k].at > 8000) { delete remote[k]; dirty = true; } }); Object.keys(cursors).forEach(k => { if (n - cursors[k].at > 3500) { cursors[k].el.style.display = 'none'; } }); }, 2000);
   function showCursor(p) {
     if (!stage) return; let c = cursors[p.from];
-    if (!c) { const el = document.createElement('div'); el.className = 'cv-cur'; el.innerHTML = '<i></i><b></b>'; stage.appendChild(el); c = cursors[p.from] = { el }; }
+    if (!c) { const el = document.createElement('div'); el.className = 'cv-cur'; el.innerHTML = '<i></i><b></b>'; (zoomEl || stage).appendChild(el); c = cursors[p.from] = { el }; }
     c.el.style.display = ''; c.el.style.left = (p.x * 100) + '%'; c.el.style.top = (p.y * 100) + '%'; c.el.querySelector('b').textContent = p.name || ''; c.at = Date.now();
   }
 
@@ -199,10 +415,11 @@
   function setMeta(patch) { applyMeta(Object.assign({}, meta, patch), false); send({ t: 'meta', meta }); changed(true); }
   function applyMeta(m, fromRemote) {
     if (!m) return; const prevBg = meta.bg;
-    meta = Object.assign({ mode: 'free', topic: '', bg: 'cream', turn: '', half: null, timerEnd: 0, drawer: '' }, m);
+    meta = Object.assign(META0(), m);
     if (bgctx && meta.bg !== prevBg) { bgctx.clearRect(0, 0, W, H); paintBg(bgctx, meta.bg); }
+    paintTpl();
     if (meta.mode !== 'guess') { guessWord = ''; }
-    if (meta.mode === 'guess' && same(meta.drawer, nm()) && !guessWord) guessWord = rnd(WORDS);
+    if (meta.mode === 'guess' && same(meta.drawer, nm()) && !guessWord) { guessWord = pickWord(); const L = wordLen(guessWord); if (meta.wlen !== L || meta.hint) { meta.wlen = L; meta.hint = ''; setTimeout(() => send({ t: 'meta', meta }), 0); } }
     if (meta.mode === 'half' && meta.half && !meta.half.R && meta.half.L && !same(meta.half.L, nm()) && fromRemote) { meta.half = Object.assign({}, meta.half, { R: nm() }); send({ t: 'meta', meta }); }
     dirty = true; renderMode(); renderHeader(); renderBgs();
   }
@@ -213,18 +430,24 @@
     if (mode === 'free') setMeta({ mode, turn: '', half: null, drawer: '', timerEnd: 0 });
     else if (mode === 'turn') { setMeta({ mode, turn: nm(), half: null, drawer: '', timerEnd: 0 }); toast2('🖌️ نوبتی شد؛ اول تو بکش و بعد «نوبتم تموم شد» رو بزن'); }
     else if (mode === 'half') { setMeta({ mode, half: { L: nm(), R: pn || '' }, turn: '', drawer: '', timerEnd: 0 }); toast2('↔️ تو نیمهٔ چپ، اون یکی نیمهٔ راست'); }
-    else if (mode === 'guess') { if (strokes.length && !confirm('برای بازی حدس بزن، بوم پاک بشه؟')) return; strokes = []; rebuild(); send({ t: 'clear' }); guessWord = rnd(WORDS); guessFeed = []; setMeta({ mode, drawer: nm(), turn: '', half: null, timerEnd: 0 }); }
+    else if (mode === 'guess') { if (strokes.length && !confirm('برای بازی حدس بزن، بوم پاک بشه؟')) return; strokes = []; rebuild(); send({ t: 'clear' }); guessWord = pickWord(); guessFeed = []; guessWrong = 0; setMeta({ mode, drawer: nm(), turn: '', half: null, timerEnd: 0, tpl: '', wlen: wordLen(guessWord), hint: '' }); }
     else if (mode === 'timed') { const m = timedMin || 2; timerDone = 0; setMeta({ mode: 'timed', timerEnd: Date.now() + m * 60000, turn: '', half: null, drawer: '' }); toast2('⏱️ ' + fa(m) + ' دقیقه وقت داریم؛ بکشیم!'); }
   }
   function passTurn() { const pn = partnerName(); if (!pn) { toast2('اون یکی توی بوم نیست'); return; } setMeta({ turn: pn }); toast2('✅ نوبت به ' + pn + ' رسید'); }
   function onGuess(p) {
     if (meta.mode !== 'guess' || !same(meta.drawer, nm()) || !guessWord) return;
-    const n = s => String(s || '').replace(/[\s‌ـ]/g, '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').toLowerCase();
-    const ok = n(p.text) === n(guessWord);
+    const ok = guessWord.split('|').some(a => wNorm(a) === wNorm(p.text)), shown = guessWord.split('|')[0];
     guessFeed.push({ name: p.name, text: p.text, ok }); guessFeed = guessFeed.slice(-6);
-    send({ t: 'gres', text: p.text, ok, word: ok ? guessWord : '' }); if (ok) win(guessWord); renderMode();
+    send({ t: 'gres', text: p.text, ok, word: ok ? shown : '' });
+    if (ok) win(shown); else { guessWrong++; if (guessWrong >= 3 && !meta.hint) { setMeta({ hint: firstLetter() }); toast2('💡 حرف اول به راهنما اضافه شد'); } }
+    renderMode();
   }
-  function win(word) { toast2('🎉 درست حدس زده شد: «' + word + '»'); fx(36); try { OMSound.play('up'); } catch (e) {} if (same(meta.drawer, nm())) { guessWord = rnd(WORDS); } }
+  const wNorm = s => String(s || '').replace(/[\s‌ـ]/g, '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[آأإ]/g, 'ا').replace(/ة/g, 'ه').toLowerCase();
+  const wordLen = w => wNorm(String(w).split('|')[0]).length, firstLetter = () => String(guessWord).split('|')[0].charAt(0);
+  const pickWord = () => { const l = WORDS[meta.level] || WORDS.med; let w = rnd(l), t = 0; while (w === guessWord && t++ < 5) w = rnd(l); return w; };
+  function newWord() { guessWord = pickWord(); guessWrong = 0; setMeta({ wlen: wordLen(guessWord), hint: '' }); }
+  const LVL = { easy: 'آسان', med: 'متوسط', hard: 'سخت' };
+  function win(word) { toast2('🎉 درست حدس زده شد: «' + word + '»'); fx(36); try { OMSound.play('up'); } catch (e) {} if (same(meta.drawer, nm())) newWord(); }
   function myGuess() {
     const i = $('cvGuessIn'); const t = i && i.value.trim(); if (!t) return;
     guessFeed.push({ name: nm(), text: t, ok: false }); guessFeed = guessFeed.slice(-6); send({ t: 'guess', text: t }); i.value = ''; renderMode();
@@ -249,7 +472,7 @@
 
   async function exportCanvas(filter) {
     const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-    paintBg(x, meta.bg); x.drawImage(base, 0, 0);
+    paintBg(x, meta.bg); x.drawImage(base, 0, 0); drawTplOn(x, meta.tpl, meta.bg);
     if (filter) applyFilter(c, filter);
     return c;
   }
@@ -285,7 +508,7 @@
     try {
       const blob = await blobOf(await exportCanvas(filter));
       const up = await uploadMediaFile(blob, 'png', 'canvas.png');
-      const row = { id: replace ? ex.id : (opts.id || ('cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5))), title, url: up.url, path: up.path, strokes: JSON.stringify(cur()), bg: meta.bg, author: secret ? nm() : (partnerName() ? nm() + ' و ' + partnerName() : nm()), created_at: replace ? ex.created_at : Date.now(), fav: replace ? !!ex.fav : false, comments: replace ? (ex.comments || '[]') : '[]', reveal_at: reveal || null, topic: meta.topic || '', mode: secret ? 'secret' : meta.mode };
+      const row = { id: replace ? ex.id : (opts.id || ('cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5))), title, url: up.url, path: up.path, strokes: JSON.stringify(cur()), bg: meta.bg, author: secret ? nm() : (partnerName() ? nm() + ' و ' + partnerName() : nm()), created_at: replace ? ex.created_at : Date.now(), fav: replace ? !!ex.fav : false, comments: replace ? (ex.comments || '[]') : '[]', reveal_at: reveal || null, topic: meta.topic || '', mode: secret ? 'secret' : (meta.tpl ? 'tpl:' + meta.tpl : meta.mode) };
       const { error } = await dbClient.from('canvas_art').upsert(row);
       if (error) { artMissing = /canvas_art|relation|schema cache/i.test(error.message || ''); try { await dbClient.storage.from('songs').remove([up.path]); } catch (e) {} throw error; }
       artMissing = false; if (replace && ex.path && ex.path !== up.path) { try { dbClient.storage.from('songs').remove([ex.path]); } catch (e) {} } gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined })); if (replace || opts.finish) { editId = null; renderMode(); }
@@ -321,7 +544,7 @@
       let cm = 0; try { cm = JSON.parse(g.comments || '[]').length; } catch (e) {}
       return `<div class="cv-card" data-id="${esc(g.id)}">${lk ? `<div class="cv-lock">🔒<small>غافلگیری! حدود ${fa(left)} ساعت دیگه</small></div>` : `<img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" data-open="${esc(g.id)}">`}
         <div class="cv-ct"><b>${esc(lk ? 'نقاشی مخفی' : g.title)}</b><small>${esc(g.author || '')} · ${esc(dateOf(g.created_at))}</small></div>
-        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button>`}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
+        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button><button type="button" data-pdf="${esc(g.id)}" title="ذخیره PDF">📄</button>`}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
     }).join('') + '</div>';
     const fo = $('cvFavOnly'); if (fo) fo.onchange = () => { galFav = fo.checked; renderGallery(); };
   }
@@ -339,7 +562,7 @@
     const g = gallery.find(x => x.id === id); if (!g || locked(g)) return;
     const d = document.createElement('div'); d.className = 'cv-modal'; d.innerHTML = `<div class="cv-mbox"><button type="button" class="cv-x" aria-label="بستن">✕</button><h3>${esc(g.title)}</h3><small>${esc(g.author || '')} · ${esc(dateOf(g.created_at))}${g.topic ? ' · موضوع: ' + esc(g.topic) : ''}</small>
       <div class="cv-mstage"><img src="${esc(g.url)}" alt=""><canvas width="${W}" height="${H}" class="cv-rp" style="display:none"></canvas></div>
-      <div class="cv-row"><button type="button" class="cv-ib pri" data-m="replay" title="پخش دوبارهٔ نقاشی" aria-label="پخش دوباره">${ico('play')}</button><button type="button" class="cv-ib" data-m="edit" title="ویرایش دوباره" aria-label="ویرایش">${ico('pen')}</button><button type="button" class="cv-ib" data-m="dl" title="دانلود" aria-label="دانلود">${ico('dl')}</button></div>
+      <div class="cv-row"><button type="button" class="cv-ib pri" data-m="replay" title="پخش دوبارهٔ نقاشی" aria-label="پخش دوباره">${ico('play')}</button><button type="button" class="cv-ib" data-m="edit" title="ویرایش دوباره" aria-label="ویرایش">${ico('pen')}</button><button type="button" class="cv-ib" data-m="dl" title="دانلود" aria-label="دانلود">${ico('dl')}</button><button type="button" class="cv-ib" data-m="pdf" title="ذخیره PDF" aria-label="PDF">${ico('pdf')}</button></div>
       <div class="cv-cm" id="cvCm"></div><form class="cv-cmf"><input type="text" maxlength="200" placeholder="یه نظر قشنگ بنویس…"><button class="btn" type="submit">ارسال</button></form></div>`;
     document.body.appendChild(d);
     const close = () => { clearTimeout(rpTimer); d.remove(); };
@@ -348,15 +571,17 @@
     renderCm();
     d.querySelector('.cv-cmf').onsubmit = async e => { e.preventDefault(); const i = e.target.querySelector('input'), t = i.value.trim(); if (!t) return; let l = []; try { l = JSON.parse(g.comments || '[]'); } catch (_) {} l.push({ by: nm(), text: t.slice(0, 200), ts: Date.now() }); g.comments = JSON.stringify(l); i.value = ''; renderCm(); try { await dbClient.from('canvas_art').update({ comments: g.comments }).eq('id', id); } catch (_) {} renderGallery(); };
     d.querySelector('[data-m=dl]').onclick = () => dlArt(id);
+    d.querySelector('[data-m=pdf]').onclick = () => pdfArt(id);
     d.querySelector('[data-m=edit]').onclick = () => editArt(id);
     d.querySelector('[data-m=replay]').onclick = async () => {
       let sts = null; try { const r = await dbClient.from('canvas_art').select('strokes').eq('id', id).maybeSingle(); sts = r.data && JSON.parse(r.data.strokes || '[]'); } catch (e) {}
       if (!sts || !sts.length) { toast2('مراحل این نقاشی ذخیره نشده'); return; }
-      const cv = d.querySelector('.cv-rp'), img = d.querySelector('.cv-mstage img'); img.style.display = 'none'; cv.style.display = 'block'; replay(cv, sts, g.bg || 'cream', () => { img.style.display = ''; cv.style.display = 'none'; });
+      const cv = d.querySelector('.cv-rp'), img = d.querySelector('.cv-mstage img'); img.style.display = 'none'; cv.style.display = 'block'; replay(cv, sts, g.bg || 'cream', () => { img.style.display = ''; cv.style.display = 'none'; }, tplOf(g));
     };
   }
   /* ✏️ ویرایش دوبارهٔ یک نقاشی ذخیره‌شده: مراحلش روی بوم مشترک بارگذاری می‌شه و با ذخیره، همون نقاشی (یا یک نسخهٔ جدید) به‌روز می‌شه */
   let editId = null;
+  const tplOf = g => { const m = String(g && g.mode || ''); return m.startsWith('tpl:') && TPLS.some(t => t.id === m.slice(4)) ? m.slice(4) : ''; };
   async function editArt(id) {
     const g = gallery.find(x => x.id === id); if (!g || locked(g)) return;
     if (strokes.length && !confirm('بوم فعلی با این نقاشی جایگزین می‌شه. ادامه بدم؟ (اگه بوم فعلی رو می‌خوای، اول ذخیره‌اش کن)')) return;
@@ -364,21 +589,21 @@
     if (!sts || !sts.length) { toast2('مراحل این نقاشی ذخیره نشده؛ نمی‌شه ویرایشش کرد'); return; }
     document.querySelectorAll('.cv-modal').forEach(x => x.remove()); clearTimeout(rpTimer);
     secret = false; strokes = sts; redo = []; editId = id; tab = 'draw'; pop = null;
-    applyMeta(Object.assign({}, meta, { mode: 'free', turn: '', half: null, drawer: '', timerEnd: 0, bg: g.bg || 'cream', topic: g.topic || '' }), false);
+    applyMeta(Object.assign({}, meta, { mode: 'free', turn: '', half: null, drawer: '', timerEnd: 0, bg: g.bg || 'cream', topic: g.topic || '', tpl: tplOf(g) }), false);
     rebuild(); render(); send({ t: 'meta', meta }); clearTimeout(saveT); await saveLive(); send({ t: 'reload' });
     toast2('✏️ «' + g.title + '» روی بوم باز شد؛ ویرایشش کن و ذخیره بزن');
   }
-  function replay(cv, sts, bg, done) {
+  function replay(cv, sts, bg, done, tplId) {
     clearTimeout(rpTimer);
     const x = cv.getContext('2d'), bc = document.createElement('canvas'); bc.width = W; bc.height = H; const bx = bc.getContext('2d');
     const total = sts.reduce((a, s) => a + (s.pts ? s.pts.length : 8), 0), per = Math.max(2, Math.ceil(total / (14 * 60)));
     let i = 0, n = 0;
-    const draw = tmp => { x.clearRect(0, 0, W, H); paintBg(x, bg); const w = document.createElement('canvas'); w.width = W; w.height = H; const wx = w.getContext('2d'); wx.drawImage(bc, 0, 0); if (tmp) drawStroke(wx, tmp); x.drawImage(w, 0, 0); };
+    const env = { tpl: tplId || '', bg }, draw = tmp => { x.clearRect(0, 0, W, H); paintBg(x, bg); const w = document.createElement('canvas'); w.width = W; w.height = H; const wx = w.getContext('2d'); wx.drawImage(bc, 0, 0); if (tmp) drawStroke(wx, tmp, env); x.drawImage(w, 0, 0); drawTplOn(x, tplId, bg); };
     (function step() {
       if (i >= sts.length) { draw(null); rpTimer = setTimeout(done, 1500); return; }
       const s = sts[i];
-      if (s.t !== 'p') { drawStroke(bx, s); i++; draw(null); rpTimer = setTimeout(step, 260); return; }
-      n += per; if (n >= s.pts.length) { drawStroke(bx, s); i++; n = 0; draw(null); rpTimer = setTimeout(step, 16); return; }
+      if (s.t !== 'p') { drawStroke(bx, s, env); i++; draw(null); rpTimer = setTimeout(step, 260); return; }
+      n += per; if (n >= s.pts.length) { drawStroke(bx, s, env); i++; n = 0; draw(null); rpTimer = setTimeout(step, 16); return; }
       draw(Object.assign({}, s, { pts: s.pts.slice(0, n) })); rpTimer = setTimeout(step, 16);
     })();
   }
@@ -489,6 +714,13 @@
     brushes: '<circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/>',
     gal: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
     play: '<polygon points="5 3 19 12 5 21 5 3"/>',
+    pdf: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    fill: '<path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/>',
+    pan: '<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.9-2.4L3.4 16a2 2 0 0 1 3.2-2.4L8 15"/>',
+    zin: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>',
+    zout: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>',
+    tpl: '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>',
+    fit: '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
     canvas: '<path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/>'
   };
   const ico = (n, s) => `<svg viewBox="0 0 24 24" width="${s || 20}" height="${s || 20}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || ''}</svg>`;
@@ -540,6 +772,17 @@
 .cv-gg input{min-width:0;flex:1}
 .cv-stage{margin:0}
 .cv-save{display:none}
+.cv-zoom{position:absolute;inset:0;transform-origin:0 0}
+.cv-stage canvas#cvTpl{pointer-events:none;mix-blend-mode:multiply}.cv-stage canvas#cvTpl.night{mix-blend-mode:screen}
+.cv-cur{transform:translate(-4px,-4px) scale(var(--iz,1));transform-origin:0 0}
+.cv-stage[data-tool=pan] canvas.draw{cursor:grab}.cv-stage[data-tool=fill] canvas.draw{cursor:cell}
+.cv-zb{position:absolute;left:8px;bottom:8px;z-index:7;display:flex;gap:4px;align-items:center;padding:4px;border-radius:14px;background:rgba(20,16,36,.62);color:#fff}
+.cv-zb .cv-ib{width:30px;height:30px;border-radius:10px;background:none;border-color:transparent;color:#fff}.cv-zb span{font-size:.72rem;min-width:36px;text-align:center;direction:ltr}
+.cv-rail{max-height:calc(100vh - 100px);overflow-y:auto;scrollbar-width:none}.cv-rail::-webkit-scrollbar{display:none}
+.cv-cats{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}.cv-cats button{width:32px;height:32px;border-radius:10px;border:1px solid rgba(212,165,255,.25);background:rgba(255,255,255,.06);cursor:pointer;font-size:1.05rem;padding:0}.cv-cats button.on{background:rgba(212,165,255,.4);border-color:var(--cvA)}
+.cv-grid2.em.scr{max-height:210px;overflow-y:auto;padding:2px}
+.cv-tpls{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-height:300px;overflow-y:auto}.cv-tpls button{border:2px solid transparent;border-radius:10px;background:#fff;padding:0;cursor:pointer;overflow:hidden;position:relative}.cv-tpls button.on{border-color:var(--cvA)}.cv-tpls img{width:100%;display:block}.cv-tpls small{position:absolute;bottom:0;left:0;right:0;background:rgba(27,21,48,.75);color:#fff;font-size:.62rem;padding:1px 0;text-align:center}
+.cv-wd{display:flex;gap:6px;justify-content:center;margin:6px 0;font-weight:700;font-size:1.15rem;flex-wrap:wrap}.cv-wd span{min-width:26px;border-bottom:3px solid var(--cvA);text-align:center;line-height:1.5}
 @media (max-width:760px){
   .cv-main{flex-direction:column-reverse;align-items:stretch}
   .cv-wrap{flex:none;width:100%}
@@ -564,15 +807,14 @@
       <div class="cv-main">
         <div class="cv-rail" id="cvRail"></div>
         <div class="cv-wrap"><div class="cv-pop" id="cvPop"></div>
-          <div class="cv-stage intro" id="cvStage"><canvas id="cvBg" width="${W}" height="${H}"></canvas><canvas id="cvWork" class="draw" width="${W}" height="${H}"></canvas></div>
+          <div class="cv-stage intro" id="cvStage"><div class="cv-zoom" id="cvZoom"><canvas id="cvBg" width="${W}" height="${H}"></canvas><canvas id="cvWork" class="draw" width="${W}" height="${H}"></canvas><canvas id="cvTpl" width="${W}" height="${H}"></canvas></div><div class="cv-zb"><button type="button" class="cv-ib" data-z="out" title="کوچیک‌تر">${ico('zout', 16)}</button><span id="cvZl">۱۰۰٪</span><button type="button" class="cv-ib" data-z="in" title="زوم">${ico('zin', 16)}</button><button type="button" class="cv-ib" data-z="fit" title="اندازهٔ اصلی">${ico('fit', 16)}</button></div></div>
         </div>
       </div>
       ${liveMissing ? '<div class="cv-empty">برای ذخیرهٔ خودکار روی هر دو دستگاه، SQL شمارهٔ ۲۴ رو یک بار اجرا کن؛ فعلاً روی همین دستگاه ذخیره می‌شه.</div>' : ''}</div>`;
     bindTabs();
     stage = $('cvStage'); bgc = $('cvBg'); bgctx = bgc.getContext('2d'); work = $('cvWork'); wctx = work.getContext('2d');
-    cursors = {}; paintBg(bgctx, meta.bg);
-    work.addEventListener('pointerdown', e => { if (pop) { pop = null; renderPop(); renderRail(); } pDown(e); }); work.addEventListener('pointermove', pMove);
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => work.addEventListener(ev, pUp));
+    zoomEl = $('cvZoom'); tplc = $('cvTpl'); ptrs.clear(); pinch = null; panDrag = null; pinchLock = false;
+    cursors = {}; paintBg(bgctx, meta.bg); paintTpl(); wireStage();
     setTimeout(() => stage && stage.classList.remove('intro'), 1100);
     renderHeader(); renderTopic(); renderMode(); renderRail(); renderAct(); renderPop(); dirty = true; startFrame();
   }
@@ -598,14 +840,15 @@
   const renderModes = () => refreshPop();
   function renderRail() {
     const el = $('cvRail'); if (!el) return;
-    const T = [['pen', 'قلم'], ['brush', 'قلم‌مو'], ['hl', 'هایلایتر'], ['eraser', 'پاک‌کن'], ['sticker', 'استیکر'], ['text', 'متن']];
+    const T = [['pen', 'قلم'], ['brush', 'قلم‌مو'], ['hl', 'هایلایتر'], ['eraser', 'پاک‌کن'], ['fill', 'سطل رنگ'], ['sticker', 'استیکر'], ['text', 'متن'], ['pan', 'جابجایی (دست)']];
     const dotSize = Math.max(4, Math.min(18, size / 3 + 4));
+    if (stage) stage.dataset.tool = sigMode ? 'sig' : tool;
     el.innerHTML = T.map(t => ib(`data-t="${t[0]}"`, t[0], t[1], tool === t[0] && !sigMode ? 'on' : '')).join('') + ib('data-t="sig"', 'sig', 'امضا', sigMode ? 'on' : '')
       + '<div class="div"></div>' + ib('data-t="undo"', 'undo', 'برگرد') + ib('data-t="redo" id="cvRedo"', 'redo', 'جلو') + ib('data-t="clear"', 'clear', 'پاک کردن بوم')
       + '<div class="div"></div>'
       + `<button type="button" class="cv-ib${pop === 'color' ? ' on' : ''}" data-pop="color" title="رنگ"><span class="cv-sw1" style="background:${esc(color)}"></span></button>`
       + `<button type="button" class="cv-ib${pop === 'size' ? ' on' : ''}" data-pop="size" title="ضخامت و شفافیت"><span style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:currentColor;opacity:${.35 + alpha * .65};display:block"></span></button>`
-      + '<div class="div"></div>' + ib('data-pop="mode"', 'mode', 'حالت‌های بازی', pop === 'mode' || secret ? 'on' : '') + ib('data-pop="bg"', 'bg', 'پس‌زمینه', pop === 'bg' ? 'on' : '') + ib('data-pop="set"', 'set', 'تنظیمات', pop === 'set' ? 'on' : '');
+      + '<div class="div"></div>' + ib('data-pop="tpl"', 'tpl', 'طرح آماده برای رنگ‌آمیزی', pop === 'tpl' || meta.tpl ? 'on' : '') + ib('data-pop="mode"', 'mode', 'حالت‌های بازی', pop === 'mode' || secret ? 'on' : '') + ib('data-pop="bg"', 'bg', 'پس‌زمینه', pop === 'bg' ? 'on' : '') + ib('data-pop="set"', 'set', 'تنظیمات', pop === 'set' ? 'on' : '');
     el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
       const t = b.dataset.t;
       if (t === 'undo') undo(); else if (t === 'redo') redoOp(); else if (t === 'clear') clearAll();
@@ -629,10 +872,12 @@
       return `<h6>اندازه</h6><div class="cv-sizes">${PRE.map(v => `<button type="button" data-sz="${v}" class="${size === v ? 'on' : ''}" title="${fa(v)}"><i style="width:${Math.max(3, Math.min(30, v * (tool === 'hl' ? 1.6 : tool === 'eraser' ? 0.7 : 1)))}px;height:${Math.max(3, Math.min(30, v * (tool === 'hl' ? 1.6 : tool === 'eraser' ? 0.7 : 1)))}px;background:${pv}"></i></button>`).join('')}</div>
       <div class="cv-prow"><div class="cv-pv"><i id="cvPvDot" style="width:${Math.min(40, size)}px;height:${Math.min(40, size)}px;background:${pv};opacity:${tool === 'eraser' ? 1 : alpha}"></i></div><input type="range" id="cvSize" min="1" max="60" value="${size}"></div>
       ${tool === 'eraser' ? '' : `<h6>شفافیت</h6><div class="cv-prow"><input type="range" id="cvAlpha" min="5" max="100" value="${Math.round(alpha * 100)}"></div>`}`; }
-    if (n === 'stk') return `<h6>استیکر</h6><div class="cv-grid2 em">${STICKERS.map(s => `<button type="button" data-s="${s}" class="${s === stickerPick ? 'on' : ''}">${s}</button>`).join('')}</div>`;
+    if (n === 'stk') return `<h6>استیکر</h6><div class="cv-cats">${STK.map((c, i) => `<button type="button" data-sc="${i}" title="${esc(c.n)}" class="${i === stkCat ? 'on' : ''}">${c.ic}</button>`).join('')}</div><div class="cv-grid2 em scr">${STK[stkCat].l.map(s => `<button type="button" data-s="${s}" class="${s === stickerPick ? 'on' : ''}">${s}</button>`).join('')}</div>`;
+    if (n === 'tpl') return `<h6>طرح آماده · رنگ‌آمیزی</h6><div class="cv-chips" style="margin:0 0 8px"><button type="button" data-th2="solo" class="${tplHow === 'solo' ? 'on' : ''}">با هم رنگ کنیم</button><button type="button" data-th2="half" class="${tplHow === 'half' ? 'on' : ''}">دو نیمه (هرکی یه طرف)</button></div><div class="cv-tpls">${TPLS.map(t => `<button type="button" data-tp2="${t.id}" class="${meta.tpl === t.id ? 'on' : ''}" title="${esc(t.n)}"><img alt="" src="${tplThumb(t.id)}"><small>${esc(t.n)}</small></button>`).join('')}</div>${meta.tpl ? `<div class="cv-chips"><button type="button" data-tp2="">برداشتن طرح</button></div>` : ''}<h6 style="margin-top:8px">با سطل رنگ 🪣 داخل خط‌ها رو پر کن</h6>`;
     if (n === 'bg') return `<h6>پس‌زمینه</h6><div class="cv-grid2 sq">${Object.keys(BGS).map(k => `<button type="button" data-bg="${k}" title="${BGS[k]}" style="background:${BG_CSS[k]}" class="${meta.bg === k ? 'on' : ''}"></button>`).join('')}</div>`;
     if (n === 'mode') return `<h6>حالت بازی</h6><div class="cv-mg">${MODES.map(m => `<button type="button" data-md="${m[0]}" title="${m[2]}" aria-label="${m[2]}" class="${(m[0] === 'secret' ? secret : (!secret && meta.mode === m[0])) ? 'on' : ''}">${ico(m[1], 22)}</button>`).join('')}</div>
-      <div class="cv-chips">${[1, 2, 3, 5].map(m => `<button type="button" data-tm="${m}" title="${m} دقیقه" class="${timedMin === m ? 'on' : ''}">${fa(m)}</button>`).join('')}</div>`;
+      <div class="cv-chips">${[1, 2, 3, 5].map(m => `<button type="button" data-tm="${m}" title="${m} دقیقه" class="${timedMin === m ? 'on' : ''}">${fa(m)}</button>`).join('')}</div>
+      <h6 style="margin-top:8px">سطح بازی حدس زدن</h6><div class="cv-chips">${['easy', 'med', 'hard'].map(l => `<button type="button" data-lv="${l}" class="${meta.level === l ? 'on' : ''}">${LVL[l]}</button>`).join('')}</div>`;
     if (n === 'set') return `<h6>ظاهر</h6><div class="cv-prow" style="justify-content:space-between">${['dream', 'sunset', 'mint'].map(t => `<button type="button" class="cv-ib${theme === t ? ' on' : ''}" data-th="${t}" title="تم" style="background:${t === 'dream' ? 'linear-gradient(135deg,#d4a5ff,#ff8fb8)' : t === 'sunset' ? 'linear-gradient(135deg,#ffb07a,#ff6f91)' : 'linear-gradient(135deg,#7fe0c4,#6fb7ff)'}"></button>`).join('')}
       <button type="button" class="cv-ib" data-set="light" title="روشن / تاریک">${ico(light ? 'moon' : 'sun')}</button><button type="button" class="cv-ib" data-set="music" title="موسیقی">${ico('music')}</button></div>
       <h6>فیلتر خروجی</h6><div class="cv-chips">${[['', '○'], ['cartoon', '◐'], ['sketch', '✎'], ['soft', '✿']].map(f => `<button type="button" data-f="${f[0]}" title="${{ '': 'بدون فیلتر', cartoon: 'کارتونی', sketch: 'مدادی', soft: 'نرم و رویایی' }[f[0]]}" class="${filterSel === f[0] ? 'on' : ''}">${f[1]}</button>`).join('')}</div>`;
@@ -649,6 +894,10 @@
     el.querySelectorAll('[data-sz]').forEach(b => b.onclick = () => { size = +b.dataset.sz; toolSizes[tool] = size; renderPop(); renderRailDot(); });
     const sz = $('cvSize'); if (sz) sz.oninput = e => { size = +e.target.value; toolSizes[tool] = size; el.querySelectorAll('[data-sz]').forEach(b => b.classList.toggle('on', +b.dataset.sz === size)); const d = $('cvPvDot'); if (d) { d.style.width = d.style.height = Math.min(40, size) + 'px'; } renderRailDot(); };
     const al = $('cvAlpha'); if (al) al.oninput = e => { alpha = +e.target.value / 100; const d = $('cvPvDot'); if (d) d.style.opacity = alpha; renderRailDot(); };
+    el.querySelectorAll('[data-sc]').forEach(b => b.onclick = () => { stkCat = +b.dataset.sc; renderPop(); });
+    el.querySelectorAll('[data-th2]').forEach(b => b.onclick = () => { tplHow = b.dataset.th2; renderPop(); });
+    el.querySelectorAll('[data-tp2]').forEach(b => b.onclick = () => { useTpl(b.dataset.tp2); });
+    el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { setMeta({ level: b.dataset.lv }); if (meta.mode === 'guess' && same(meta.drawer, nm())) newWord(); renderPop(); });
     el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { stickerPick = b.dataset.s; pop = null; renderPop(); renderRail(); });
     el.querySelectorAll('[data-bg]').forEach(b => b.onclick = () => setMeta({ bg: b.dataset.bg }));
     el.querySelectorAll('[data-md]').forEach(b => b.onclick = () => { const m = b.dataset.md; if (m === 'secret') toggleSecret(); else modeSet(m); pop = null; renderRail(); renderPop(); });
@@ -658,13 +907,25 @@
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filterSel = b.dataset.f; renderPop(); });
   }
   const refreshPop = () => { if (pop === 'mode' || pop === 'bg') renderPop(); };
+  const thumbs = {};
+  function tplThumb(id) { if (thumbs[id]) return thumbs[id]; const t = tplData(id); if (!t) return ''; const c = document.createElement('canvas'); c.width = 150; c.height = 105; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 150, 105); x.drawImage(t.canvas, 0, 0, 150, 105); return thumbs[id] = c.toDataURL('image/png'); }
+  function useTpl(id) {
+    if (secret) { toast2('اول از حالت مخفی بیا بیرون'); return; }
+    if (!id) { setMeta({ tpl: '' }); pop = null; renderPop(); renderRail(); return; }
+    if (strokes.length && !confirm('بوم فعلی پاک بشه و طرح تازه باز بشه؟ (اگه می‌خوای نگهش داری اول ذخیره‌اش کن)')) return;
+    strokes = []; redo = []; editId = null; rebuild(); send({ t: 'clear' });
+    const patch = { tpl: id, turn: '', drawer: '', timerEnd: 0, bg: ['grid', 'dots', 'lines'].includes(meta.bg) ? 'white' : meta.bg };
+    if (tplHow === 'half') { Object.assign(patch, { mode: 'half', half: { L: nm(), R: partnerName() || '' } }); tool = 'fill'; toast2('↔️ هرکی یه نیمه رو رنگ می‌کنه؛ تو نیمهٔ چپ'); } else { Object.assign(patch, { mode: 'free', half: null }); tool = 'fill'; toast2('🖍️ با سطل رنگ یا قلم رنگش کنید'); }
+    setMeta(patch); pop = null; renderPop(); renderRail();
+  }
+  const wordBoxes = () => { const n = meta.wlen || 0, a = []; for (let i = 0; i < n; i++) a.push(i === 0 && meta.hint ? meta.hint : '&nbsp;'); return a.map(x => `<span>${x}</span>`).join(''); };
   function renderRailDot() { const b = document.querySelector('#cvRail [data-pop=size] span'); if (b) { const d = Math.max(4, Math.min(18, size / 3 + 4)); b.style.width = b.style.height = d + 'px'; b.style.opacity = .35 + alpha * .65; } }
   document.addEventListener('click', e => { if (!pop) return; const path = e.composedPath ? e.composedPath() : []; if (path.some(n => n && (n.id === 'cvRail' || n.id === 'cvPop'))) return; pop = null; renderPop(); renderRail(); });
   function renderAct() {
     const el = $('cvAct'); if (!el) return;
     el.innerHTML = secret ? ib('data-x="save"', 'save', 'ذخیره و ارسال مخفی', 'pri') + ib('data-x="exit"', 'x', 'خروج از حالت مخفی')
-      : ib('data-x="save"', 'save', 'ذخیره در گالری') + ib('data-x="finish"', 'flag', 'تموم شد!', 'pri') + ib('data-x="dl"', 'dl', 'دانلود PNG') + ib('data-x="new"', 'plus', 'بوم تازه');
-    el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { const a = b.dataset.x; if (a === 'save') saveToGallery(); else if (a === 'finish') saveToGallery({ finish: true }); else if (a === 'dl') download(); else if (a === 'exit') toggleSecret(); else if (a === 'new') { if (confirm('بوم تازه شروع بشه؟ (نقاشی فعلی پاک می‌شه؛ اگه می‌خوای نگهش داری اول ذخیره کن)')) { editId = null; strokes = []; redo = []; rebuild(); send({ t: 'clear' }); setMeta({ mode: 'free', turn: '', half: null, drawer: '', timerEnd: 0, topic: '' }); } } });
+      : ib('data-x="save"', 'save', 'ذخیره در گالری') + ib('data-x="finish"', 'flag', 'تموم شد!', 'pri') + ib('data-x="dl"', 'dl', 'دانلود PNG') + ib('data-x="pdf"', 'pdf', 'ذخیره به‌صورت PDF') + ib('data-x="new"', 'plus', 'بوم تازه');
+    el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { const a = b.dataset.x; if (a === 'save') saveToGallery(); else if (a === 'finish') saveToGallery({ finish: true }); else if (a === 'dl') download(); else if (a === 'pdf') downloadPdf(); else if (a === 'exit') toggleSecret(); else if (a === 'new') { if (confirm('بوم تازه شروع بشه؟ (نقاشی فعلی پاک می‌شه؛ اگه می‌خوای نگهش داری اول ذخیره کن)')) { editId = null; strokes = []; redo = []; rebuild(); send({ t: 'clear' }); setMeta({ mode: 'free', turn: '', half: null, drawer: '', timerEnd: 0, topic: '', tpl: '' }); } } });
   }
   const renderBgs = refreshPop, renderSw = () => { renderRail(); };
   function suggestPalette() {
@@ -681,16 +942,18 @@
   function renderMode() {
     refreshPop(); const el = $('cvModeInfo'); if (!el) return; let h = '';
     if (secret) h = '<div class="cv-banner">🔒 <b>نقاشی مخفی</b> — فقط تو می‌بینی. وقتی تموم شد «ذخیره و ارسال مخفی» رو بزن و بگو چند ساعت دیگه برای اون یکی نمایش داده بشه.</div>';
-    else if (meta.mode === 'turn') h = `<div class="cv-banner">🔄 <b>کاملش کن</b> — نوبت: <b>${esc(meta.turn || '—')}</b>${same(meta.turn, nm()) ? ' <button type="button" class="cv-ib" data-a="pass" title="نوبتم تموم شد">✅</button>' : ''}</div>`;
+    else if (meta.tpl && !secret && meta.mode !== 'guess') h = `<div class="cv-banner">🖍️ رنگ‌آمیزی «${esc((TPLS.find(t => t.id === meta.tpl) || {}).n || '')}» ${meta.mode === 'half' ? '(نیمه‌نیمه)' : '(با هم)'} <button type="button" class="cv-ib sm" data-a="notpl" title="برداشتن طرح">${ico('x', 14)}</button></div>`;
+    if (secret) {}
+    else if (meta.mode === 'turn') h += `<div class="cv-banner">🔄 <b>کاملش کن</b> — نوبت: <b>${esc(meta.turn || '—')}</b>${same(meta.turn, nm()) ? ' <button type="button" class="cv-ib" data-a="pass" title="نوبتم تموم شد">✅</button>' : ''}</div>`;
     else if (meta.mode === 'half') h = `<div class="cv-banner">↔️ <b>نیمه‌نیمه</b> — چپ: <b>${esc(meta.half && meta.half.L || '—')}</b> · راست: <b>${esc(meta.half && meta.half.R || 'منتظر نفر دوم')}</b></div>`;
     else if (meta.mode === 'guess') {
       const dr = same(meta.drawer, nm());
-      h = `<div class="cv-banner">🤔 <b>حدس بزن</b> — نقاش: <b>${esc(meta.drawer)}</b>${dr ? `<br>🤫 چیزی که باید بکشی: <b>${esc(guessWord)}</b> <button type="button" class="cv-ib" data-a="newword" title="کلمهٔ دیگه">🎲</button>` : '<div class="cv-gg"><input id="cvGuessIn" placeholder="چی کشیده؟ حدس بزن…"><button type="button" class="cv-ib" data-a="guess" title="ارسال حدس">➤</button></div>'}</div><div class="cv-feed">${guessFeed.map(g => `<div class="${g.ok ? 'ok' : ''}">${esc(g.name)}: ${esc(g.text)} ${g.ok ? '✅' : ''}</div>`).join('')}</div>`;
+      h = `<div class="cv-banner">🤔 <b>حدس بزن</b> · ${LVL[meta.level] || ''} — نقاش: <b>${esc(meta.drawer)}</b>${dr ? `<br>🤫 چیزی که باید بکشی: <b>${esc(String(guessWord).split('|')[0])}</b> <button type="button" class="cv-ib" data-a="newword" title="کلمهٔ دیگه">🎲</button><button type="button" class="cv-ib" data-a="hint" title="حرف اول رو به راهنما اضافه کن">💡</button>` : '<div class="cv-wd" dir="rtl">' + wordBoxes() + '</div><div class="cv-gg"><input id="cvGuessIn" placeholder="چی کشیده؟ حدس بزن…"><button type="button" class="cv-ib" data-a="guess" title="ارسال حدس">➤</button></div>'}</div><div class="cv-feed">${guessFeed.map(g => `<div class="${g.ok ? 'ok' : ''}">${esc(g.name)}: ${esc(g.text)} ${g.ok ? '✅' : ''}</div>`).join('')}</div>`;
     }
     else if (meta.mode === 'timed' && meta.timerEnd) h = '<div class="cv-banner">⏱️ <b>زمان‌دار</b> — <span class="cv-timer" id="cvTimer">…</span></div>';
     if (editId && !secret) { const eg = gallery.find(x => x.id === editId); h = '<div class="cv-banner">✏️ در حال ویرایش «' + esc(eg ? eg.title : '') + '» <button type="button" class="cv-ib sm" data-a="noedit" title="لغو ویرایش">' + ico('x', 14) + '</button></div>' + h; }
     el.innerHTML = h;
-    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pass') passTurn(); else if (a === 'guess') myGuess(); else if (a === 'newword') { guessWord = rnd(WORDS); renderMode(); } else if (a === 'noedit') { editId = null; renderMode(); } });
+    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; if (a === 'pass') passTurn(); else if (a === 'guess') myGuess(); else if (a === 'newword') newWord(); else if (a === 'hint') { if (!meta.hint) setMeta({ hint: firstLetter() }); } else if (a === 'notpl') setMeta({ tpl: '' }); else if (a === 'noedit') { editId = null; renderMode(); } });
     const gi = $('cvGuessIn'); if (gi) gi.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); myGuess(); } };
     tickTimer();
   }
@@ -728,6 +991,7 @@
       const o = e.target.closest('[data-open]'); if (o) return openArt(o.dataset.open);
       const ed = e.target.closest('[data-edit]'); if (ed) return editArt(ed.dataset.edit);
       const d = e.target.closest('[data-dl]'); if (d) return dlArt(d.dataset.dl);
+      const pf = e.target.closest('[data-pdf]'); if (pf) return pdfArt(pf.dataset.pdf);
       const x = e.target.closest('[data-del]'); if (x) return delArt(x.dataset.del);
     });
   }
