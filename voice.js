@@ -380,7 +380,7 @@
       const d = dayLabel(m.ts); if (d && d !== last) { last = d; html += `<div class="vc-day">${esc(d)}</div>`; }
       const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span>${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
       const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" data-zoom="${esc(m.img)}">` : '';
-      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span>${esc(m.text)}</span>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button></i></div>`;
+      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span>${esc(m.text)}</span>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
     });
     list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
     if (chatMissing) list.innerHTML += '<div class="vc-empty">برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن.</div>';
@@ -391,8 +391,8 @@
       const r = await dbClient.from('voice_chat').select('*').order('ts', { ascending: false }).limit(300);
       if (r.error) { chatMissing = /voice_chat|relation|schema cache/i.test(r.error.message || ''); renderChat(); return; }
       chatMissing = false;
-      (r.data || []).filter(x => !String(x.id).startsWith('__seen_') || (!isMine(x.name) && (seenBy[x.name] = Math.max(seenBy[x.name] || 0, Number(x.ts) || 0)) && false)).forEach(x => addMsg({ id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }));
-      saveMsgs(); renderChat(); markSeen();
+      (r.data || []).filter(x => { const id = String(x.id); if (id === '__bot') { botOn = x.text !== '0'; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} return false; } return !id.startsWith('__seen_') || (!isMine(x.name) && (seenBy[x.name] = Math.max(seenBy[x.name] || 0, Number(x.ts) || 0)) && false); }).forEach(x => addMsg({ edited: !!x.edited, id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }));
+      saveMsgs(); renderChat(); renderBot(); markSeen();
     } catch (e) {}
   }
   function onChat(p) {
@@ -404,12 +404,16 @@
   }
   /* ---------- ✓✓ سین، ✍️ در حال نوشتن، 🧸 پفیلا (دستیار مشترک) ---------- */
   const BOT = 'پفیلا';
+  let botOn = true, editing = null; try { botOn = localStorage.getItem('vc_bot') !== '0'; } catch (e) {}
   let seenBy = {}, typers = {}, lastTypeSent = 0, typeIdle = null, mySeenSent = 0;
   try { mySeenSent = Number(localStorage.getItem('vc_seen_sent')) || 0; } catch (e) {}
   const ctSend = p => { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'ct', payload: Object.assign({ from: ID, name: nm() }, p) }); } catch (e) {} };
   function onCt(p) {
     if (!p || p.from === ID) return;
     if (p.k === 'typing') { typers[p.who ? 'bot' : p.from] = { name: p.who ? BOT : String(p.name || 'اون یکی').slice(0, 30), until: p.on ? Date.now() + 4500 : 0 }; renderTyping(); }
+    else if (p.k === 'del') { const n = msgs.length; msgs = msgs.filter(x => x.id !== p.id); if (msgs.length !== n) { saveMsgs(); renderChat(); } }
+    else if (p.k === 'edit') { const m = msgs.find(x => x.id === p.id); if (m && typeof p.text === 'string') { m.text = p.text.slice(0, 500); m.edited = true; saveMsgs(); renderChat(); } }
+    else if (p.k === 'bot') { botOn = !!p.on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); say(botOn ? '🧸 پفیلا روشن شد' : '🧸 پفیلا خاموش شد'); }
     else if (p.k === 'seen') { const n = String(p.name || ''); seenBy[n] = Math.max(seenBy[n] || 0, Number(p.upto) || 0); renderChat(); }
   }
   function renderTyping() {
@@ -459,9 +463,32 @@
     if (has('خوبی', 'حالت', 'چطوری')) return rndp(['عالیم! امروز کلی پفک خوردم 🧸', 'خوبم، تو چطوری؟ 💜']);
     return rndp(['هنوز کوچولوام و همه‌چیز نمی‌دونم 🙈 «راهنما» رو بنویس ببین چی بلدم', 'این رو نفهمیدم، ولی دوستت دارم 🧸', 'بذار فکر کنم… نه، نشد! «راهنما» بنویس 😅']);
   }
+  function renderBot() {
+    const b = $('botToggle'); if (b) { b.classList.toggle('on', botOn); b.title = botOn ? 'پفیلا روشنه (برای خاموش کردن بزن)' : 'پفیلا خاموشه (برای روشن کردن بزن)'; b.setAttribute('aria-pressed', botOn ? 'true' : 'false'); }
+    const c = $('vcBot'); if (c) c.style.display = botOn ? '' : 'none';
+  }
+  function setBot(on) {
+    botOn = !!on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); ctSend({ k: 'bot', on: botOn }); say(botOn ? '🧸 پفیلا روشن شد' : '🧸 پفیلا خاموش شد');
+    try { dbClient.from('voice_chat').upsert({ id: '__bot', name: nm(), text: botOn ? '1' : '0', ts: Date.now() }).then(() => {}, () => {}); } catch (e) {}
+  }
+  function delMsg(id) {
+    const m = msgs.find(x => x.id === id); if (!m || !confirm('این پیام برای هر دو حذف بشه؟')) return;
+    msgs = msgs.filter(x => x.id !== id); saveMsgs(); renderChat(); ctSend({ k: 'del', id }); if (editing && editing.id === id) { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; renderComposer(); }
+    try { dbClient.from('voice_chat').delete().eq('id', id).then(() => {}, () => {}); } catch (e) {}
+  }
+  function startEdit(id) {
+    const m = msgs.find(x => x.id === id); if (!m || !isMine(m.name) || !m.text) return; editing = { id }; replyTo = null; pendImg = null; renderComposer();
+    const i = $('vcChatInput'); if (i) { i.value = m.text; i.focus(); }
+  }
+  function applyEdit(text) {
+    const m = msgs.find(x => x.id === editing.id); const id = editing.id; editing = null; renderComposer();
+    const i = $('vcChatInput'); if (i) { i.value = ''; i.focus(); }
+    if (!m || !text) return; if (text === m.text) return; m.text = text; m.edited = true; saveMsgs(); renderChat(); ctSend({ k: 'edit', id, text });
+    try { dbClient.from('voice_chat').update({ text, edited: true }).eq('id', id).then(r => { if (r && r.error) return dbClient.from('voice_chat').update({ text }).eq('id', id); }).then(() => {}, () => {}); } catch (e) {}
+  }
   const BOT_RE = /^\s*[@＠]?\s*پفیلا/;
   function botMaybe(text) {
-    if (!BOT_RE.test(text || '')) return; const q = text.replace(BOT_RE, '').replace(/^[\s،,:؛]+/, '');
+    if (!botOn || !BOT_RE.test(text || '')) return; const q = text.replace(BOT_RE, '').replace(/^[\s،,:؛]+/, '');
     typers.bot = { name: BOT, until: Date.now() + 2600 }; renderTyping(); ctSend({ k: 'typing', on: 1, who: BOT });
     setTimeout(() => {
       const ts = Date.now(), id = 'm_' + ts + '_bot' + ID, ans = botAnswer(q), p = { from: ID, id, name: BOT, text: ans, ts, img: '', reply: null };
@@ -477,6 +504,7 @@
   function renderComposer() {
     const el = $('vcComposer'); if (!el) return;
     let h = '';
+    if (editing) h += `<div class="vc-cmp"><span>✏️ ویرایش پیام</span><button type="button" data-cmp="noedit" aria-label="لغو ویرایش">✕</button></div>`;
     if (replyTo) h += `<div class="vc-cmp"><span>↩︎ پاسخ به <b>${esc(replyTo.name)}</b>: ${esc((replyTo.text || '📷 تصویر').slice(0, 60))}</span><button type="button" data-cmp="noreply" aria-label="لغو ریپلای">✕</button></div>`;
     if (pendImg) h += `<div class="vc-cmp"><img src="${esc(pendImg.preview)}" alt=""><span>تصویر آماده ارسال</span><button type="button" data-cmp="noimg" aria-label="حذف تصویر">✕</button></div>`;
     el.innerHTML = h; el.style.display = h ? '' : 'none';
@@ -495,7 +523,7 @@
   }
   const REPLY_COLS = /reply_id|reply_name|reply_text|img|column/i;
   async function sendChat() {
-    const inp = $('vcChatInput'); if (!inp || chatSending) return; const text = inp.value.trim().slice(0, 500); if (!text && !pendImg) return;
+    const inp = $('vcChatInput'); if (!inp || chatSending) return; const text = inp.value.trim().slice(0, 500); if (editing) { if (!text) { delMsg(editing.id); return; } applyEdit(text); return; } if (!text && !pendImg) return;
     if (!ch || !subscribed) { say('⏳ هنوز وصل نشده؛ چند لحظه دیگه'); return; }
     chatSending = true; const sb = $('vcChatForm') && $('vcChatForm').querySelector('button[type=submit]'); if (sb) sb.disabled = true;
     let img = '';
@@ -546,13 +574,16 @@
     const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
     const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
     const cb = $('vcImgBtn'); if (cb && pk) cb.addEventListener('click', () => pk.click());
-    const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else pendImg = null; renderComposer(); });
+    const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else if (b.dataset.cmp === 'noedit') { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; } else pendImg = null; renderComposer(); });
     const cl = $('vcChatList'); if (cl) cl.addEventListener('click', e => {
       const z = e.target.closest('[data-zoom]'); if (z) { zoom(z.dataset.zoom); return; }
+      const eb = e.target.closest('[data-edit]'); if (eb) { startEdit(eb.dataset.edit); return; }
+      const db = e.target.closest('[data-del]'); if (db) { delMsg(db.dataset.del); return; }
       const rb = e.target.closest('[data-reply]'); if (rb) { const m = msgs.find(x => x.id === rb.dataset.reply); if (m) { replyTo = { id: m.id, name: m.name, text: m.text }; renderComposer(); const i = $('vcChatInput'); if (i) i.focus(); } return; }
       const g = e.target.closest('[data-goto]'); if (g) { const t = cl.querySelector('[data-mid="' + CSS.escape(g.dataset.goto) + '"]'); if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 1400); } }
     });
-    renderComposer();
+    const bt = $('botToggle'); if (bt) bt.addEventListener('click', () => setBot(!botOn));
+    renderBot(); renderComposer();
     window.addEventListener('pagehide', () => leave(true));
     window.addEventListener('offline', () => { if (joined) { say('📶 اینترنتت قطع شد'); blip('down'); } });
     window.addEventListener('online', () => { if (joined) { say('📶 اینترنت برگشت'); blip('up'); } });

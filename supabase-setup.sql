@@ -324,3 +324,7 @@ alter table public.canvas_art enable row level security;
 drop policy if exists "canvas_art_public_all" on public.canvas_art;
 create policy "canvas_art_public_all" on public.canvas_art
   for all to anon, authenticated using (true) with check (true);
+
+
+-- 25) علامت «ویرایش‌شده» برای پیام‌های چت (اختیاری؛ بدونش هم ویرایش کار می‌کنه)
+alter table public.voice_chat add column if not exists edited boolean;
