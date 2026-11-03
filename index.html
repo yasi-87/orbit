@@ -1599,7 +1599,7 @@ body.reading-mode .reading-content {
 @keyframes vcFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 2px var(--accent,#d4a5ff)}}
 .vc-cmp{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid rgba(212,165,255,.2);font-size:.8rem;background:rgba(0,0,0,.18)}
 .vc-cmp span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
-.vc-cmp img{width:38px;height:38px;object-fit:cover;border-radius:8px}
+.vc-cmp.up{flex-wrap:wrap}.vc-cmp .vc-upb{flex-basis:100%;height:5px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden}.vc-cmp .vc-upb i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b388ff,#ff8fc7);transition:width .15s}.vc-cmp img{width:38px;height:38px;object-fit:cover;border-radius:8px}
 .vc-cmp button{background:none;border:0;color:inherit;cursor:pointer;font-size:1rem}
 .vc-zoom{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
 .vc-zoom img{max-width:100%;max-height:100%;border-radius:12px}
@@ -2495,8 +2495,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-03d';
+const SITE_VERSION = '2026-11-03e';
 const SITE_CHANGES = [
+  '📤 موقع فرستادن عکس توی چت، درصد و مقدار آپلود شده زیر پیش‌نمایش نشون داده می‌شه و می‌تونی لغوش کنی',
   '📋 توی چت می‌تونی عکس رو کپی کنی و توی نوشته‌ی پیام پیست کنی (یا بکشی و رها کنی) تا آماده‌ی ارسال بشه',
   '👧 بوم آیسا جداست: آیسا بوم و گالری خودش رو داره و ما بوم خودمون رو؛ اگه خواستیم، از تنظیمات بوم آیسا رو به بوم ما دعوت می‌کنیم. آیسا گربه و موسیقی پس‌زمینه هم داره',
   '👧 ورود مهمان برای آیسا: با نام کاربری «آیسا» و رمز مخصوص خودش فقط 🎨 بوم و 👤 پروفایل باز می‌شه؛ و توی بوم هر سه نفر همزمان می‌تونن نقاشی کنن',
@@ -3427,7 +3428,11 @@ function trackUpload(name, total) {
 }
 
 /* آپلود روی bucket: path دلخواه؛ برای فایل‌های بزرگ نوار پیشرفت نشون می‌ده */
-async function storagePut(path, blob, label) {
+async function storagePut(path, blob, label, opts) {
+  if (opts && opts.onProgress) {
+    await xhrUpload(path, blob, opts.onProgress, opts.ctl);
+    return dbClient.storage.from('songs').getPublicUrl(path).data.publicUrl;
+  }
   const tr = blob.size > 200 * 1024 ? trackUpload(label || path.split('/').pop(), blob.size) : null;
   try {
     await xhrUpload(path, blob, tr && tr.onProgress, tr && tr.ctl);
@@ -3436,9 +3441,9 @@ async function storagePut(path, blob, label) {
   return dbClient.storage.from('songs').getPublicUrl(path).data.publicUrl;
 }
 /* فایل رو توی Storage می‌ذاره (به‌جای base64 توی متن فصل که سایت رو سنگین می‌کرد) */
-async function uploadMediaFile(blobOrFile, ext, label) {
+async function uploadMediaFile(blobOrFile, ext, label, opts) {
   const path = 'media/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-  const url = await storagePut(path, blobOrFile, label || blobOrFile.name);
+  const url = await storagePut(path, blobOrFile, label || blobOrFile.name, opts);
   return { path, url };
 }
 /* دلیل واقعیِ خطای آپلود رو به زبان ساده نشون می‌ده */
