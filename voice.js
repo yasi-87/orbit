@@ -427,7 +427,7 @@
     if (!file || !/^image\//.test(file.type)) return;
     const pop = $('vcBgPop'), st = pop && pop.querySelector('[data-bgst]');
     try {
-      const blob = await resizeImageFile(file, 1200, 0.8);
+      const blob = dataUrlToBlob(await resizeImageFile(file, 1200, 0.8));
       const up = await uploadMediaFile(blob, 'jpg', 'chat-bg.jpg', { onProgress: (l, t) => { if (st) st.textContent = 'در حال آپلود… ' + Math.round(l / t * 100).toLocaleString('fa-IR') + '٪'; } });
       setBg('i:' + up.url); if (st) st.textContent = '';
     } catch (e) { if (st) st.textContent = ''; say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'عکس آپلود نشد')); }
