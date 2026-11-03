@@ -44,7 +44,7 @@
     if (p.t === 'open') {
       if (!p.room || (room && room.id === p.room.id)) return;
       openRoom(p.room, false);
-      toast2('🍿 ' + (p.name || 'اون یکی') + ' اتاق تماشای «' + (p.room.item.title || '') + '» رو ساخت');
+      toast2('🍿 ' + (p.name || 'اون یکی') + ' اتاق تماشای «' + (p.room.item.title || '') + '» رو ساخت (🎬 سرگرمی ← فیلم)');
       try { window.OMSound && OMSound.play('up'); } catch (e) {}
       return;
     }
@@ -52,6 +52,7 @@
     if (p.t === 'state') applyState(p);
     else if (p.t === 'stat') { peers[p.from] = { name: p.name, st: p.st, pos: p.pos, ts: Date.now() }; renderPeople(); }
     else if (p.t === 'react') floatReact(p.e, p.name);
+    else if (p.t === 'sub') { if (p.sub && room.subs && !room.subs.some(x => x.id === p.sub.id)) { room.subs.push(p.sub); if (!activeSub) activeSub = p.sub.id; toast2('💬 ' + (p.name || 'اون یکی') + ' یه زیرنویس اضافه کرد'); prepSub(p.sub).then(() => { mountSubs(); renderSubUi(); }); } }
     else if (p.t === 'close') {
       const done = p.done, r = room; closeRoom(false);
       toast2(done ? '🏁 تماشای «' + r.item.title + '» تموم شد و توی دیده‌شده‌ها ثبت شد' : '🍿 اتاق تماشا بسته شد');
@@ -75,11 +76,12 @@
     if (room && !confirm('اتاق تماشای فعلی بسته بشه و اتاق تازه ساخته بشه؟')) return;
     if (room) closeRoom(true);
     join();
-    const r = { id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5), item: { id: item.id, title: item.title, url: item.url, category: item.category }, mode: VIDEO_RE.test(item.url) ? 'video' : 'clock', by: nm(), at: Date.now() };
+    const r = { id: 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5), item: { id: item.id, title: item.title, url: item.url, category: item.category }, mode: (item.direct || VIDEO_RE.test(item.url)) ? 'video' : 'clock', by: nm(), at: Date.now(), subs: savedSubs(item.url) };
     picker = false;
     const go = () => { openRoom(r, true); toast2('🍿 اتاق تماشا ساخته شد؛ اون یکی هم توی سایت باشه، اتاق براش باز می‌شه'); };
     go();
-    if (typeof currentScreen !== 'undefined' && currentScreen !== 'voice' && typeof showScreen === 'function') showScreen('voice');
+    try { if (typeof setFunCat === 'function') setFunCat(item.category === 'series' ? 'series' : 'movie'); } catch (e) {}
+    if (typeof currentScreen !== 'undefined' && currentScreen !== 'fun' && typeof showScreen === 'function') showScreen('fun');
   }
   function closeRoom(broadcast, done) {
     if (!room) return;
@@ -186,6 +188,105 @@
   }
   function react(e) { if (!room) return; floatReact(e, nm()); send({ t: 'react', rid: room.id, e }); }
 
+  /* ---------- 💬 زیرنویس (srt / vtt؛ آپلود یا لینک) ---------- */
+  const SUBKEY = 'wt_subs';
+  const savedSubs = url => { try { return (JSON.parse(localStorage.getItem(SUBKEY) || '{}')[url] || []).slice(0, 6); } catch (e) { return []; } };
+  const saveSubs = () => { if (!room) return; try { const all = JSON.parse(localStorage.getItem(SUBKEY) || '{}'); all[room.item.url] = (room.subs || []).filter(x => /^https?:/.test(x.url)).slice(0, 6); localStorage.setItem(SUBKEY, JSON.stringify(all)); } catch (e) {} };
+  let subCache = {}, activeSub = '', subShift = 0;
+  function decodeText(buf) {
+    let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { try { t = new TextDecoder('windows-1256').decode(buf); } catch (e2) { t = new TextDecoder().decode(buf); } }
+    return t.replace(/^﻿/, '');
+  }
+  const tsec = x => { const m = String(x).trim().match(/^(?:(\d+):)?(\d+):(\d+)[.,](\d+)/); return m ? (+(m[1] || 0)) * 3600 + (+m[2]) * 60 + (+m[3]) + Number('0.' + m[4]) : NaN; };
+  function parseSub(text) {
+    const cues = [];
+    String(text).replace(/\r/g, '').split(/\n{2,}/).forEach(b => {
+      const ls = b.split('\n').filter(l => l.length), i = ls.findIndex(l => l.includes('-->')); if (i < 0) return;
+      const [a, c] = ls[i].split('-->'), s = tsec(a), e = tsec(String(c).trim().split(/\s+/)[0]); if (isNaN(s) || isNaN(e)) return;
+      const t = ls.slice(i + 1).join('\n').replace(/\{\\an?\d+\}/g, '').replace(/<\/?font[^>]*>/gi, '').trim(); if (t) cues.push({ s, e, t });
+    });
+    return cues;
+  }
+  const toVtt = cues => 'WEBVTT\n\n' + cues.map(c => { const f = x => { const h = Math.floor(x / 3600), m = Math.floor(x % 3600 / 60), sec = x % 60; return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + sec.toFixed(3).padStart(6, '0'); }; return f(c.s) + ' --> ' + f(c.e) + '\n' + c.t; }).join('\n\n');
+  async function prepSub(sub) {
+    if (subCache[sub.id]) return subCache[sub.id];
+    try { const r = await fetch(sub.url); if (!r.ok) throw 0; const cues = parseSub(decodeText(await r.arrayBuffer())); if (!cues.length) throw 0; return subCache[sub.id] = cues; }
+    catch (e) { toast2('⚠️ زیرنویس «' + (sub.label || '') + '» باز نشد (لینک مستقیم و بدون قفل نیست؟)'); return null; }
+  }
+  function mountSubs() {
+    const v = vid(); if (!v || !room) return;
+    v._wtTracks = v._wtTracks || {};
+    (room.subs || []).forEach(sub => {
+      const cues = subCache[sub.id]; if (!cues) return;
+      let t = v._wtTracks[sub.id]; if (!t) t = v._wtTracks[sub.id] = v.addTextTrack('subtitles', sub.label || 'زیرنویس', 'fa');
+      t.mode = 'hidden'; while (t.cues && t.cues.length) t.removeCue(t.cues[0]);
+      cues.forEach(c => { try { const q = new VTTCue(Math.max(0, c.s + subShift), Math.max(0.01, c.e + subShift), c.t); q.line = 'auto'; t.addCue(q); } catch (e) {} });
+      t.mode = sub.id === activeSub ? 'showing' : 'disabled';
+    });
+  }
+  function renderSubUi() {
+    const el = $('wtSub'); if (!el || !room) return; const subs = room.subs || [];
+    el.innerHTML = `<b>💬 زیرنویس</b><select id="wtSubSel" aria-label="انتخاب زیرنویس"><option value="">${subs.length ? 'بدون زیرنویس' : 'هنوز زیرنویسی نیست'}</option>${subs.map(x => `<option value="${esc(x.id)}"${x.id === activeSub ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select>
+      <button type="button" class="btn ghost" data-ws="file" title="آپلود فایل زیرنویس از سیستم">📄 آپلود</button><button type="button" class="btn ghost" data-ws="url" title="لینک فایل زیرنویس">🔗 لینک</button>
+      <span class="sh" title="اگه زیرنویس جلو یا عقبه، همین‌جا تنظیمش کن (فقط برای خودت)"><button type="button" data-ws="m" aria-label="زودتر">−</button><small>${fa(subShift.toFixed(1))}s</small><button type="button" data-ws="p" aria-label="دیرتر">+</button></span>
+      <input type="file" id="wtSubFile" accept=".srt,.vtt,.txt,text/vtt,application/x-subrip" hidden />`;
+    const sel = $('wtSubSel'); if (sel) sel.onchange = () => { activeSub = sel.value; mountSubs(); };
+    const f = $('wtSubFile'); if (f) f.onchange = () => { const fl = f.files && f.files[0]; f.value = ''; if (fl) subFromFile(fl); };
+    el.querySelectorAll('[data-ws]').forEach(b => b.onclick = () => {
+      const a = b.dataset.ws;
+      if (a === 'file') $('wtSubFile').click();
+      else if (a === 'url') { const u = (prompt('لینک مستقیم فایل زیرنویس (srt یا vtt):') || '').trim(); if (u) subFromUrl(u); }
+      else { subShift = Math.round((subShift + (a === 'p' ? 0.5 : -0.5)) * 10) / 10; mountSubs(); renderSubUi(); }
+    });
+  }
+  function addSub(sub, cues) {
+    if (!room) return; room.subs = room.subs || []; subCache[sub.id] = cues; room.subs.push(sub); activeSub = sub.id; saveSubs();
+    send({ t: 'sub', rid: room.id, sub }); mountSubs(); renderSubUi(); toast2('💬 زیرنویس «' + sub.label + '» اضافه شد');
+  }
+  async function subFromFile(file) {
+    if (!room || !isVideo()) return; if (file.size > 3 * 1024 * 1024) { toast2('⚠️ این فایل برای زیرنویس خیلی بزرگه'); return; }
+    const cues = parseSub(decodeText(await file.arrayBuffer())); if (!cues.length) { toast2('⚠️ این فایل زیرنویس معتبر (srt/vtt) نیست'); return; }
+    const label = (file.name || 'زیرنویس').replace(/\.[^.]+$/, '').slice(0, 30), id = 's_' + Date.now().toString(36);
+    toast2('⏳ در حال بارگذاری زیرنویس…');
+    try { const up = await uploadMediaFile(new Blob([toVtt(cues)], { type: 'text/vtt' }), 'vtt', label + '.vtt'); addSub({ id, label, url: up.url, by: nm() }, cues); }
+    catch (e) { addSub({ id, label: label + ' (فقط برای من)', url: '', by: nm() }, cues); toast2('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'songs') : 'آپلود نشد') + ' — زیرنویس فقط برای خودت فعاله'); }
+  }
+  async function subFromUrl(u) {
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u; const id = 's_' + Date.now().toString(36), sub = { id, label: (u.split('/').pop() || 'زیرنویس').split('?')[0].replace(/\.[^.]+$/, '').slice(0, 30) || 'زیرنویس', url: u, by: nm() };
+    const cues = await prepSub(sub); if (cues) addSub(sub, cues);
+  }
+
+  /* ---------- 🎞️ آوردن فیلم با لینک مستقیم یا آپلود از سیستم ---------- */
+  const NOPLAY = /\.(mkv|avi|wmv|flv|ts)(\?|#|$)/i;
+  async function saveToArchive(title, url, category) {
+    try {
+      const row = { id: 'ln_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), category, title: title.slice(0, 80), url, author: nm(), created_at: Date.now() };
+      const { error } = await dbClient.from('links').insert(row); if (error) return;
+      if (typeof funList !== 'undefined') funList.push(row); if (typeof renderFun === 'function') renderFun();
+    } catch (e) {}
+  }
+  function startFromLink() {
+    let url = ($('wtLink') && $('wtLink').value || '').trim(), title = ($('wtLinkT') && $('wtLinkT').value || '').trim();
+    if (!url) { toast2('⚠️ لینک فیلم رو بنویس'); return; } if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    try { new URL(url); } catch (e) { toast2('⚠️ این لینک درست نیست'); return; }
+    if (NOPLAY.test(url)) { toast2('⚠️ فرمت mkv/avi توی مرورگر پخش نمی‌شه؛ فایل mp4 یا webm بده'); return; }
+    const cat = ($('wtCat') && $('wtCat').value) || 'movie', direct = !!($('wtDirect') && $('wtDirect').checked) || VIDEO_RE.test(url);
+    title = title || decodeURIComponent((url.split('?')[0].split('/').pop() || 'فیلم').replace(/\.[^.]+$/, '')).slice(0, 80) || 'فیلم';
+    if ($('wtSave') && $('wtSave').checked) saveToArchive(title, url, cat);
+    create({ id: '', title, url, category: cat, direct });
+  }
+  async function startFromFile(file) {
+    if (!file) return; if (!/^video\//.test(file.type) && !VIDEO_RE.test(file.name || '')) { toast2('⚠️ این فایل ویدیو نیست'); return; }
+    if (file.size > 200 * 1024 * 1024) { toast2('⚠️ فایل بزرگه! حداکثر ۲۰۰ مگابایت'); return; }
+    if (!/\.(mp4|webm|m4v|mov|ogv)$/i.test(file.name || '')) toast2('ℹ️ فقط mp4 / webm / mov توی همهٔ مرورگرها پخش می‌شه');
+    const cat = ($('wtCat') && $('wtCat').value) || 'movie', title = (file.name || 'فیلم').replace(/\.[^.]+$/, '').slice(0, 80); toast2('⏳ در حال آپلود فیلم… (پیشرفتش پایین صفحه‌ست)');
+    try {
+      const ext = ((file.name || '').split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'mp4';
+      const up = await uploadMediaFile(file, ext, file.name); if ($('wtSave') && $('wtSave').checked) saveToArchive(title, up.url, cat);
+      create({ id: '', title, url: up.url, category: cat, direct: true });
+    } catch (e) { toast2('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'songs') : 'آپلود نشد')); }
+  }
+
   /* ---------- دیده‌شده‌ها ---------- */
   async function loadSeen() {
     try {
@@ -235,6 +336,13 @@
 .wt-sec{font-size:.82rem;color:var(--muted,#aaa);margin-top:4px}
 .fc-seen{position:absolute;bottom:8px;left:44px;font-size:.7rem;background:rgba(80,200,140,.18);color:#8fe6b8;border-radius:999px;padding:1px 8px}
 .fc-watch{top:auto;bottom:6px;left:8px}
+#watchWrap .vc-area-watch{margin:12px 0 !important}
+.wt-new{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:14px;background:rgba(255,255,255,.04);border:1px dashed rgba(212,165,255,.3)}
+.wt-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.82rem}.wt-row input[type=text],.wt-row select{flex:1;min-width:140px;padding:8px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:rgba(10,10,15,.5);color:inherit;font:inherit}
+.wt-row label{display:flex;gap:4px;align-items:center;color:var(--muted,#aaa)}
+.wt-sub{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.84rem}.wt-sub select{flex:1;min-width:130px;padding:7px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:#241a3a;color:#f3ecff;font:inherit}
+.wt-sub .btn{padding:6px 12px;font-size:.8rem}.wt-sub .sh{display:inline-flex;align-items:center;gap:4px;direction:ltr}.wt-sub .sh button{width:28px;height:28px;border-radius:8px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer}.wt-sub .sh small{min-width:40px;text-align:center}
+.wt-stage video::cue{font-size:1.1em;background:rgba(0,0,0,.7);color:#fff}
 @media (min-width:900px){.vc-area-watch{grid-column:1 / -1}}`;
 
   function ensureCss() { if ($('wtCss')) return; const st = document.createElement('style'); st.id = 'wtCss'; st.textContent = CSS; document.head.appendChild(st); }
@@ -251,17 +359,23 @@
       : `<div class="wt-stage" id="wtStage"><div class="wt-clock" id="wtClock"></div></div>`;
     box.innerHTML = `<div class="wt-h">🍿 اتاق تماشا: «${esc(r.item.title)}» <span class="sp"></span><small style="color:var(--muted,#aaa)">ساخته‌شده توسط ${esc(r.by || '')}</small></div>
       <div class="wt-body">${stage}
+        ${isVideo() ? '<div class="wt-sub" id="wtSub"></div>' : '<div class="wt-sec">💬 زیرنویس فقط برای فیلم‌های لینک مستقیم/آپلودی فعاله.</div>'}
         <div class="wt-react" id="wtReact">${REACTS.map(e => `<button type="button" data-re="${e}" aria-label="واکنش ${e}">${e}</button>`).join('')}</div>
         <div class="wt-people" id="wtPeople"></div>
         <div class="wt-sec">💬 برای چت کردن موقع تماشا، از چت کنار اتاق صحبت استفاده کنید.</div>
         <div class="wt-act"><button type="button" class="btn" data-wt="finish">🏁 تموم شد؛ ثبت توی دیده‌شده‌ها</button><button type="button" class="btn ghost" data-wt="close">✕ بستن اتاق</button></div>
       </div>${renderSeen()}`;
-    bind(); bindVideo(); renderClock(); renderPeople();
+    bind(); bindVideo(); renderClock(); renderPeople(); renderSubUi();
   }
   function renderIdle() {
     const list = moviesFromArchive();
     return `<div class="wt-h">🍿 اتاق تماشا <span class="sp"></span><button type="button" class="btn" data-wt="pick">🎬 انتخاب فیلم از آرشیو سرگرمی</button></div>
       <div class="wt-body">
+        <div class="wt-new"><div class="wt-sec">🔗 فیلم با لینک مستقیم یا 📤 آپلود از سیستم (بدون نیاز به آرشیو)</div>
+          <div class="wt-row"><input type="text" id="wtLink" dir="ltr" inputmode="url" placeholder="لینک مستقیم فیلم (…mp4 یا webm)" /><input type="text" id="wtLinkT" maxlength="80" placeholder="اسم فیلم (اختیاری)" /></div>
+          <div class="wt-row"><select id="wtCat"><option value="movie">🎬 فیلم</option><option value="series">📺 سریال</option></select><label><input type="checkbox" id="wtDirect" /> لینک مستقیم ویدیوئه (بدون پسوند mp4)</label><label><input type="checkbox" id="wtSave" checked /> توی آرشیو هم بمونه</label></div>
+          <div class="wt-row"><button type="button" class="btn" data-wt="link">▶️ شروع تماشا با لینک</button><button type="button" class="btn ghost" data-wt="up">📤 آپلود فیلم از سیستم</button><input type="file" id="wtUp" accept="video/*,.mp4,.webm,.mov,.m4v" hidden /></div>
+          <div class="wt-sec">لینک سایت‌هایی مثل یوتیوب یا آپارات مستقیم نیستن؛ برای اونا از آرشیو استفاده کن تا «ساعت مشترک» همگامشون کنه. mkv و avi توی مرورگر پخش نمی‌شن.</div></div>
         ${picker ? (list.length ? `<div class="wt-pick">${list.map(x => `<button type="button" class="wt-it" data-wid="${esc(x.id)}"><span>${x.category === 'series' ? '📺' : '🎬'}</span><b>${esc(x.title)}</b>${isSeen(x.url) ? '<small>✅ دیده‌شده</small>' : ''}<small dir="ltr">${esc(hostOf(x.url))}</small></button>`).join('')}</div>`
           : '<div class="wt-empty">هنوز فیلم یا سریالی توی آرشیو سرگرمی نذاشتیم؛ از بخش 🎬 سرگرمی اضافه کنید 💜</div>')
           : '<div class="wt-empty">یه فیلم یا سریال از آرشیو سرگرمی انتخاب کنید تا اتاق تماشا برای هر دومون باز بشه؛ پخش و توقف همزمانه و می‌تونیم واکنش بدیم 💞</div>'}
@@ -292,8 +406,11 @@
       const a = b.dataset.wt;
       if (a === 'pick') { picker = !picker; if (typeof funLoaded !== 'undefined' && !funLoaded && typeof loadFun === 'function') loadFun().then(render); render(); }
       else if (a === 'finish') finish();
+      else if (a === 'link') startFromLink();
+      else if (a === 'up') { const u = $('wtUp'); if (u) u.click(); }
       else if (a === 'close') { if (confirm('اتاق تماشا برای هر دو بسته بشه؟')) closeRoom(true, false); }
     });
+    const wu = $('wtUp'); if (wu) wu.onchange = () => { const f = wu.files && wu.files[0]; wu.value = ''; startFromFile(f); };
     box.querySelectorAll('[data-wid]').forEach(b => b.onclick = () => { const it = moviesFromArchive().find(x => x.id === b.dataset.wid); if (it) create(it); });
     box.querySelectorAll('[data-re]').forEach(b => b.onclick = () => react(b.dataset.re));
   }
@@ -304,6 +421,8 @@
     v.addEventListener('ended', () => { sendStat(); if (!closing) finish(); });
     v.addEventListener('error', () => toast2('⚠️ این ویدیو توی سایت پخش نشد؛ لینکش مستقیم نیست یا قفله'));
     keepHb();
+    subCache = subCache; activeSub = (room.subs && room.subs[0] && room.subs[0].id) || ''; subShift = 0;
+    Promise.all((room.subs || []).map(prepSub)).then(() => { mountSubs(); renderSubUi(); });
   }
 
   function load() {
