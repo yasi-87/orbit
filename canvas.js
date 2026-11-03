@@ -14,6 +14,7 @@
   const jget = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 
+  let _bigc = null; const bigColors = () => _bigc || (_bigc = (() => { const o = []; ['#000000', '#3d3d3d', '#7a7a7a', '#b8b8b8', '#e6e6e6', '#ffffff'].forEach(c => o.push(c)); [0, 12, 24, 36, 48, 60, 80, 105, 140, 165, 185, 200, 215, 235, 255, 270, 285, 300, 320, 340].forEach(h => [[95, 78], [90, 66], [85, 55], [70, 42], [75, 30]].forEach(([sa, l]) => o.push(hsl(h, sa, l)))); ['#8b5a2b', '#c68b59', '#e8c9a0', '#5a3a22'].forEach(c => o.push(c)); return o; })());
   const COLORS = ['#1a1a1a', '#ffffff', '#ff4d6d', '#ff8fb8', '#ff9f43', '#ffd93d', '#6bcB77', '#2ec4b6', '#4d96ff', '#9b5de5', '#d4a5ff', '#8b5a2b'];
   const STK = [
     ['😀', 'صورتک‌ها', '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🤫 🤔 🤐 😐 😑 😶 😏 😒 🙄 😬 🤥 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🥵 🥶 🥴 😵 🤯 🤠 🥳 😎 🤓 🧐 😕 😟 🙁 😮 😲 🥺 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 👻 👽 🤖 💩 🙈 🙉 🙊'],
@@ -806,6 +807,7 @@
 .cv-grid2{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
 .cv-grid2 button{aspect-ratio:1;border-radius:50%;border:2px solid rgba(255,255,255,.4);cursor:pointer;padding:0}
 .cv-grid2 button.on{outline:3px solid var(--cvA);outline-offset:1px}
+.cv-grid2.cv-big{grid-template-columns:repeat(10,1fr);gap:5px;max-height:46vh;overflow-y:auto;padding:2px}.cv-grid2.cv-big button{border-width:1.5px}.cv-grid2.cv-big button.on{outline-width:2px}
 .cv-grid2.sq{grid-template-columns:repeat(4,1fr)}.cv-grid2.sq button{border-radius:12px;aspect-ratio:1.4}
 .cv-grid2.em{grid-template-columns:repeat(6,1fr)}.cv-grid2.em button{border:0;background:rgba(255,255,255,.07);border-radius:10px;font-size:1.3rem;aspect-ratio:1}.cv-grid2.em button.on{background:rgba(212,165,255,.4)}
 .cv-prow{display:flex;gap:8px;align-items:center;margin:8px 0}.cv-prow input[type=range]{flex:1}
@@ -921,7 +923,7 @@
   }
   const renderTools = renderRail;
   function popHtml(n) {
-    if (n === 'color') return `<h6>رنگ</h6><div class="cv-grid2">${COLORS.map(c => `<button type="button" data-c="${c}" style="background:${c}" class="${color.toLowerCase() === c ? 'on' : ''}" aria-label="${c}"></button>`).join('')}</div>
+    if (n === 'color') return `<h6>رنگ</h6><div class="cv-grid2 cv-big">${COLORS.concat(bigColors().filter(c => COLORS.indexOf(c) < 0)).map(c => `<button type="button" data-c="${c}" style="background:${c}" class="${color.toLowerCase() === c ? 'on' : ''}" aria-label="${c}"></button>`).join('')}</div>
       <div class="cv-prow"><input type="color" id="cvPick" value="${/^#[0-9a-f]{6}$/i.test(color) ? color : '#ff4d6d'}" title="رنگ دلخواه"><button type="button" class="cv-ib" data-pal="1" title="پالت هماهنگ با این رنگ">${ico('wand')}</button></div><div class="cv-grid2" id="cvSug"></div>`;
     if (n === 'size') { const PRE = tool === 'eraser' ? [8, 14, 24, 36, 50, 60] : [2, 4, 8, 14, 24, 40]; const pv = tool === 'eraser' ? '#999' : esc(color);
       return `<h6>اندازه</h6><div class="cv-sizes">${PRE.map(v => `<button type="button" data-sz="${v}" class="${size === v ? 'on' : ''}" title="${fa(v)}"><i style="width:${Math.max(3, Math.min(30, v * (tool === 'hl' ? 1.6 : tool === 'eraser' ? 0.7 : 1)))}px;height:${Math.max(3, Math.min(30, v * (tool === 'hl' ? 1.6 : tool === 'eraser' ? 0.7 : 1)))}px;background:${pv}"></i></button>`).join('')}</div>
