@@ -506,7 +506,7 @@
     let h = '';
     if (editing) h += `<div class="vc-cmp"><span>✏️ ویرایش پیام</span><button type="button" data-cmp="noedit" aria-label="لغو ویرایش">✕</button></div>`;
     if (replyTo) h += `<div class="vc-cmp"><span>↩︎ پاسخ به <b>${esc(replyTo.name)}</b>: ${esc((replyTo.text || '📷 تصویر').slice(0, 60))}</span><button type="button" data-cmp="noreply" aria-label="لغو ریپلای">✕</button></div>`;
-    if (pendImg) h += `<div class="vc-cmp"><img src="${esc(pendImg.preview)}" alt=""><span>تصویر آماده ارسال</span><button type="button" data-cmp="noimg" aria-label="حذف تصویر">✕</button></div>`;
+    if (pendImg) h += `<div class="vc-cmp${pendImg.up ? ' up' : ''}"><img src="${esc(pendImg.preview)}" alt=""><span id="vcUpTxt">${pendImg.up ? 'در حال آپلود…' : 'تصویر آماده ارسال'}</span><button type="button" data-cmp="noimg" aria-label="${pendImg.up ? 'لغو آپلود' : 'حذف تصویر'}">✕</button>${pendImg.up ? '<div class="vc-upb"><i id="vcUpBar"></i></div>' : ''}</div>`;
     el.innerHTML = h; el.style.display = h ? '' : 'none';
   }
   async function pickImage(file) {
@@ -528,8 +528,10 @@
     chatSending = true; const sb = $('vcChatForm') && $('vcChatForm').querySelector('button[type=submit]'); if (sb) sb.disabled = true;
     let img = '';
     if (pendImg) {
-      try { const up = await uploadMediaFile(pendImg.blob, 'jpg', 'chat.jpg'); img = up.url; }
-      catch (e) { say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'تصویر ارسال نشد')); chatSending = false; if (sb) sb.disabled = false; return; }
+      const pi = pendImg; pi.up = true; pi.ctl = { abort() {} }; renderComposer();
+      const kb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' مگابایت' : Math.max(1, Math.round(n / 1024)).toLocaleString('fa-IR') + ' کیلوبایت';
+      try { const up = await uploadMediaFile(pi.blob, 'jpg', 'chat.jpg', { ctl: pi.ctl, onProgress: (l, t) => { const pc = Math.min(100, Math.round(l / t * 100)), b = $('vcUpBar'), x = $('vcUpTxt'); if (b) b.style.width = pc + '%'; if (x) x.textContent = pc.toLocaleString('fa-IR') + '٪ · ' + kb(l) + ' از ' + kb(t); } }); img = up.url; }
+      catch (e) { pi.up = false; renderComposer(); if (e && e.cancelled) { say('⛔ آپلود لغو شد'); chatSending = false; if (sb) sb.disabled = false; return; } say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'تصویر ارسال نشد')); chatSending = false; if (sb) sb.disabled = false; return; }
     }
     const reply = replyTo ? { id: replyTo.id, name: replyTo.name, text: (replyTo.text || '').slice(0, 120) } : null;
     const ts = Date.now(), id = 'm_' + ts + '_' + ID, p = { from: ID, id, name: nm(), text, ts, img, reply };
@@ -577,7 +579,7 @@
     const ci2 = $('vcChatInput'); if (ci2) ci2.addEventListener('paste', e => { const f = imgOf(e.clipboardData); if (f) { e.preventDefault(); pickImage(f); } });
     const cf = $('vcChatForm'); if (cf) { cf.addEventListener('dragover', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); }); cf.addEventListener('drop', e => { const f = imgOf(e.dataTransfer); if (f) { e.preventDefault(); pickImage(f); } }); }
     const cb = $('vcImgBtn'); if (cb && pk) cb.addEventListener('click', () => pk.click());
-    const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else if (b.dataset.cmp === 'noedit') { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; } else pendImg = null; renderComposer(); });
+    const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else if (b.dataset.cmp === 'noedit') { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; } else { if (pendImg && pendImg.ctl && pendImg.up) pendImg.ctl.abort(); else pendImg = null; } renderComposer(); });
     const cl = $('vcChatList'); if (cl) cl.addEventListener('click', e => {
       const z = e.target.closest('[data-zoom]'); if (z) { zoom(z.dataset.zoom); return; }
       const eb = e.target.closest('[data-edit]'); if (eb) { startEdit(eb.dataset.edit); return; }
