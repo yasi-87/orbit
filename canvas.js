@@ -46,6 +46,13 @@
   let dirty = true, saveT = null, saveState = '', liveMissing = false, artMissing = false, gallery = [], galleryLoaded = false;
   let pend = [], sendT = null, curT = 0, timerI = null, timerDone = 0, theme = jget('diary_cv_theme', 'dream'), light = jget('diary_cv_light', false);
   const myThumbKey = 'diary_cv_partner';
+  /* 👧 دو فضای جدا: «بوم ما» (ما دو نفر، و آیسا اگه دعوتش کنیم) و «بوم آیسا» (مخصوص خودش) */
+  const guestNow = () => typeof guestMode !== 'undefined' && guestMode;
+  let space = null, invited = false, ich = null, ghSpace = '';
+  const spc = () => space || (space = guestNow() ? 'aisa' : 'us');
+  const liveId = () => spc() === 'aisa' ? 'aisa' : 'current';
+  const lsk = k => spc() === 'aisa' ? k + '_aisa' : k;
+  const idp = () => spc() === 'aisa' ? 'ai_' : '';
 
   const send = p => { if (secret) return; try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'cv', payload: Object.assign({ from: ID, name: nm() }, p) }); } catch (e) {} };
   const cur = () => secret ? secretStrokes : strokes;
@@ -361,7 +368,7 @@
   function join() {
     if (ch || typeof dbClient === 'undefined' || !dbClient || !dbClient.channel) return;
     try {
-      ch = dbClient.channel('our-canvas', { config: { broadcast: { self: false }, presence: { key: ID } } });
+      ch = dbClient.channel(spc() === 'aisa' ? 'canvas-aisa' : 'our-canvas', { config: { broadcast: { self: false }, presence: { key: ID } } });
       ch.on('broadcast', { event: 'cv' }, m => recv(m && m.payload))
         .on('presence', { event: 'sync' }, presence)
         .subscribe(st => { if (st === 'SUBSCRIBED') { subscribed = true; track(); render(); } });
@@ -381,7 +388,7 @@
     let st = {}; try { st = ch.presenceState() || {}; } catch (e) {}
     const old = Object.keys(peers).length; peers = {};
     Object.keys(st).forEach(k => { if (k !== ID && st[k] && st[k][0]) peers[k] = { name: st[k][0].name || 'یکی از ما', av: st[k][0].av || '' }; });
-    const pn = partnerName(); if (pn) { const k = Object.keys(peers).find(k => same(peers[k].name, pn)); jset(myThumbKey, { name: pn, av: peers[k].av }); }
+    const pn = partnerName(); if (pn) { const k = Object.keys(peers).find(k => same(peers[k].name, pn)); jset(lsk(myThumbKey), { name: pn, av: peers[k].av }); }
     if (Object.keys(peers).length > old && built) { toast2('🎨 ' + (pn || 'اون یکی') + ' اومد توی بوم'); try { OMSound.play('up'); } catch (e) {} }
     if (meta.mode === 'half' && meta.half && !meta.half.R && meta.half.L && !same(meta.half.L, nm())) setMeta({ half: Object.assign({}, meta.half, { R: nm() }) });
     renderHeader();
@@ -443,7 +450,7 @@
     if (meta.gEnd && Date.now() > meta.gEnd + 2500) return;
     const ok = guessWord.split('|').some(a => wNorm(a) === wNorm(p.text)), shown = guessWord.split('|')[0];
     guessFeed.push({ name: p.name, text: p.text, ok }); guessFeed = guessFeed.slice(-6);
-    const en = { id: 'g_' + Date.now().toString(36) + '_' + ID, who: p.name, text: String(p.text || '').slice(0, 60), ok, word: shown, rid: meta.rid, lvl: meta.level, kind: ok ? 'ok' : 'g', ts: Date.now() };
+    const en = { id: idp() + 'g_' + Date.now().toString(36) + '_' + ID, who: p.name, text: String(p.text || '').slice(0, 60), ok, word: shown, rid: meta.rid, lvl: meta.level, kind: ok ? 'ok' : 'g', ts: Date.now() };
     logGuess(en); send({ t: 'gres', text: p.text, ok, word: ok ? shown : '', en: Object.assign({}, en, { word: ok ? shown : '' }) });
     if (ok) win(shown); else { guessWrong++; if (guessWrong >= 3 && !meta.hint) { setMeta({ hint: firstLetter() }); toast2('💡 حرف اول به راهنما اضافه شد'); } }
     renderMode();
@@ -456,19 +463,19 @@
   function newWord() { guessWord = pickWord(); guessWrong = 0; setMeta(Object.assign({ wlen: wordLen(guessWord), hint: '' }, roundMeta())); }
   function finishRound(kind) {
     if (!guessWord) return; const shown = String(guessWord).split('|')[0];
-    const en = { id: 'g_' + Date.now().toString(36) + '_' + ID, who: '', text: '', ok: false, word: shown, rid: meta.rid, lvl: meta.level, kind, ts: Date.now() };
+    const en = { id: idp() + 'g_' + Date.now().toString(36) + '_' + ID, who: '', text: '', ok: false, word: shown, rid: meta.rid, lvl: meta.level, kind, ts: Date.now() };
     logGuess(en); send({ t: 'gres', text: '', ok: false, word: shown, en }); guessFeed.push({ name: kind === 't' ? '⏰ وقت تموم شد' : '⏭️ رد شد', text: '«' + shown + '» بود', ok: false }); guessFeed = guessFeed.slice(-6);
     toast2((kind === 't' ? '⏰ وقت تموم شد؛ ' : '⏭️ ') + 'کلمه «' + shown + '» بود'); newWord();
   }
   /* 🕘 تاریخچهٔ حدس‌ها (جدول canvas_guesses ← SQL شمارهٔ ۲۶؛ بدون جدول فقط روی همین دستگاه) */
-  let gh = jget('diary_cv_guesses', []), ghMissing = false;
-  function recG(e) { if (!e || !e.id || gh.some(x => x.id === e.id)) return; gh.push(e); gh.sort((a, b) => a.ts - b.ts); if (gh.length > 500) gh.splice(0, gh.length - 500); jset('diary_cv_guesses', gh); }
+  let gh = [], ghMissing = false;
+  function recG(e) { if (!e || !e.id || gh.some(x => x.id === e.id)) return; gh.push(e); gh.sort((a, b) => a.ts - b.ts); if (gh.length > 500) gh.splice(0, gh.length - 500); jset(lsk('diary_cv_guesses'), gh); }
   function logGuess(e) {
     recG(e); try { dbClient.from('canvas_guesses').upsert({ id: e.id, who: e.who, text: e.text, ok: !!e.ok, word: e.word || '', rid: e.rid || '', lvl: e.lvl || '', kind: e.kind, ts: e.ts }).then(r => { if (r && r.error) ghMissing = /canvas_guesses|relation|schema cache/i.test(r.error.message || ''); }, () => {}); } catch (x) {}
     if (tab === 'gs') renderGuesses();
   }
   async function loadGH() {
-    try { const r = await dbClient.from('canvas_guesses').select('*').order('ts', { ascending: false }).limit(400); if (r.error) ghMissing = /canvas_guesses|relation|schema cache/i.test(r.error.message || ''); else { ghMissing = false; (r.data || []).forEach(x => recG({ id: x.id, who: x.who || '', text: x.text || '', ok: !!x.ok, word: x.word || '', rid: x.rid || '', lvl: x.lvl || '', kind: x.kind || 'g', ts: Number(x.ts) || 0 })); } } catch (e) {}
+    try { const r = await dbClient.from('canvas_guesses').select('*').order('ts', { ascending: false }).limit(400); if (r.error) ghMissing = /canvas_guesses|relation|schema cache/i.test(r.error.message || ''); else { ghMissing = false; (r.data || []).filter(x => spc() === 'aisa' ? String(x.id).startsWith('ai_') : !String(x.id).startsWith('ai_')).forEach(x => recG({ id: x.id, who: x.who || '', text: x.text || '', ok: !!x.ok, word: x.word || '', rid: x.rid || '', lvl: x.lvl || '', kind: x.kind || 'g', ts: Number(x.ts) || 0 })); } } catch (e) {}
     renderGuesses();
   }
   function renderGuesses() {
@@ -499,15 +506,15 @@
   function scheduleSave() { clearTimeout(saveT); setSave('⏳'); saveT = setTimeout(saveLive, 1500); }
   const setSave = s => { saveState = s; const e = $('cvSaveDot'); if (e) { e.classList.toggle('ok', s === '✓'); e.title = s === '✓' ? 'ذخیره شد' : s === '!' ? 'فقط روی همین دستگاه ذخیره شد' : s ? 'در حال ذخیره…' : 'ذخیرهٔ خودکار'; } };
   async function saveLive() {
-    const row = { id: 'current', strokes: JSON.stringify(strokes), meta: JSON.stringify(meta), updated_at: Date.now() };
-    jset('diary_cv_live', { strokes, meta });
+    const row = { id: liveId(), strokes: JSON.stringify(strokes), meta: JSON.stringify(meta), updated_at: Date.now() };
+    jset(lsk('diary_cv_live'), { strokes, meta });
     try { const { error } = await dbClient.from('canvas_live').upsert(row); if (error) { liveMissing = /canvas_live|relation|schema cache/i.test(error.message || ''); setSave('!'); render(); return; } liveMissing = false; setSave('✓'); } catch (e) { setSave('!'); }
   }
   async function loadLive(quiet) {
     let data = null;
-    try { const r = await dbClient.from('canvas_live').select('*').eq('id', 'current').maybeSingle(); if (r.error) { liveMissing = /canvas_live|relation|schema cache/i.test(r.error.message || ''); } else { liveMissing = false; data = r.data; } } catch (e) {}
+    try { const r = await dbClient.from('canvas_live').select('*').eq('id', liveId()).maybeSingle(); if (r.error) { liveMissing = /canvas_live|relation|schema cache/i.test(r.error.message || ''); } else { liveMissing = false; data = r.data; } } catch (e) {}
     if (data) { try { strokes = JSON.parse(data.strokes || '[]'); applyMeta(JSON.parse(data.meta || '{}'), true); } catch (e) {} }
-    else { const l = jget('diary_cv_live', null); if (l && !strokes.length) { strokes = l.strokes || []; applyMeta(l.meta || meta, true); } else applyMeta(meta, true); }
+    else { const l = jget(lsk('diary_cv_live'), null); if (l && !strokes.length) { strokes = l.strokes || []; applyMeta(l.meta || meta, true); } else applyMeta(meta, true); }
     if (!secret) rebuild(); redoUi(); render();
   }
 
@@ -549,7 +556,7 @@
     try {
       const blob = await blobOf(await exportCanvas(filter));
       const up = await uploadMediaFile(blob, 'png', 'canvas.png');
-      const row = { id: replace ? ex.id : (opts.id || ('cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5))), title, url: up.url, path: up.path, strokes: JSON.stringify(cur()), bg: meta.bg, author: secret ? nm() : (partnerName() ? nm() + ' و ' + partnerName() : nm()), created_at: replace ? ex.created_at : Date.now(), fav: replace ? !!ex.fav : false, comments: replace ? (ex.comments || '[]') : '[]', reveal_at: reveal || null, topic: meta.topic || '', mode: secret ? 'secret' : (meta.tpl ? 'tpl:' + meta.tpl : meta.mode) };
+      const row = { id: replace ? ex.id : (opts.id || (idp() + 'cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5))), title, url: up.url, path: up.path, strokes: JSON.stringify(cur()), bg: meta.bg, author: secret ? nm() : (partnerName() ? nm() + ' و ' + partnerName() : nm()), created_at: replace ? ex.created_at : Date.now(), fav: replace ? !!ex.fav : false, comments: replace ? (ex.comments || '[]') : '[]', reveal_at: reveal || null, topic: meta.topic || '', mode: secret ? 'secret' : (meta.tpl ? 'tpl:' + meta.tpl : meta.mode) };
       const { error } = await dbClient.from('canvas_art').upsert(row);
       if (error) { artMissing = /canvas_art|relation|schema cache/i.test(error.message || ''); try { await dbClient.storage.from('songs').remove([up.path]); } catch (e) {} throw error; }
       artMissing = false; if (replace && ex.path && ex.path !== up.path) { try { dbClient.storage.from('songs').remove([ex.path]); } catch (e) {} } gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined })); if (replace || opts.finish) { editId = null; renderMode(); }
@@ -569,7 +576,7 @@
   async function loadGallery() {
     try {
       const r = await dbClient.from('canvas_art').select('id,title,url,path,bg,author,created_at,fav,comments,reveal_at,topic,mode').order('created_at', { ascending: false }).limit(200);
-      if (r.error) { artMissing = /canvas_art|relation|schema cache/i.test(r.error.message || ''); } else { artMissing = false; gallery = r.data || []; galleryLoaded = true; }
+      if (r.error) { artMissing = /canvas_art|relation|schema cache/i.test(r.error.message || ''); } else { artMissing = false; gallery = (r.data || []).filter(g => spc() === 'aisa' ? String(g.id).startsWith('ai_') : !String(g.id).startsWith('ai_')); galleryLoaded = true; }
     } catch (e) {}
     renderGallery();
   }
@@ -845,7 +852,7 @@
     const root = $('canvasBox'); if (!root) return;
     buildCanvases(); buildCanvases2();
     const scr = $('screen-canvas'); if (scr) { scr.dataset.cvt = theme; scr.classList.toggle('cv-light', !!light); }
-    const seg = `<div class="cv-seg"><button type="button" class="${tab === 'draw' ? 'on' : ''}" data-tab="draw" title="بوم" aria-label="بوم">${ico('canvas', 18)}</button><button type="button" class="${tab === 'gal' ? 'on' : ''}" data-tab="gal" title="گالری" aria-label="گالری">${ico('gal', 18)}</button><button type="button" class="${tab === 'gs' ? 'on' : ''}" data-tab="gs" title="تاریخچهٔ حدس‌ها" aria-label="حدس‌ها">${ico('bulb', 18)}</button></div>`;
+    const seg = `<div class="cv-seg"><button type="button" class="${tab === 'draw' ? 'on' : ''}" data-tab="draw" title="بوم" aria-label="بوم">${ico('canvas', 18)}</button><button type="button" class="${tab === 'gal' ? 'on' : ''}" data-tab="gal" title="گالری" aria-label="گالری">${ico('gal', 18)}</button><button type="button" class="${tab === 'gs' ? 'on' : ''}" data-tab="gs" title="تاریخچهٔ حدس‌ها" aria-label="حدس‌ها">${ico('bulb', 18)}</button></div>` + (guestNow() && invited ? `<div class="cv-seg"><button type="button" style="width:auto;padding:0 12px" class="${spc() === 'aisa' ? 'on' : ''}" data-sp="aisa">بوم من</button><button type="button" style="width:auto;padding:0 12px" class="${spc() === 'us' ? 'on' : ''}" data-sp="us">بوم ما</button></div>` : '');
     if (tab === 'gs') { root.innerHTML = `<div class="cv-app"><div class="cv-top">${seg}</div><div id="cvGs"></div></div>`; bindTabs(); renderGuesses(); return; }
     if (tab === 'gal') { root.innerHTML = `<div class="cv-app"><div class="cv-top">${seg}</div><div id="cvGal"></div></div>`; bindTabs(); renderGallery(); return; }
     root.innerHTML = `<div class="cv-app">
@@ -865,12 +872,12 @@
     setTimeout(() => stage && stage.classList.remove('intro'), 1100);
     renderHeader(); renderTopic(); renderMode(); renderRail(); renderAct(); renderPop(); dirty = true; startFrame();
   }
-  function bindTabs() { document.querySelectorAll('#canvasBox [data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; pop = null; render(); if (tab === 'gal') loadGallery(); if (tab === 'gs') loadGH(); }); }
+  function bindTabs() { document.querySelectorAll('#canvasBox [data-sp]').forEach(b => b.onclick = () => switchSpace(b.dataset.sp)); document.querySelectorAll('#canvasBox [data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; pop = null; render(); if (tab === 'gal') loadGallery(); if (tab === 'gs') loadGH(); }); }
   function avHtml(name, av, on) { const ini = esc((name || '؟').trim().charAt(0)); return `<div class="cv-av${on ? ' on' : ''}" title="${esc(name || '')}">${av ? `<img src="${esc(av)}" alt="">` : ini}<i></i></div>`; }
   function renderHeader() {
     const el = $('cvHead'); if (!el) return;
     const me = (typeof userProfile !== 'undefined' && userProfile.avatar) || thumb || '';
-    const pn = partnerName(), pk = Object.keys(peers).find(k => same(peers[k].name, pn)), last = jget(myThumbKey, null);
+    const pn = partnerName(), pk = Object.keys(peers).find(k => same(peers[k].name, pn)), last = jget(lsk(myThumbKey), null);
     const others = Object.keys(peers).filter(k => !same(peers[k].name, nm())).map(k => avHtml(peers[k].name, peers[k].av, true)).join('');
     el.innerHTML = (others || avHtml(last ? last.name : 'اون یکی', last ? last.av : '', false)) + avHtml(nm(), me, true);
   }
@@ -928,6 +935,7 @@
       <h6 style="margin-top:8px">سطح بازی حدس زدن</h6><div class="cv-chips">${['easy', 'med', 'hard'].map(l => `<button type="button" data-lv="${l}" class="${meta.level === l ? 'on' : ''}">${LVL[l]}</button>`).join('')}</div>`;
     if (n === 'set') return `<h6>ظاهر</h6><div class="cv-prow" style="justify-content:space-between">${['dream', 'sunset', 'mint'].map(t => `<button type="button" class="cv-ib${theme === t ? ' on' : ''}" data-th="${t}" title="تم" style="background:${t === 'dream' ? 'linear-gradient(135deg,#d4a5ff,#ff8fb8)' : t === 'sunset' ? 'linear-gradient(135deg,#ffb07a,#ff6f91)' : 'linear-gradient(135deg,#7fe0c4,#6fb7ff)'}"></button>`).join('')}
       <button type="button" class="cv-ib" data-set="light" title="روشن / تاریک">${ico(light ? 'moon' : 'sun')}</button><button type="button" class="cv-ib" data-set="music" title="موسیقی">${ico('music')}</button></div>
+      ${guestNow() ? '' : `<h6>آیسا 👧</h6><div class="cv-chips"><button type="button" data-inv="1" class="${invited ? 'on' : ''}">${invited ? '✅ آیسا توی بوم ماست (برای بیرون کردن بزن)' : '➕ آیسا رو به بوم ما اضافه کن'}</button></div>`}
       <h6>فیلتر خروجی</h6><div class="cv-chips">${[['', '○'], ['cartoon', '◐'], ['sketch', '✎'], ['soft', '✿']].map(f => `<button type="button" data-f="${f[0]}" title="${{ '': 'بدون فیلتر', cartoon: 'کارتونی', sketch: 'مدادی', soft: 'نرم و رویایی' }[f[0]]}" class="${filterSel === f[0] ? 'on' : ''}">${f[1]}</button>`).join('')}</div>`;
     return '';
   }
@@ -952,6 +960,7 @@
     el.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { timedMin = +b.dataset.tm; modeSet('timed'); pop = null; renderRail(); renderPop(); });
     el.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { theme = b.dataset.th; jset('diary_cv_theme', theme); $('screen-canvas').dataset.cvt = theme; renderPop(); });
     el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { if (b.dataset.set === 'light') { light = !light; jset('diary_cv_light', light); $('screen-canvas').classList.toggle('cv-light', light); renderPop(); } else { const m = $('mpPlay'); if (m) m.click(); } });
+    el.querySelectorAll('[data-inv]').forEach(b => b.onclick = () => setInvite(!invited));
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filterSel = b.dataset.f; renderPop(); });
   }
   const refreshPop = () => { if (pop === 'mode' || pop === 'bg') renderPop(); };
@@ -1019,7 +1028,7 @@
     clearInterval(timerI); timerI = null; if (!(meta.mode === 'timed' && meta.timerEnd)) return;
     const upd = () => {
       const left = meta.timerEnd - Date.now(), e = $('cvTimer');
-      if (left <= 0) { clearInterval(timerI); timerI = null; if (e) e.textContent = '⏰ تموم شد!'; if (timerDone !== meta.timerEnd) { timerDone = meta.timerEnd; toast2('⏰ وقت تموم شد!'); saveToGallery({ id: 'cv_t' + meta.timerEnd, title: titleIdea(), finish: true }); } return; }
+      if (left <= 0) { clearInterval(timerI); timerI = null; if (e) e.textContent = '⏰ تموم شد!'; if (timerDone !== meta.timerEnd) { timerDone = meta.timerEnd; toast2('⏰ وقت تموم شد!'); saveToGallery({ id: idp() + 'cv_t' + meta.timerEnd, title: titleIdea(), finish: true }); } return; }
       if (e) { const s = Math.ceil(left / 1000); e.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
     };
     upd(); timerI = setInterval(upd, 500);
@@ -1034,7 +1043,36 @@
   function hexToHsl(h) { const r = parseInt(h.slice(1, 3), 16) / 255, g = parseInt(h.slice(3, 5), 16) / 255, b = parseInt(h.slice(5, 7), 16) / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b); let hh = 0, s = 0, l = (mx + mn) / 2; if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); hh = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; hh *= 60; } return [hh, s * 100, l * 100]; }
   const hsl = (h, s, l) => '#' + [0, 8, 4].map(n => { const a = s / 100 * Math.min(l / 100, 1 - l / 100), k = (n + h / 30) % 12, c = l / 100 - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); return Math.round(255 * c).toString(16).padStart(2, '0'); }).join('');
   /* ---------- راه‌اندازی ---------- */
+  function joinInv() {
+    if (ich || typeof dbClient === 'undefined' || !dbClient || !dbClient.channel) return;
+    try {
+      ich = dbClient.channel('canvas-invite', { config: { broadcast: { self: false } } });
+      ich.on('broadcast', { event: 'inv' }, m => {
+        const on = !!(m && m.payload && m.payload.on); invited = on;
+        if (guestNow()) { if (!on && spc() === 'us') { switchSpace('aisa'); toast2('👋 دعوت به بوم ما تموم شد؛ برگشتی به بوم خودت'); } else if (on) toast2('💌 تو رو به بوم ما دعوت کردن! بالا می‌تونی بین «بوم من» و «بوم ما» جابه‌جا بشی'); render(); }
+        else renderPop();
+      }).subscribe();
+    } catch (e) { ich = null; }
+  }
+  async function loadInvite() {
+    try { const r = await dbClient.from('canvas_live').select('*').eq('id', 'invite').maybeSingle(); if (r && r.data) { const on = !!(JSON.parse(r.data.meta || '{}').on); if (on !== invited) { invited = on; if (built) { render(); } } } } catch (e) {}
+  }
+  function setInvite(on) {
+    invited = !!on; try { if (ich) ich.send({ type: 'broadcast', event: 'inv', payload: { on: invited } }); } catch (e) {}
+    try { dbClient.from('canvas_live').upsert({ id: 'invite', strokes: '', meta: JSON.stringify({ on: invited }), updated_at: Date.now() }).then(() => {}, () => {}); } catch (e) {}
+    toast2(invited ? '👧 آیسا دعوت شد؛ می‌تونه بیاد توی بوم ما' : '👧 آیسا از بوم ما بیرون رفت'); renderPop();
+  }
+  function switchSpace(s) {
+    if (s === spc() || (s === 'us' && !invited)) return;
+    try { if (ch) { try { ch.unsubscribe(); } catch (e) {} try { dbClient.removeChannel(ch); } catch (e) {} } } catch (e) {}
+    clearTimeout(saveT); space = s; ch = null; subscribed = false; peers = {}; remote = {}; mine = null; strokes = []; secretStrokes = []; secret = false; redo = []; meta = META0(); gallery = []; galleryLoaded = false; editId = null; tab = 'draw'; pop = null; guessWord = ''; guessFeed = [];
+    ghSpace = spc(); gh = jget(lsk('diary_cv_guesses'), []);
+    if (bctx) rebuild(); join(); render(); loadLive(); loadGallery();
+    toast2(s === 'aisa' ? '🎨 بوم خودت' : '👥 بوم ما');
+  }
   function load() {
+    if (ghSpace !== spc()) { ghSpace = spc(); gh = jget(lsk('diary_cv_guesses'), []); }
+    joinInv(); loadInvite();
     join();
     if (!$('canvasBox')) return;
     if (!$('cvCss')) buildCanvases();
@@ -1053,6 +1091,6 @@
       const x = e.target.closest('[data-del]'); if (x) return delArt(x.dataset.del);
     });
   }
-  window.Canvas2 = { _gEnd: ms => setMeta({ gEnd: Date.now() + ms }), _gh: () => gh, load, init, saveToGallery, _state: () => ({ strokes, secretStrokes, meta, tool, peers, secret, gallery, remote: Object.keys(remote), liveMissing }), _id: ID, W, H };
+  window.Canvas2 = { _space: () => spc(), _invited: () => invited, _gEnd: ms => setMeta({ gEnd: Date.now() + ms }), _gh: () => gh, load, init, saveToGallery, _state: () => ({ strokes, secretStrokes, meta, tool, peers, secret, gallery, remote: Object.keys(remote), liveMissing }), _id: ID, W, H };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
