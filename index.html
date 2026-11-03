@@ -1591,7 +1591,7 @@ body.reading-mode .reading-content {
 .vc-bot{display:flex;gap:5px;overflow-x:auto;padding:4px 10px;scrollbar-width:none;align-items:center}.vc-bot::-webkit-scrollbar{display:none}
 .vc-bot span{font-size:.72rem;color:var(--gold);white-space:nowrap;font-weight:700}
 .vc-bot button{flex:none;border:1px solid rgba(255,200,120,.35);background:rgba(255,200,120,.08);color:inherit;border-radius:999px;padding:3px 10px;font:inherit;font-size:.74rem;cursor:pointer;white-space:nowrap}
-.bot-tg{margin-inline-start:auto;margin-inline-end:6px;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:.8rem;cursor:pointer;opacity:.7}
+.bot-tg{flex:none;white-space:nowrap;margin-inline-start:auto;margin-inline-end:6px;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:.8rem;cursor:pointer;opacity:.7}
 .bot-tg i{width:26px;height:14px;border-radius:8px;background:#555;position:relative;transition:.2s}.bot-tg i::after{content:"";position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:.2s}
 .bot-tg.on{opacity:1;border-color:rgba(255,200,120,.6)}.bot-tg.on i{background:#4cd964}.bot-tg.on i::after{right:14px}
 .vc-ed{font-size:.62rem;opacity:.7}
@@ -1957,6 +1957,7 @@ input.seek:disabled{opacity:.4;cursor:default}
       <button type="button" class="fun-tab" data-c="movie" onclick="setFunCat('movie')"><span class="ft-ico">🎬</span><b>فیلم</b><small></small></button>
       <button type="button" class="fun-tab" data-c="series" onclick="setFunCat('series')"><span class="ft-ico">📺</span><b>سریال</b><small></small></button>
     </div>
+    <div id="watchWrap" style="display:none"><div class="vc-chat vc-area-watch" id="watchBox"></div></div>
     <form class="fun-form" onsubmit="addFunLink(event)">
       <input type="text" id="funTitle" maxlength="80" placeholder="اسم (مثلاً سایت فیلم‌های ما)" />
       <input type="text" id="funUrl" inputmode="url" dir="ltr" placeholder="https://..." />
@@ -1985,7 +1986,6 @@ input.seek:disabled{opacity:.4;cursor:default}
     <div id="voiceBox" class="vc-area-room"></div>
     <div id="vcAudios"></div>
     <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
-    <div class="vc-chat vc-area-watch" id="watchBox"></div>
     <div class="vc-chat vc-area-share" id="shareBox"></div>
     <details id="vcDiagBox" class="vc-diag vc-area-diag"><summary>🔍 اطلاعات فنی اتصال (اگه تماس وصل نشد، این رو برام بفرست)</summary><pre id="vcDiag"></pre></details>
     </div>
@@ -2308,7 +2308,7 @@ function showScreen(name) {
   if (name === 'profile') bioRefresh();
   if (name === 'canvas' && window.Canvas2) Canvas2.load();
   if (name === 'voice' && window.Voice) Voice.load();
-  if (name === 'voice' && window.Watch) Watch.load();
+  if (name === 'fun' && window.Watch) Watch.load();
   if (name === 'voice' && window.Screen2) Screen2.load();
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
@@ -2464,8 +2464,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-02d';
+const SITE_VERSION = '2026-11-03a';
 const SITE_CHANGES = [
+  '🍿 اتاق تماشا رفت توی 🎬 سرگرمی (تب فیلم و سریال)؛ حالا زیرنویس (آپلود فایل srt/vtt یا لینک، با تنظیم همزمانی) داره و فیلم رو می‌شه با لینک مستقیم یا آپلود از سیستم هم آورد و دید',
   '🎨 بوم: حدس‌ها ثبت می‌شن و توی تب 💡 (کنار گالری) می‌بینی کی چی حدس زده، چندتا درست بوده و جواب هر دور؛ و هر دور حدس زدن زمان‌دار شد (۷۵ تا ۱۲۰ ثانیه بسته به سطح)',
   '💬 چت: ویرایش ✏️ و حذف 🗑️ پیام‌های خودت (برای هر دو)، و کلید روشن/خاموش پفیلا 🧸 بالای چت',
   '💬 چت: ✓ ارسال‌شده و ✓✓ دیده‌شد، «داره می‌نویسه…» و دستیار مشترک کوچولو به اسم پفیلا 🧸 (بنویس «پفیلا، جوک بگو» یا از دکمه‌های بالای کادر پیام استفاده کن)',
@@ -4198,6 +4199,7 @@ async function loadFun() {
   funMissing = false; funList = data || []; funLoaded = true; renderFun();
 }
 function setFunTabs() {
+  const ww = document.getElementById('watchWrap'); if (ww) ww.style.display = (funCat === 'movie' || funCat === 'series') ? '' : 'none';
   document.querySelectorAll('#funTabs .fun-tab').forEach(b => {
     b.classList.toggle('on', b.dataset.c === funCat);
     const n = funList.filter(x => x.category === b.dataset.c).length;
