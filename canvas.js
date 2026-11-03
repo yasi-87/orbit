@@ -871,7 +871,8 @@
     const el = $('cvHead'); if (!el) return;
     const me = (typeof userProfile !== 'undefined' && userProfile.avatar) || thumb || '';
     const pn = partnerName(), pk = Object.keys(peers).find(k => same(peers[k].name, pn)), last = jget(myThumbKey, null);
-    el.innerHTML = (pn ? avHtml(pn, peers[pk].av, true) : avHtml(last ? last.name : 'اون یکی', last ? last.av : '', false)) + avHtml(nm(), me, true);
+    const others = Object.keys(peers).filter(k => !same(peers[k].name, nm())).map(k => avHtml(peers[k].name, peers[k].av, true)).join('');
+    el.innerHTML = (others || avHtml(last ? last.name : 'اون یکی', last ? last.av : '', false)) + avHtml(nm(), me, true);
   }
   function renderTopic() {
     const el = $('cvTopic'); if (!el) return;
