@@ -411,7 +411,7 @@
   /* ---------- پس‌زمینهٔ مشترک چت ---------- */
   const BGS = { night: 'linear-gradient(160deg,#1b1038,#3a1c5e 55%,#14213d)', rose: 'linear-gradient(160deg,#4a1635,#a23a6b 60%,#2b1240)', ocean: 'linear-gradient(160deg,#06243d,#0f6a8a 60%,#102a56)', forest: 'linear-gradient(160deg,#0d2a1f,#1f6b4d 60%,#1a2a45)', sunset: 'linear-gradient(160deg,#42204f,#d6567a 55%,#f2a65a)', dots: 'radial-gradient(rgba(255,255,255,.12) 1.5px,transparent 1.6px) 0 0/18px 18px,linear-gradient(160deg,#1c1530,#2a1f4a)' };
   let chatBg = ''; try { chatBg = localStorage.getItem('vc_bg') || ''; } catch (e) {}
-  const okBg = v => typeof v === 'string' && (v === '' || (/^p:[a-z]+$/.test(v) && BGS[v.slice(2)]) || /^i:https?:\/\/[^\s"'()]+$/.test(v));
+  const okBg = v => typeof v === 'string' && (v === '' || (/^p:[a-z]+$/.test(v) && BGS[v.slice(2)]) || /^i:https?:\/\/[^\s"'()]+$/.test(v) || (/^i:data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(v) && v.length < 200000));
   function applyBg() {
     const l = $('vcChatList'); if (!l) return;
     let v = '';
@@ -425,12 +425,19 @@
   }
   async function pickBgImage(file) {
     if (!file || !/^image\//.test(file.type)) return;
-    const pop = $('vcBgPop'), st = pop && pop.querySelector('[data-bgst]');
+    const pop = $('vcBgPop'), st = pop && pop.querySelector('[data-bgst]'), msg = t => { if (st) st.textContent = t; };
+    msg('⏳ در حال آماده‌سازی عکس…');
+    let big = '';
+    try { big = await resizeImageFile(file, 1200, 0.8); } catch (e) { msg('⚠️ این عکس باز نشد'); return; }
     try {
-      const blob = dataUrlToBlob(await resizeImageFile(file, 1200, 0.8));
-      const up = await uploadMediaFile(blob, 'jpg', 'chat-bg.jpg', { onProgress: (l, t) => { if (st) st.textContent = 'در حال آپلود… ' + Math.round(l / t * 100).toLocaleString('fa-IR') + '٪'; } });
-      setBg('i:' + up.url); if (st) st.textContent = '';
-    } catch (e) { if (st) st.textContent = ''; say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'عکس آپلود نشد')); }
+      const up = await uploadMediaFile(dataUrlToBlob(big), 'jpg', 'chat-bg.jpg', { onProgress: (l, t) => msg('📤 در حال آپلود… ' + Math.round(l / t * 100).toLocaleString('fa-IR') + '٪') });
+      await new Promise((res, rej) => { const im = new Image(); im.onload = res; im.onerror = () => rej(new Error('آدرس عکس باز نشد (bucket عمومی نیست؟)')); im.src = up.url; });
+      setBg('i:' + up.url); msg('✅ پس‌زمینه گذاشته شد');
+    } catch (e) {
+      // اگه آپلود نشد، نسخهٔ کوچیک عکس مستقیم ذخیره می‌شه تا کار بیفته
+      try { const small = await resizeImageFile(file, 720, 0.55); if (('i:' + small).length < 190000) { setBg('i:' + small); msg('✅ گذاشته شد (نسخهٔ سبک؛ آپلود نشد: ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : (e && e.message || '')) + ')'); return; } } catch (e2) {}
+      msg('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : (e && e.message) || 'عکس آپلود نشد'));
+    }
   }
   function toggleBgPop() {
     const dock = $('chatDock'); if (!dock) return; const old = $('vcBgPop'); if (old) { old.remove(); return; }
