@@ -6,7 +6,7 @@
    فقط به چند تابع سایت وصله: CatPal.start() موقع ورود و CatPal.act(type) موقع فعالیت‌ها. */
 (function () {
   'use strict';
-  const KEY = 'cat_state_v1';
+  let KEY = 'cat_state_v1';
   const fa = n => Number(n).toLocaleString('fa-IR');
   let asleep = false, lastTouch = Date.now(), sleepAud = null, sleepIdx = 0;
   const rnd = a => a[Math.floor(Math.random() * a.length)];
@@ -558,6 +558,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
     const byKey = {};
     rows.forEach(x => { const k = Recur.nameKey(x.name || ''); if (!k) return; if (!byKey[k] || (x.updated_at || 0) > (byKey[k].updated_at || 0)) byKey[k] = x; });
     rows = Object.keys(byKey).map(k => byKey[k]);
+    if (typeof guestMode !== 'undefined' && guestMode) rows = [];
     if (mine) { const mk = Recur.nameKey(mine.name); rows = rows.filter(x => Recur.nameKey(x.name || '') !== mk); rows.unshift(mine); }
     const pr = x => { let w = { acc: [], fur: 'cream' }; try { w = JSON.parse(x.worn) || w; } catch (e) {} return { worn: w, mood: x.mood || 'normal' }; };
     const total = Object.keys(ITEMS).length;
@@ -591,6 +592,12 @@ body.reading-mode .catpal:hover{opacity:1}`;
       else if (root && !asleep && Math.random() < .3 && !bubble.classList.contains('show')) say(pickLine('act', ACT_LINES), 3200);
     } catch (e) { console.warn(e); }
   }
+  /* 👧 گربهٔ مخصوص مهمان (آیسا): وضعیت جدا از گربه‌های ما */
+  function useGuest() {
+    KEY = 'cat_state_guest_v1'; S = { pets: 0, visits: 0, streak: 0, lastDay: '', acts: {}, unlocked: [], worn: { acc: [], fur: 'cream' }, mood: 'normal', lastGreet: -1, lastMem: '' };
+    try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') S = Object.assign(S, v); } catch (e) {}
+    S.worn = S.worn || { acc: [], fur: 'cream' }; S.acts = S.acts || {}; S.unlocked = (S.unlocked || []).filter(x => x !== 'm_sleep'); lastLook = JSON.stringify(S.worn);
+  }
   function start() {
     if (started) { if (root) root.classList.remove('hidden'); return; }
     started = true;
@@ -620,5 +627,5 @@ body.reading-mode .catpal:hover{opacity:1}`;
     if (ch) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} try { redraw(); } catch (e) {} }
     return ch;
   }
-  window.CatPal = { family, meow, _sleep: on => on === false ? wake() : fallAsleep(true), _asleep: () => asleep, _idle: ms => { lastTouch = Date.now() - ms; S.lastPet = 0; }, _sleepAudio: () => sleepAud, _voices: VOICES, _sleepVoices: SLEEP_VOICES, exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
+  window.CatPal = { useGuest, family, meow, _sleep: on => on === false ? wake() : fallAsleep(true), _asleep: () => asleep, _idle: ms => { lastTouch = Date.now() - ms; S.lastPet = 0; }, _sleepAudio: () => sleepAud, _voices: VOICES, _sleepVoices: SLEEP_VOICES, exportState, importState, start, act, family, _sync: sync, _row: myRow, _pick: pickMemory, say: (t, ms) => { if (root && !bubble.classList.contains('show')) say(t, ms); }, _greet: greeting, _relocate: relocate, _spots: spots, poke: () => root && poke(), _state: () => S, _items: ITEMS };
 })();

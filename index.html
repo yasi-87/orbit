@@ -1713,7 +1713,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 .gate-box input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(212,165,255,.4);background:rgba(10,10,15,.6);color:var(--text);font:inherit;font-size:1.05rem;text-align:center;direction:ltr;letter-spacing:1px}
 .gate-box .btn{width:100%;margin-top:12px}.gate-err{min-height:1.4em;margin-top:10px;color:#ff8fa8;font-size:.85rem}
 .gate-box.shake{animation:caShake .5s}
-body.guest .nav-btn:not([data-screen=canvas]):not([data-screen=profile]),body.guest #bellBtn,body.guest #updatesBtn,body.guest #notifPanel,body.guest #chatLauncher,body.guest #chatDock,body.guest #musicPlayer,body.guest #bioCard,body.guest .profile-stats,body.guest #catFamily,body.guest #catFamH,body.guest .cat-pal,body.guest [id^=catPal]{display:none !important}
+body.guest .nav-btn:not([data-screen=canvas]):not([data-screen=profile]),body.guest #bellBtn,body.guest #updatesBtn,body.guest #notifPanel,body.guest #chatLauncher,body.guest #chatDock,body.guest #bioCard,body.guest .profile-stats,body.guest #catFamily,body.guest #catFamH{display:none !important}
 body.guest #app{padding-left:0 !important}
 </style>
 </head>
@@ -2336,6 +2336,8 @@ function enterApp() {
   if (guestMode) {
     document.body.classList.add('app-on', 'guest'); showScreen('canvas');
     toast('👋 خوش اومدی ' + (userProfile.name || 'آیسا') + '! اینجا بوم و پروفایلته 🎨');
+    playAmbient();
+    try { CatPal.useGuest(); CatPal.start(); } catch (e) { console.warn(e); }
     return;
   }
   showScreen('chapters');
@@ -2493,8 +2495,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-03b';
+const SITE_VERSION = '2026-11-03c';
 const SITE_CHANGES = [
+  '👧 بوم آیسا جداست: آیسا بوم و گالری خودش رو داره و ما بوم خودمون رو؛ اگه خواستیم، از تنظیمات بوم آیسا رو به بوم ما دعوت می‌کنیم. آیسا گربه و موسیقی پس‌زمینه هم داره',
   '👧 ورود مهمان برای آیسا: با نام کاربری «آیسا» و رمز مخصوص خودش فقط 🎨 بوم و 👤 پروفایل باز می‌شه؛ و توی بوم هر سه نفر همزمان می‌تونن نقاشی کنن',
   '🍿 اتاق تماشا رفت توی 🎬 سرگرمی (تب فیلم و سریال)؛ حالا زیرنویس (آپلود فایل srt/vtt یا لینک، با تنظیم همزمانی) داره و فیلم رو می‌شه با لینک مستقیم یا آپلود از سیستم هم آورد و دید',
   '🎨 بوم: حدس‌ها ثبت می‌شن و توی تب 💡 (کنار گالری) می‌بینی کی چی حدس زده، چندتا درست بوده و جواب هر دور؛ و هر دور حدس زدن زمان‌دار شد (۷۵ تا ۱۲۰ ثانیه بسته به سطح)',
