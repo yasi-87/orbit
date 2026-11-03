@@ -391,8 +391,8 @@
       const r = await dbClient.from('voice_chat').select('*').order('ts', { ascending: false }).limit(300);
       if (r.error) { chatMissing = /voice_chat|relation|schema cache/i.test(r.error.message || ''); renderChat(); return; }
       chatMissing = false;
-      (r.data || []).filter(x => { const id = String(x.id); if (id === '__bot') { botOn = x.text !== '0'; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} return false; } return !id.startsWith('__seen_') || (!isMine(x.name) && (seenBy[x.name] = Math.max(seenBy[x.name] || 0, Number(x.ts) || 0)) && false); }).forEach(x => addMsg({ edited: !!x.edited, id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }));
-      saveMsgs(); renderChat(); renderBot(); markSeen();
+      (r.data || []).filter(x => { const id = String(x.id); if (id === '__bg') { const v = x.text === '-' ? '' : String(x.text || ''); if (okBg(v)) { chatBg = v; try { localStorage.setItem('vc_bg', v); } catch (e) {} } return false; } if (id === '__bot') { botOn = x.text !== '0'; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} return false; } return !id.startsWith('__seen_') || (!isMine(x.name) && (seenBy[x.name] = Math.max(seenBy[x.name] || 0, Number(x.ts) || 0)) && false); }).forEach(x => addMsg({ edited: !!x.edited, id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }));
+      saveMsgs(); renderChat(); renderBot(); applyBg(); markSeen();
     } catch (e) {}
   }
   function onChat(p) {
@@ -407,6 +407,43 @@
   let botOn = true, editing = null; try { botOn = localStorage.getItem('vc_bot') !== '0'; } catch (e) {}
   let seenBy = {}, typers = {}, lastTypeSent = 0, typeIdle = null, mySeenSent = 0;
   try { mySeenSent = Number(localStorage.getItem('vc_seen_sent')) || 0; } catch (e) {}
+
+  /* ---------- پس‌زمینهٔ مشترک چت ---------- */
+  const BGS = { night: 'linear-gradient(160deg,#1b1038,#3a1c5e 55%,#14213d)', rose: 'linear-gradient(160deg,#4a1635,#a23a6b 60%,#2b1240)', ocean: 'linear-gradient(160deg,#06243d,#0f6a8a 60%,#102a56)', forest: 'linear-gradient(160deg,#0d2a1f,#1f6b4d 60%,#1a2a45)', sunset: 'linear-gradient(160deg,#42204f,#d6567a 55%,#f2a65a)', dots: 'radial-gradient(rgba(255,255,255,.12) 1.5px,transparent 1.6px) 0 0/18px 18px,linear-gradient(160deg,#1c1530,#2a1f4a)' };
+  let chatBg = ''; try { chatBg = localStorage.getItem('vc_bg') || ''; } catch (e) {}
+  const okBg = v => typeof v === 'string' && (v === '' || (/^p:[a-z]+$/.test(v) && BGS[v.slice(2)]) || /^i:https?:\/\/[^\s"'()]+$/.test(v));
+  function applyBg() {
+    const l = $('vcChatList'); if (!l) return;
+    let v = '';
+    if (chatBg.startsWith('p:')) v = BGS[chatBg.slice(2)] || ''; else if (chatBg.startsWith('i:')) v = 'linear-gradient(rgba(10,6,24,.45),rgba(10,6,24,.45)),url("' + chatBg.slice(2) + '")';
+    l.classList.toggle('hasbg', !!v); l.style.background = v; if (v) { l.style.backgroundSize = chatBg.startsWith('i:') ? 'cover' : ''; l.style.backgroundPosition = 'center'; }
+    const pop = $('vcBgPop'); if (pop) pop.querySelectorAll('[data-bgp]').forEach(b => b.classList.toggle('on', 'p:' + b.dataset.bgp === chatBg));
+  }
+  function setBg(v, quiet) {
+    if (!okBg(v)) return; chatBg = v; try { localStorage.setItem('vc_bg', v); } catch (e) {} applyBg();
+    if (!quiet) { ctSend({ k: 'bg', v }); try { dbClient.from('voice_chat').upsert({ id: '__bg', name: nm(), text: v || '-', ts: Date.now() }).then(() => {}, () => {}); } catch (e) {} say(v ? '🎨 پس‌زمینهٔ چت عوض شد' : '🎨 پس‌زمینه برداشته شد'); }
+  }
+  async function pickBgImage(file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    const pop = $('vcBgPop'), st = pop && pop.querySelector('[data-bgst]');
+    try {
+      const blob = await resizeImageFile(file, 1200, 0.8);
+      const up = await uploadMediaFile(blob, 'jpg', 'chat-bg.jpg', { onProgress: (l, t) => { if (st) st.textContent = 'در حال آپلود… ' + Math.round(l / t * 100).toLocaleString('fa-IR') + '٪'; } });
+      setBg('i:' + up.url); if (st) st.textContent = '';
+    } catch (e) { if (st) st.textContent = ''; say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'عکس آپلود نشد')); }
+  }
+  function toggleBgPop() {
+    const dock = $('chatDock'); if (!dock) return; const old = $('vcBgPop'); if (old) { old.remove(); return; }
+    const d = document.createElement('div'); d.id = 'vcBgPop'; d.className = 'vc-bgpop';
+    d.innerHTML = '<h6>پس‌زمینهٔ مشترک چت (برای هر دو نفر)</h6><div class="vc-bgsw">' + Object.keys(BGS).map(k => '<button type="button" data-bgp="' + k + '" style="background:' + BGS[k] + '" aria-label="' + k + '"></button>').join('') + '</div><div class="vc-bgact"><button type="button" data-bgup>🖼️ عکس خودمون</button><button type="button" data-bgno>🚫 بدون پس‌زمینه</button></div><input type="file" accept="image/*" hidden id="vcBgFile"><h6 data-bgst></h6>';
+    dock.appendChild(d); applyBg();
+    d.addEventListener('click', e => {
+      const p = e.target.closest('[data-bgp]'); if (p) { setBg('p:' + p.dataset.bgp); return; }
+      if (e.target.closest('[data-bgno]')) { setBg(''); d.remove(); return; }
+      if (e.target.closest('[data-bgup]')) { $('vcBgFile').click(); }
+    });
+    $('vcBgFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; pickBgImage(f); });
+  }
   const ctSend = p => { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'ct', payload: Object.assign({ from: ID, name: nm() }, p) }); } catch (e) {} };
   function onCt(p) {
     if (!p || p.from === ID) return;
@@ -414,6 +451,7 @@
     else if (p.k === 'del') { const n = msgs.length; msgs = msgs.filter(x => x.id !== p.id); if (msgs.length !== n) { saveMsgs(); renderChat(); } }
     else if (p.k === 'edit') { const m = msgs.find(x => x.id === p.id); if (m && typeof p.text === 'string') { m.text = p.text.slice(0, 500); m.edited = true; saveMsgs(); renderChat(); } }
     else if (p.k === 'bot') { botOn = !!p.on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); say(botOn ? '🧸 پفیلا روشن شد' : '🧸 پفیلا خاموش شد'); }
+    else if (p.k === 'bg') { if (okBg(p.v)) { chatBg = p.v; try { localStorage.setItem('vc_bg', chatBg); } catch (e) {} applyBg(); say('🎨 ' + (String(p.name || 'اون یکی').slice(0, 30)) + ' پس‌زمینهٔ چت رو عوض کرد'); } }
     else if (p.k === 'seen') { const n = String(p.name || ''); seenBy[n] = Math.max(seenBy[n] || 0, Number(p.upto) || 0); renderChat(); }
   }
   function renderTyping() {
@@ -573,6 +611,7 @@
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     const ci = $('vcChatInput'); if (ci) ci.addEventListener('input', onTyping);
+    const gb = $('bgBtn'); if (gb) gb.addEventListener('click', toggleBgPop); applyBg();
     const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
     const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
     const imgOf = dt => { const it = dt && dt.items ? Array.from(dt.items).find(i => i.kind === 'file' && /^image\//.test(i.type)) : null; const f = it ? it.getAsFile() : (dt && dt.files ? Array.from(dt.files).find(x => /^image\//.test(x.type)) : null); return f || null; };

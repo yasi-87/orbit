@@ -1597,6 +1597,14 @@ body.reading-mode .reading-content {
 .vc-ed{font-size:.62rem;opacity:.7}
 .vc-msg.flash{animation:vcFlash 1.4s}
 @keyframes vcFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 2px var(--accent,#d4a5ff)}}
+.vc-chat-list.hasbg{background-size:cover;background-position:center;border-radius:0}
+.vc-bgpop{position:absolute;top:44px;inset-inline:10px;z-index:5;background:rgba(24,16,40,.97);border:1px solid rgba(212,165,255,.35);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.vc-bgpop h6{margin:0;font-size:.75rem;color:var(--muted);font-weight:600}
+.vc-bgsw{display:flex;flex-wrap:wrap;gap:8px}
+.vc-bgsw button{width:42px;height:42px;border-radius:10px;border:2px solid transparent;cursor:pointer;background-size:cover;background-position:center;color:#fff;font-size:.9rem}
+.vc-bgsw button.on{border-color:var(--gold)}
+.vc-bgpop .vc-bgact{display:flex;gap:6px;flex-wrap:wrap}
+.vc-bgpop .vc-bgact button{flex:1;padding:7px 8px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer;font-size:.8rem}
 .vc-cmp{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid rgba(212,165,255,.2);font-size:.8rem;background:rgba(0,0,0,.18)}
 .vc-cmp span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .vc-cmp.up{flex-wrap:wrap}.vc-cmp .vc-upb{flex-basis:100%;height:5px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden}.vc-cmp .vc-upb i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b388ff,#ff8fc7);transition:width .15s}.vc-cmp img{width:38px;height:38px;object-fit:cover;border-radius:8px}
@@ -2106,7 +2114,7 @@ body.guest #app{padding-left:0 !important}
 
 <!-- ============ چت کنار صفحه (همه‌جا دم دسته) ============ -->
 <button type="button" id="chatLauncher" aria-label="باز کردن چت" title="چت"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><i id="chatBadge" style="display:none">0</i></button>
-<aside id="chatDock" class="vc-chat" aria-label="چت"><div class="vc-chat-h"><span>💬 چت کوچولو</span><button type="button" id="botToggle" class="bot-tg on" aria-pressed="true" title="پفیلا روشنه">🧸 <i></i></button><button type="button" id="chatClose" aria-label="بستن چت" title="بستن"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+<aside id="chatDock" class="vc-chat" aria-label="چت"><div class="vc-chat-h"><span>💬 چت کوچولو</span><button type="button" id="bgBtn" aria-label="پس‌زمینهٔ چت" title="پس‌زمینهٔ مشترک چت">🎨</button><button type="button" id="botToggle" class="bot-tg on" aria-pressed="true" title="پفیلا روشنه">🧸 <i></i></button><button type="button" id="chatClose" aria-label="بستن چت" title="بستن"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
 <div class="vc-chat-list" id="vcChatList"></div>
       <div id="vcTyping" class="vc-typing" aria-live="polite"></div>
       <div class="vc-bot" id="vcBot" title="پفیلا، دستیار کوچولوی مشترک"><span>🧸 پفیلا</span><button type="button" data-bot="جوک بگو">😂 جوک</button><button type="button" data-bot="فال">✨ فال</button><button type="button" data-bot="یه سوال بپرس">❓ سوال</button><button type="button" data-bot="ایده برای دیت">💡 ایده</button><button type="button" data-bot="سکه بنداز">🪙 سکه</button><button type="button" data-bot="تاس بنداز">🎲 تاس</button><button type="button" data-bot="راهنما">؟</button></div>
@@ -2495,8 +2503,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-03e';
+const SITE_VERSION = '2026-11-03f';
 const SITE_CHANGES = [
+  '🎨 پس‌زمینهٔ مشترک چت: از دکمهٔ 🎨 بالای چت یه طرح آماده یا عکس خودتون رو می‌ذارید و برای هر دو نفر عوض می‌شه',
   '📤 موقع فرستادن عکس توی چت، درصد و مقدار آپلود شده زیر پیش‌نمایش نشون داده می‌شه و می‌تونی لغوش کنی',
   '📋 توی چت می‌تونی عکس رو کپی کنی و توی نوشته‌ی پیام پیست کنی (یا بکشی و رها کنی) تا آماده‌ی ارسال بشه',
   '👧 بوم آیسا جداست: آیسا بوم و گالری خودش رو داره و ما بوم خودمون رو؛ اگه خواستیم، از تنظیمات بوم آیسا رو به بوم ما دعوت می‌کنیم. آیسا گربه و موسیقی پس‌زمینه هم داره',
