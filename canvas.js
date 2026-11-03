@@ -946,7 +946,7 @@
     if (!pop) { el.style.display = 'none'; return; }
     el.style.display = 'block'; el.innerHTML = popHtml(pop);
     el.onclick = e => e.stopPropagation();
-    el.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { color = b.dataset.c; renderRail(); renderPop(); });
+    el.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { color = b.dataset.c; if (window.matchMedia && matchMedia('(max-width:760px)').matches) { pop = null; render(); } else { renderRail(); renderPop(); } });
     const pk = $('cvPick'); if (pk) pk.oninput = e => { color = e.target.value; const d = $('cvPvDot'); if (d) d.style.background = color; renderRail(); };
     el.querySelectorAll('[data-pal]').forEach(b => b.onclick = suggestPalette);
     el.querySelectorAll('[data-sz]').forEach(b => b.onclick = () => { size = +b.dataset.sz; toolSizes[tool] = size; renderPop(); renderRailDot(); });
