@@ -1713,12 +1713,15 @@ input.seek:disabled{opacity:.4;cursor:default}
 .gate-box input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(212,165,255,.4);background:rgba(10,10,15,.6);color:var(--text);font:inherit;font-size:1.05rem;text-align:center;direction:ltr;letter-spacing:1px}
 .gate-box .btn{width:100%;margin-top:12px}.gate-err{min-height:1.4em;margin-top:10px;color:#ff8fa8;font-size:.85rem}
 .gate-box.shake{animation:caShake .5s}
+body.guest .nav-btn:not([data-screen=canvas]):not([data-screen=profile]),body.guest #bellBtn,body.guest #updatesBtn,body.guest #notifPanel,body.guest #chatLauncher,body.guest #chatDock,body.guest #musicPlayer,body.guest #bioCard,body.guest .profile-stats,body.guest #catFamily,body.guest #catFamH,body.guest .cat-pal,body.guest [id^=catPal]{display:none !important}
+body.guest #app{padding-left:0 !important}
 </style>
 </head>
 <body>
 <!-- ============ قفل سایت ============ -->
 <div id="gate"><form class="gate-box" id="gateForm" autocomplete="off">
   <div class="g-ico">🔒</div><h2>Our Memories</h2><p>این‌جا فقط مال ماست 💜 رمز رو بزن</p>
+  <input id="gateUser" type="text" placeholder="نام کاربری (اگه داری)" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px" />
   <input id="gatePass" type="password" placeholder="رمز" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" />
   <button class="btn" type="submit">🔓 ورود</button>
   <button class="btn ghost" type="button" id="gateBio" style="display:none">🖐️ ورود با اثر انگشت</button><div class="gate-err" id="gateErr"></div>
@@ -2083,7 +2086,7 @@ input.seek:disabled{opacity:.4;cursor:default}
       </div>
     </div>
 
-    <div class="chapters-header" style="margin-top:26px"><h2>🐾 گربه‌های ما</h2></div>
+    <div class="chapters-header" id="catFamH" style="margin-top:26px"><h2>🐾 گربه‌های ما</h2></div>
     <div id="catFamily"></div>
   </div>
 </div>
@@ -2171,9 +2174,12 @@ let userProfile = {
 };
 
 function saveUserProfile() {
+  if (guestMode) { try { if (userProfile.name) localStorage.setItem('diary_guest_name', userProfile.name); if (userProfile.avatar) localStorage.setItem('diary_guest_avatar', userProfile.avatar); } catch (e) {} }
+  else {
   if (userProfile.name) localStorage.setItem('diary_user_name', userProfile.name);
   if (window.ProfileSync && userProfile.name) setTimeout(() => ProfileSync.start(), 0);
   if (userProfile.avatar) localStorage.setItem('diary_user_avatar', userProfile.avatar);
+  }
   updateProfileUI();
   updateHomeGreeting();
   updateCommentAvatar();
@@ -2279,6 +2285,7 @@ function uploadAvatar(ev) {
 let currentScreen = 'chapters';
 
 function showScreen(name) {
+  if (guestMode && name !== 'canvas' && name !== 'profile') name = 'canvas';
   currentScreen = name;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const target = document.getElementById('screen-' + name);
@@ -2319,12 +2326,18 @@ function showScreen(name) {
 }
 
 function enterApp() {
-  if (!gateOpen()) { showGate(); return; }
+  if (!gateOpen()) { pendingEnter = true; showGate(); return; }
+  pendingEnter = false;
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('app').classList.add('active');
   updateProfileUI();
   updateHomeGreeting();
   updateCommentAvatar();
+  if (guestMode) {
+    document.body.classList.add('app-on', 'guest'); showScreen('canvas');
+    toast('👋 خوش اومدی ' + (userProfile.name || 'آیسا') + '! اینجا بوم و پروفایلته 🎨');
+    return;
+  }
   showScreen('chapters');
   playAmbient();
   initNotifications();
@@ -2341,6 +2354,7 @@ function backToWelcome() {
   document.getElementById('welcome').classList.remove('hidden');
   currentChapterId = null;
   gateOk = false;   // با خروج، دفعهٔ بعد دوباره رمز می‌خواد
+  if (guestMode) { applyGuest(false); try { location.reload(); } catch (e) {} }
   document.body.classList.remove('app-on', 'chat-open');
 }
 
@@ -2372,10 +2386,19 @@ function sha256Hex(str) {
   }
   return h.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
 }
+/* 👧 ورود مهمان (آیسا): با نام کاربری «آیسا / Aisa» و رمز مخصوص خودش فقط 🎨 بوم و 👤 پروفایل باز می‌شه. (این هم سمت مرورگره؛ فقط جلوی دسترسیِ معمولی به بخش‌های دیگه رو می‌گیره) */
+const GUEST_HASH = '0536c0b26ecf29bd0c132220d2f11a1fdbedfa084aca8861d0fd525228c00a0d', GUEST_USERS = ['آیسا', 'ایسا', 'aisa'];
+const normUser = s => String(s || '').trim().toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\s\u200c]/g, '');
+let guestMode = false;
+function applyGuest(on) {
+  guestMode = !!on; document.body.classList.toggle('guest', guestMode);
+  if (guestMode) { userProfile = { name: localStorage.getItem('diary_guest_name') || 'آیسا', avatar: localStorage.getItem('diary_guest_avatar') || '' }; }
+  else { userProfile = { name: localStorage.getItem('diary_user_name') || '', avatar: localStorage.getItem('diary_user_avatar') || '' }; }
+}
 let gateOk = false;   // فقط توی حافظهٔ صفحه؛ هر بار که سایت باز یا رفرش بشه دوباره رمز می‌خواد
 try { localStorage.removeItem(GATE_KEY); } catch (e) {}
 const gateOpen = () => gateOk;
-let gateFails = 0, gateLockUntil = 0;
+let gateFails = 0, gateLockUntil = 0, pendingEnter = false;
 function showGate() {
   const g = document.getElementById('gate'); g.classList.add('show');
   setTimeout(() => { const i = document.getElementById('gatePass'); if (i) i.focus(); }, 100);
@@ -2406,7 +2429,7 @@ async function bioLogin() {
   const err = document.getElementById('gateErr'); if (bioBusy || gateOk) return; bioBusy = true;
   try {
     const cred = await navigator.credentials.get({ publicKey: { challenge: rndBytes(32), allowCredentials: [{ type: 'public-key', id: b64d(bioId()) }], userVerification: 'required', timeout: 60000 } });
-    if (cred) gateUnlock();
+    if (cred) { applyGuest(false); gateUnlock(); }
   } catch (e) { if (e && e.name !== 'NotAllowedError' && e.name !== 'AbortError') err.textContent = 'اثر انگشت جواب نداد؛ رمز رو بزن 🙈'; }
   bioBusy = false;
 }
@@ -2453,8 +2476,14 @@ document.getElementById('gateForm').addEventListener('submit', e => {
   e.preventDefault();
   const inp = document.getElementById('gatePass'), err = document.getElementById('gateErr'), box = document.getElementById('gateForm');
   if (Date.now() < gateLockUntil) { err.textContent = 'کمی صبر کن و دوباره امتحان کن ⏳'; return; }
-  if (sha256Hex('om:' + inp.value.trim()) === GATE_HASH) {
-    gateUnlock(); setTimeout(bioOffer, 800);
+  const hh = sha256Hex('om:' + inp.value.trim()), un = normUser((document.getElementById('gateUser') || {}).value);
+  if (hh === GATE_HASH) {
+    applyGuest(false); gateUnlock(); setTimeout(bioOffer, 800);
+  } else if (hh === GUEST_HASH && GUEST_USERS.includes(un)) {
+    applyGuest(true); gateUnlock();
+    if (document.getElementById('app').classList.contains('active') || pendingEnter) { enterApp(); }
+  } else if (hh === GUEST_HASH) {
+    inp.value = ''; err.textContent = 'نام کاربری رو هم بنویس 🙈';
   } else {
     gateFails++; inp.value = ''; err.textContent = 'رمز درست نیست 🙈';
     box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
@@ -2464,8 +2493,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-03a';
+const SITE_VERSION = '2026-11-03b';
 const SITE_CHANGES = [
+  '👧 ورود مهمان برای آیسا: با نام کاربری «آیسا» و رمز مخصوص خودش فقط 🎨 بوم و 👤 پروفایل باز می‌شه؛ و توی بوم هر سه نفر همزمان می‌تونن نقاشی کنن',
   '🍿 اتاق تماشا رفت توی 🎬 سرگرمی (تب فیلم و سریال)؛ حالا زیرنویس (آپلود فایل srt/vtt یا لینک، با تنظیم همزمانی) داره و فیلم رو می‌شه با لینک مستقیم یا آپلود از سیستم هم آورد و دید',
   '🎨 بوم: حدس‌ها ثبت می‌شن و توی تب 💡 (کنار گالری) می‌بینی کی چی حدس زده، چندتا درست بوده و جواب هر دور؛ و هر دور حدس زدن زمان‌دار شد (۷۵ تا ۱۲۰ ثانیه بسته به سطح)',
   '💬 چت: ویرایش ✏️ و حذف 🗑️ پیام‌های خودت (برای هر دو)، و کلید روشن/خاموش پفیلا 🧸 بالای چت',
