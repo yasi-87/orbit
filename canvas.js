@@ -1101,6 +1101,15 @@
   }
   function init() {
     if (inited) return; inited = true;
+    document.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const k = String(e.key || '').toLowerCase(); if (k !== 'z' && k !== 'y') return;
+      const a = document.activeElement, tg = a && a.tagName; if (tg === 'INPUT' || tg === 'TEXTAREA' || tg === 'SELECT' || (a && a.isContentEditable)) return;
+      const box = $('canvasBox'); if (!box || !box.offsetParent || !$('cvWork') || document.querySelector('.cv-modal')) return;
+      if (typeof guessWord !== 'undefined' && false) return;
+      e.preventDefault();
+      if (k === 'y' || (k === 'z' && e.shiftKey)) redoOp(); else undo();
+    });
     const g = $('canvasBox'); if (g) g.addEventListener('click', e => {
       const f = e.target.closest('[data-fav]'); if (f) return toggleFav(f.dataset.fav);
       const o = e.target.closest('[data-open]'); if (o) return openArt(o.dataset.open);
