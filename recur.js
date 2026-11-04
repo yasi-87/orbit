@@ -267,6 +267,8 @@
 
   const NOTIF_TEXT = {
     chapter: { icon: '📖', text: 'یه فصل جدید نوشت' },
+    canvas: { icon: '🎨', text: 'داره نقاشی می‌کشه' },
+    canvas_art: { icon: '🖼️', text: 'یه نقاشی ذخیره کرد' },
     chapter_update: { icon: '✏️', text: 'یه فصل رو آپدیت کرد' },
     comment: { icon: '💬', text: 'یه کامنت گذاشت' },
     song: { icon: '🎵', text: 'یه آهنگ اضافه کرد' },
