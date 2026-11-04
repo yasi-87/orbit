@@ -577,6 +577,7 @@
           if (r2 && r2.error) { try { await dbClient.storage.from('songs').remove([up2.path]); } catch (e) {} } else if (!replace && typeof notify === 'function') notify('canvas_art', title, cp.id, { author: nm() });
         } catch (e) { console.warn(e); }
       }
+      if (!secret && canShare() && (shareOn() || (replace && sharedSet.has(row.id)))) { try { await putAisaCopy(Object.assign({}, row), row.strokes, blob); } catch (e) { console.warn(e); } }
       artMissing = false; if (replace && ex.path && ex.path !== up.path) { try { dbClient.storage.from('songs').remove([ex.path]); } catch (e) {} } gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined })); if (replace || opts.finish) { editId = null; renderMode(); }
       fx(opts.finish ? 40 : 18); toast2(secret ? '🔒 نقاشی مخفی ذخیره شد و سر وقتش نمایش داده می‌شه' : (opts.finish ? '🏁 نقاشی تموم شد و توی گالری ذخیره شد 💞' : '💾 توی گالری ذخیره شد ✨'));
       if (!secret) send({ t: 'saved' });
@@ -594,7 +595,7 @@
   async function loadGallery() {
     try {
       const r = await dbClient.from('canvas_art').select('id,title,url,path,bg,author,created_at,fav,comments,reveal_at,topic,mode').order('created_at', { ascending: false }).limit(200);
-      if (r.error) { artMissing = /canvas_art|relation|schema cache/i.test(r.error.message || ''); } else { artMissing = false; gallery = (r.data || []).filter(g => spc() === 'aisa' ? String(g.id).startsWith('ai_') : !String(g.id).startsWith('ai_')); galleryLoaded = true; }
+      if (r.error) { artMissing = /canvas_art|relation|schema cache/i.test(r.error.message || ''); } else { artMissing = false; sharedSet = new Set((r.data || []).filter(g => String(g.id).startsWith('ai_sh_')).map(g => String(g.id).slice(6))); gallery = (r.data || []).filter(g => spc() === 'aisa' ? String(g.id).startsWith('ai_') : !String(g.id).startsWith('ai_')); galleryLoaded = true; }
     } catch (e) {}
     renderGallery();
   }
@@ -610,15 +611,41 @@
       let cm = 0; try { cm = JSON.parse(g.comments || '[]').length; } catch (e) {}
       return `<div class="cv-card" data-id="${esc(g.id)}">${lk ? `<div class="cv-lock">🔒<small>غافلگیری! حدود ${fa(left)} ساعت دیگه</small></div>` : `<img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" data-open="${esc(g.id)}">`}
         <div class="cv-ct"><b>${esc(lk ? 'نقاشی مخفی' : g.title)}</b><small>${esc(g.author || '')} · ${esc(dateOf(g.created_at))}</small></div>
-        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button><button type="button" data-pdf="${esc(g.id)}" title="ذخیره PDF">📄</button>`}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
+        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button><button type="button" data-pdf="${esc(g.id)}" title="ذخیره PDF">📄</button>`}${canShare() && !lk ? `<button type="button" data-aish="${esc(g.id)}" class="${sharedSet.has(g.id) ? 'on' : ''}" title="${sharedSet.has(g.id) ? 'الان برای آیسا نمایش داده می‌شه (برای پنهان کردن بزن)' : 'نمایش برای آیسا'}">${sharedSet.has(g.id) ? '👧✅' : '👧'}</button>` : ''}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
     }).join('') + '</div>';
     const fo = $('cvFavOnly'); if (fo) fo.onchange = () => { galFav = fo.checked; renderGallery(); };
   }
-  let galFav = false;
+  let galFav = false, sharedSet = new Set();
+  const shareOn = () => { try { return localStorage.getItem('cv_share_aisa') === '1'; } catch (e) { return false; } };
+  const canShare = () => !guestNow() && spc() === 'us';
+  /* 👧 نمایش یک نقاشیِ ما برای آیسا (یک نسخه توی گالری خودش؛ با زدن دوباره، پنهان می‌شه) */
+  async function putAisaCopy(g, strokesJson, blob) {
+    const up = await uploadMediaFile(blob, 'png', 'canvas.png');
+    const row = { id: 'ai_sh_' + g.id, title: g.title, url: up.url, path: up.path, strokes: strokesJson || '[]', bg: g.bg || 'cream', author: g.author || '', created_at: g.created_at || Date.now(), fav: false, comments: '[]', reveal_at: null, topic: g.topic || '', mode: g.mode && g.mode !== 'secret' ? g.mode : 'free' };
+    const { error } = await dbClient.from('canvas_art').upsert(row);
+    if (error) { try { await dbClient.storage.from('songs').remove([up.path]); } catch (e) {} throw error; }
+    sharedSet.add(g.id); return row;
+  }
+  async function shareArt(id) {
+    const g = gallery.find(x => x.id === id); if (!g || locked(g)) return;
+    const sid = 'ai_sh_' + id;
+    if (sharedSet.has(id)) {
+      if (!confirm('«' + g.title + '» از گالری آیسا برداشته بشه؟')) return;
+      try { const r = await dbClient.from('canvas_art').select('path').eq('id', sid).maybeSingle(); const { error } = await dbClient.from('canvas_art').delete().eq('id', sid); if (error) throw error; if (r && r.data && r.data.path) dbClient.storage.from('songs').remove([r.data.path]); sharedSet.delete(id); renderGallery(); toast2('👧 از گالری آیسا برداشته شد'); } catch (e) { toast2('⚠️ برداشته نشد'); }
+      return;
+    }
+    toast2('⏳ دارم برای آیسا می‌فرستم…');
+    try {
+      const rs = await dbClient.from('canvas_art').select('strokes').eq('id', id).maybeSingle();
+      const blob = await (await fetch(g.url)).blob();
+      await putAisaCopy(g, rs && rs.data && rs.data.strokes, blob);
+      renderGallery(); toast2('👧 «' + g.title + '» حالا توی گالری آیسا هم هست 💞');
+    } catch (e) { console.error(e); toast2('⚠️ برای آیسا فرستاده نشد'); }
+  }
   async function toggleFav(id) { const g = gallery.find(x => x.id === id); if (!g) return; g.fav = !g.fav; renderGallery(); try { await dbClient.from('canvas_art').update({ fav: g.fav }).eq('id', id); } catch (e) {} }
   async function delArt(id) {
     if (!confirm('این نقاشی برای هر دو حذف بشه؟')) return; const g = gallery.find(x => x.id === id); if (!g) return;
-    try { const { error } = await dbClient.from('canvas_art').delete().eq('id', id); if (error) throw error; if (g.path) dbClient.storage.from('songs').remove([g.path]); gallery = gallery.filter(x => x.id !== id); renderGallery(); toast2('🗑️ حذف شد'); } catch (e) { toast2('⚠️ حذف نشد'); }
+    try { const { error } = await dbClient.from('canvas_art').delete().eq('id', id); if (error) throw error; if (g.path) dbClient.storage.from('songs').remove([g.path]); if (sharedSet.has(id)) { try { const r2 = await dbClient.from('canvas_art').select('path').eq('id', 'ai_sh_' + id).maybeSingle(); await dbClient.from('canvas_art').delete().eq('id', 'ai_sh_' + id); if (r2 && r2.data && r2.data.path) dbClient.storage.from('songs').remove([r2.data.path]); sharedSet.delete(id); } catch (e) {} } gallery = gallery.filter(x => x.id !== id); renderGallery(); toast2('🗑️ حذف شد'); } catch (e) { toast2('⚠️ حذف نشد'); }
   }
   async function dlArt(id) { const g = gallery.find(x => x.id === id); if (!g) return; try { const r = await fetch(g.url); const b = await r.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = (g.title || 'canvas') + '.png'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); } catch (e) { window.open(g.url, '_blank'); } }
 
@@ -954,7 +981,7 @@
       <h6 style="margin-top:8px">سطح بازی حدس زدن</h6><div class="cv-chips">${['easy', 'med', 'hard'].map(l => `<button type="button" data-lv="${l}" class="${meta.level === l ? 'on' : ''}">${LVL[l]}</button>`).join('')}</div>`;
     if (n === 'set') return `<h6>ظاهر</h6><div class="cv-prow" style="justify-content:space-between">${['dream', 'sunset', 'mint'].map(t => `<button type="button" class="cv-ib${theme === t ? ' on' : ''}" data-th="${t}" title="تم" style="background:${t === 'dream' ? 'linear-gradient(135deg,#d4a5ff,#ff8fb8)' : t === 'sunset' ? 'linear-gradient(135deg,#ffb07a,#ff6f91)' : 'linear-gradient(135deg,#7fe0c4,#6fb7ff)'}"></button>`).join('')}
       <button type="button" class="cv-ib" data-set="light" title="روشن / تاریک">${ico(light ? 'moon' : 'sun')}</button><button type="button" class="cv-ib" data-set="music" title="موسیقی">${ico('music')}</button></div>
-      ${guestNow() ? '' : `<h6>آیسا 👧</h6><div class="cv-chips"><button type="button" data-inv="1" class="${invited ? 'on' : ''}">${invited ? '✅ آیسا توی بوم ماست (برای بیرون کردن بزن)' : '➕ آیسا رو به بوم ما اضافه کن'}</button></div>`}
+      ${guestNow() ? '' : `<h6>آیسا 👧</h6><div class="cv-chips"><button type="button" data-shr="1" class="${shareOn() ? 'on' : ''}">${shareOn() ? '✅ نقاشی‌های ذخیره‌شده‌ی ما برای آیسا هم ذخیره بشن' : '🖼️ نقاشی‌های ذخیره‌شده برای آیسا هم ذخیره بشن'}</button></div><div class="cv-chips"><button type="button" data-inv="1" class="${invited ? 'on' : ''}">${invited ? '✅ آیسا توی بوم ماست (برای بیرون کردن بزن)' : '➕ آیسا رو به بوم ما اضافه کن'}</button></div>`}
       <h6>فیلتر خروجی</h6><div class="cv-chips">${[['', '○'], ['cartoon', '◐'], ['sketch', '✎'], ['soft', '✿']].map(f => `<button type="button" data-f="${f[0]}" title="${{ '': 'بدون فیلتر', cartoon: 'کارتونی', sketch: 'مدادی', soft: 'نرم و رویایی' }[f[0]]}" class="${filterSel === f[0] ? 'on' : ''}">${f[1]}</button>`).join('')}</div>`;
     return '';
   }
@@ -980,6 +1007,7 @@
     el.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { theme = b.dataset.th; jset('diary_cv_theme', theme); $('screen-canvas').dataset.cvt = theme; renderPop(); });
     el.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { if (b.dataset.set === 'light') { light = !light; jset('diary_cv_light', light); $('screen-canvas').classList.toggle('cv-light', light); renderPop(); } else { const m = $('mpPlay'); if (m) m.click(); } });
     el.querySelectorAll('[data-inv]').forEach(b => b.onclick = () => setInvite(!invited));
+    el.querySelectorAll('[data-shr]').forEach(b => b.onclick = () => { try { localStorage.setItem('cv_share_aisa', shareOn() ? '0' : '1'); } catch (e) {} toast2(shareOn() ? '👧 از این به بعد هر نقاشی‌ای ذخیره کنیم، برای آیسا هم ذخیره می‌شه' : '👧 ذخیرهٔ خودکار برای آیسا خاموش شد'); renderPop(); });
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filterSel = b.dataset.f; renderPop(); });
   }
   const refreshPop = () => { if (pop === 'mode' || pop === 'bg') renderPop(); };
@@ -1116,6 +1144,7 @@
       const ed = e.target.closest('[data-edit]'); if (ed) return editArt(ed.dataset.edit);
       const d = e.target.closest('[data-dl]'); if (d) return dlArt(d.dataset.dl);
       const pf = e.target.closest('[data-pdf]'); if (pf) return pdfArt(pf.dataset.pdf);
+      const ash = e.target.closest('[data-aish]'); if (ash) return shareArt(ash.dataset.aish);
       const x = e.target.closest('[data-del]'); if (x) return delArt(x.dataset.del);
     });
   }
