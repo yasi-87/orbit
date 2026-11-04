@@ -1577,6 +1577,8 @@ body.reading-mode .reading-content {
 .vc-day{align-self:center;font-size:.74rem;color:var(--muted);background:#2a2036;border:1px solid rgba(212,165,255,.18);padding:3px 12px;border-radius:12px;margin:0;position:sticky;top:6px;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .vc-msg b{font-size:.75rem;color:var(--gold)}.vc-msg i{font-size:.65rem;color:var(--muted);font-style:normal}
 
+.vc-msg .vc-tx{display:block;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}
+#vcChatInput{unicode-bidi:plaintext}
 .vc-emofav{display:flex;gap:2px;padding:3px 8px;border-top:1px solid rgba(212,165,255,.15);flex:none;align-items:center}
 .vc-emofav .sc{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
 .vc-emofav .sc::-webkit-scrollbar{display:none}
@@ -2141,7 +2143,7 @@ body.guest #app{padding-left:0 !important}
       <div id="vcEmoFav" class="vc-emofav"></div>
       <div id="vcEmoji" class="vc-emoji" style="display:none"></div>
       <div id="vcComposer" style="display:none"></div>
-      <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><button class="btn ghost vc-imgbtn" type="button" id="vcImgBtn" title="فرستادن تصویر" aria-label="فرستادن تصویر">📷</button><input type="file" id="vcImgPick" accept="image/*" hidden /><button class="btn ghost vc-imgbtn" type="button" id="vcEmoBtn" title="ایموجی" aria-label="ایموجی">😊</button><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form>
+      <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><button class="btn ghost vc-imgbtn" type="button" id="vcImgBtn" title="فرستادن تصویر" aria-label="فرستادن تصویر">📷</button><input type="file" id="vcImgPick" accept="image/*" hidden /><button class="btn ghost vc-imgbtn" type="button" id="vcEmoBtn" title="ایموجی" aria-label="ایموجی">😊</button><input id="vcChatInput" dir="auto" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form>
 </aside>
 
 <div class="notif-panel" id="notifPanel"></div>
@@ -2540,8 +2542,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-04j';
+const SITE_VERSION = '2026-11-04k';
 const SITE_CHANGES = [
+  '🔤 چت: پیام‌های انگلیسی و عددی دیگه برعکس نمی‌شن؛ جهتِ هر پیام (فارسی/انگلیسی) خودکار درست می‌شه',
   '🖼️ عکس پروفایل: همیشه آخرین عکس خودِ هر نفر نمایش داده می‌شه (نه عکس قدیمیِ کامنتش)، مربعی و بدون کشیدگی و با کیفیت بالاتر؛ کیفیت عکس‌های گالری، چت و فصل‌ها هم بهتر شد',
   '⭐ نوار ایموجی چت حالا از روی پیام‌های خودِ ما ساخته می‌شه: ایموجی‌هایی که هر دومون تا حالا بیشتر فرستادیم اول نوار هستن',
   '⭐ نوار ایموجی‌های پرکاربرد بالای کادر پیام: ایموجی‌هایی که بیشتر از همه می‌فرستیم خودکار اونجا میان؛ با دکمهٔ 😊 همهٔ ایموجی‌ها باز می‌شن',
