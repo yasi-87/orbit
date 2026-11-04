@@ -403,7 +403,7 @@
     if (addMsg(m)) { saveMsgs(); renderChat(); renderTyping(); markSeen(); blip('recv'); if (window.ChatDock && !ChatDock.isOpen()) { ChatDock.bump(); say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); } }
   }
   /* ---------- ✓✓ سین، ✍️ در حال نوشتن، 🧸 پفیلا (دستیار مشترک) ---------- */
-  const BOT = 'پفیلا';
+  const BOT = 'ChatGPT';
   let botOn = true, editing = null; try { botOn = localStorage.getItem('vc_bot') !== '0'; } catch (e) {}
   let seenBy = {}, typers = {}, lastTypeSent = 0, typeIdle = null, mySeenSent = 0;
   try { mySeenSent = Number(localStorage.getItem('vc_seen_sent')) || 0; } catch (e) {}
@@ -457,7 +457,7 @@
     if (p.k === 'typing') { typers[p.who ? 'bot' : p.from] = { name: p.who ? BOT : String(p.name || 'اون یکی').slice(0, 30), until: p.on ? Date.now() + 4500 : 0 }; renderTyping(); }
     else if (p.k === 'del') { const n = msgs.length; msgs = msgs.filter(x => x.id !== p.id); if (msgs.length !== n) { saveMsgs(); renderChat(); } }
     else if (p.k === 'edit') { const m = msgs.find(x => x.id === p.id); if (m && typeof p.text === 'string') { m.text = p.text.slice(0, 500); m.edited = true; saveMsgs(); renderChat(); } }
-    else if (p.k === 'bot') { botOn = !!p.on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); say(botOn ? '🧸 پفیلا روشن شد' : '🧸 پفیلا خاموش شد'); }
+    else if (p.k === 'bot') { botOn = !!p.on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); say(botOn ? '🤖 ChatGPT روشن شد' : '🤖 ChatGPT خاموش شد'); }
     else if (p.k === 'bg') { if (okBg(p.v)) { chatBg = p.v; try { localStorage.setItem('vc_bg', chatBg); } catch (e) {} applyBg(); say('🎨 ' + (String(p.name || 'اون یکی').slice(0, 30)) + ' پس‌زمینهٔ چت رو عوض کرد'); } }
     else if (p.k === 'seen') { const n = String(p.name || ''); seenBy[n] = Math.max(seenBy[n] || 0, Number(p.upto) || 0); renderChat(); }
   }
@@ -484,7 +484,7 @@
     clearTimeout(typeIdle); typeIdle = setTimeout(() => { lastTypeSent = 0; ctSend({ k: 'typing', on: 0 }); }, 3000);
   }
   const rndp = a => a[Math.floor(Math.random() * a.length)];
-  const BOT_HELP = 'من پفیلام 🧸 دستیار کوچولوی مشترک شماها! بنویس «پفیلا، …» و یکی از اینا رو بخواه: جوک 😂 · فال ✨ · سوال دونفره ❓ · ایده برای دیت 💡 · سکه 🪙 · تاس 🎲 · «پیتزا یا برگر؟» (برات انتخاب می‌کنم) · تاریخ و ساعت ⏰';
+  const BOT_HELP = 'من ChatGPT‌ام 🤖 دستیار کوچولوی مشترک شماها! بنویس «ChatGPT، …» و یکی از اینا رو بخواه: جوک 😂 · فال ✨ · سوال دونفره ❓ · ایده برای دیت 💡 · سکه 🪙 · تاس 🎲 · «پیتزا یا برگر؟» (برات انتخاب می‌کنم) · تاریخ و ساعت ⏰';
   const JOKES = ['به خرگوشه می‌گن چرا گوشات بلنده؟ می‌گه چون هر چی حرف می‌زنن، من اینا رو بلند گوش می‌دم 🐰', 'یارو می‌ره دکتر می‌گه همه‌ش حس می‌کنم نامرئی‌م. دکتر می‌گه: «بعدی!» 😅', 'به لاک‌پشته می‌گن چرا اینقدر آروم؟ می‌گه عجله نکن، خونه رو که همیشه با خودمه 🐢', 'دو تا ابر عاشق هم شدن؛ بعدش از خوشحالی بارون شدن ☁️💧', 'به کامپیوتره می‌گن چرا خسته‌ای؟ می‌گه امروز کلی «کوکی» خوردم 🍪', 'شنیدی ماه چرا همیشه سرحاله؟ چون هر شب «کامل» می‌شه! 🌕'];
   const QS = ['اگه فردا هیچ کاری نداشتیم، کجا می‌رفتیم؟', 'اولین چیزی که از من یادت می‌یاد چیه؟', 'یه خاطرهٔ خنده‌دار از ما که هیچ‌وقت یادت نمی‌ره؟', 'اگه می‌تونستیم یه روز جای هم باشیم، اول چیکار می‌کردی؟', 'یه آرزوی کوچیک که دوست داری با هم برآورده کنیم؟', 'کدوم آهنگ یاد من می‌ندازتت؟', 'بهترین هدیه‌ای که تا حالا گرفتی چی بوده؟', 'ده سال دیگه خودمون رو کجا می‌بینی؟'];
   const DATES = ['🍿 فیلم‌بازی توی اتاق تماشا با یه ظرف پاپ‌کورن', '🎨 هر دو یه طرح آماده رو توی بوم دو نیمه رنگ کنید', '🌙 پیاده‌روی شبانه و بستنی', '🍕 هرکی یه غذای مورد علاقه‌شو بپزه و عکسش رو برای اون یکی بفرسته', '🎧 یه پلی‌لیست مشترک با ۵ آهنگ از هر کدوم', '📞 یه تماس طولانی بدون هیچ دلیل، فقط برای حرف زدن', '🧩 یه بازی حدس کلمه توی بوم'];
@@ -503,17 +503,17 @@
     if (has('ایده', 'دیت', 'چیکار کنیم', 'کجا بریم', 'برنامه', 'پیشنهاد')) return '💡 پیشنهاد من: ' + rndp(DATES);
     if (has('تاریخ', 'امروز', 'ساعت', 'چندمه', 'چند شنبه')) { try { const w = Recur.epochToWall(Date.now()); return '⏰ امروز ' + Recur.fmtJalaliLong(w.iso) + '، ساعت ' + fa(w.hhmm); } catch (e) { return '⏰ ساعتم خرابه 😅'; } }
     if (has('تشکر', 'مرسی', 'ممنون', 'دمت')) return 'قابل‌شما رو نداشت 🧸';
-    if (has('اسم', 'کی هستی', 'تو کی', 'کی هستی')) return 'من پفیلا هستم 🧸 یه دستیار کوچولو که اینجا بین شما دوتا زندگی می‌کنه. «راهنما» رو بنویس تا بگم چی بلدم.';
+    if (has('اسم', 'کی هستی', 'تو کی', 'کی هستی')) return 'من ChatGPT هستم 🤖 یه دستیار کوچولو که اینجا بین شما دوتا زندگی می‌کنه. «راهنما» رو بنویس تا بگم چی بلدم.';
     if (has('سلام', 'درود', 'هلو', 'های', 'صبح بخیر', 'شب بخیر')) return rndp(['سلام سلام! 🧸', 'به به! چه خبرا؟ ☁️', 'سلام، من اینجام! 🍬']);
     if (has('خوبی', 'حالت', 'چطوری')) return rndp(['عالیم! امروز کلی پفک خوردم 🧸', 'خوبم، تو چطوری؟ 💜']);
     return rndp(['هنوز کوچولوام و همه‌چیز نمی‌دونم 🙈 «راهنما» رو بنویس ببین چی بلدم', 'این رو نفهمیدم، ولی دوستت دارم 🧸', 'بذار فکر کنم… نه، نشد! «راهنما» بنویس 😅']);
   }
   function renderBot() {
-    const b = $('botToggle'); if (b) { b.classList.toggle('on', botOn); b.title = botOn ? 'پفیلا روشنه (برای خاموش کردن بزن)' : 'پفیلا خاموشه (برای روشن کردن بزن)'; b.setAttribute('aria-pressed', botOn ? 'true' : 'false'); }
+    const b = $('botToggle'); if (b) { b.classList.toggle('on', botOn); b.title = botOn ? 'ChatGPT روشنه (برای خاموش کردن بزن)' : 'ChatGPT خاموشه (برای روشن کردن بزن)'; b.setAttribute('aria-pressed', botOn ? 'true' : 'false'); }
     const c = $('vcBot'); if (c) c.style.display = botOn ? '' : 'none';
   }
   function setBot(on) {
-    botOn = !!on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); ctSend({ k: 'bot', on: botOn }); say(botOn ? '🧸 پفیلا روشن شد' : '🧸 پفیلا خاموش شد');
+    botOn = !!on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); ctSend({ k: 'bot', on: botOn }); say(botOn ? '🤖 ChatGPT روشن شد' : '🤖 ChatGPT خاموش شد');
     try { dbClient.from('voice_chat').upsert({ id: '__bot', name: nm(), text: botOn ? '1' : '0', ts: Date.now() }).then(() => {}, () => {}); } catch (e) {}
   }
   function delMsg(id) {
@@ -531,17 +531,31 @@
     if (!m || !text) return; if (text === m.text) return; m.text = text; m.edited = true; saveMsgs(); renderChat(); ctSend({ k: 'edit', id, text });
     try { dbClient.from('voice_chat').update({ text, edited: true }).eq('id', id).then(r => { if (r && r.error) return dbClient.from('voice_chat').update({ text }).eq('id', id); }).then(() => {}, () => {}); } catch (e) {}
   }
-  const BOT_RE = /^\s*[@＠]?\s*پفیلا/;
+  const BOT_RE = /^\s*[@＠]?\s*(?:chat\s*-?\s*gpt|چت\s*[‌-]?\s*جی\s*[‌-]?\s*پی\s*[‌-]?\s*تی|پفیلا)/i;
+  const LOCAL_Q = /^(?:راهنما|سکه|تاس|help)/;
+  let botBusy = false;
+  async function gptAnswer(q, who) {
+    const hist = msgs.filter(m => m.text && !String(m.id || '').startsWith('__')).slice(-8).map(m => ({ role: m.name === BOT ? 'assistant' : 'user', content: (m.name === BOT ? '' : (m.name || '') + ': ') + m.text }));
+    if (!hist.length || hist[hist.length - 1].role !== 'user') hist.push({ role: 'user', content: who + ': ' + q });
+    const r = await Promise.race([dbClient.functions.invoke('chatgpt', { body: { messages: hist } }), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
+    if (r && r.error) throw r.error; const t = r && r.data && r.data.reply; if (!t) throw new Error((r && r.data && r.data.error) || 'empty'); return String(t);
+  }
   function botMaybe(text) {
     if (!botOn || !BOT_RE.test(text || '')) return; const q = text.replace(BOT_RE, '').replace(/^[\s،,:؛]+/, '');
-    typers.bot = { name: BOT, until: Date.now() + 2600 }; renderTyping(); ctSend({ k: 'typing', on: 1, who: BOT });
-    setTimeout(() => {
-      const ts = Date.now(), id = 'm_' + ts + '_bot' + ID, ans = botAnswer(q), p = { from: ID, id, name: BOT, text: ans, ts, img: '', reply: null };
+    if (botBusy) { say('⏳ ChatGPT هنوز داره جواب قبلی رو می‌نویسه'); return; } botBusy = true;
+    typers.bot = { name: BOT, until: Date.now() + 30000 }; renderTyping(); ctSend({ k: 'typing', on: 1, who: BOT });
+    const finish = ans => {
+      botBusy = false; const ts = Date.now(), id = 'm_' + ts + '_bot' + ID, p = { from: ID, id, name: BOT, text: ans, ts, img: '', reply: null };
       delete typers.bot; ctSend({ k: 'typing', on: 0, who: BOT });
       try { ch.send({ type: 'broadcast', event: 'chat', payload: p }); } catch (e) {}
       addMsg({ id, name: BOT, text: ans, ts, img: '', reply: null }); saveMsgs(); renderChat(); renderTyping(); blip('recv');
       try { dbClient.from('voice_chat').upsert({ id, name: BOT, text: ans, ts }).then(() => {}, () => {}); } catch (e) {}
-    }, 1100 + Math.random() * 700);
+    };
+    if (!q || LOCAL_Q.test(q)) { setTimeout(() => finish(botAnswer(q)), 700 + Math.random() * 500); return; }
+    gptAnswer(q, nm()).then(finish).catch(e => {
+      const why = String((e && (e.message || e.error)) || e || '');
+      finish('🤖 الان نتونستم از ChatGPT جواب بگیرم' + (/not found|404|Failed to send|fetch|relay/i.test(why) ? ' (تابع chatgpt هنوز روی Supabase راه‌اندازی نشده)' : /OPENAI_API_KEY|401|incorrect/i.test(why) ? ' (کلید OpenAI تنظیم نشده یا اشتباهه)' : '') + '؛ ' + botAnswer(q));
+    });
   }
 
   /* ---------- 📷 تصویر و ↩︎ ریپلای توی چت ---------- */
@@ -619,7 +633,7 @@
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     const ci = $('vcChatInput'); if (ci) ci.addEventListener('input', onTyping);
     const gb = $('bgBtn'); if (gb) gb.addEventListener('click', toggleBgPop); applyBg();
-    const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
+    const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'ChatGPT، ' + b.dataset.bot; sendChat(); } });
     const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
     const imgOf = dt => { const it = dt && dt.items ? Array.from(dt.items).find(i => i.kind === 'file' && /^image\//.test(i.type)) : null; const f = it ? it.getAsFile() : (dt && dt.files ? Array.from(dt.files).find(x => /^image\//.test(x.type)) : null); return f || null; };
     const ci2 = $('vcChatInput'); if (ci2) ci2.addEventListener('paste', e => { const f = imgOf(e.clipboardData); if (f) { e.preventDefault(); pickImage(f); } });
