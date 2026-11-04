@@ -347,7 +347,7 @@
   }
   function pUp() {
     if (!mine) return; clearTimeout(sendT); sendT = null; sendSeg(false);
-    const s = mine; mine = null; commit(s); send({ t: 'end', id: s.id });
+    const s = mine; mine = null; commit(s); send({ t: 'end', id: s.id }); aisaPing();
   }
   function sendSeg(first) {
     if (!mine || (!pend.length && !first)) return;
@@ -363,6 +363,15 @@
   function place(s) {
     s.id = 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); s.by = nm(); s.ts = Date.now();
     commit(s); send({ t: 'add', s }); try { OMSound.play('send'); } catch (e) {}
+    aisaPing();
+  }
+  /* وقتی آیسا توی بوم خودش نقاشی می‌کشه، برای ما اعلان می‌ره (حداکثر هر ۳۰ دقیقه یک بار) */
+  function aisaPing() {
+    if (!guestNow() || spc() !== 'aisa' || typeof notify !== 'function') return;
+    let last = 0; try { last = Number(localStorage.getItem('aisa_ping') || 0); } catch (e) {}
+    if (Date.now() - last < 30 * 60000) return;
+    try { localStorage.setItem('aisa_ping', String(Date.now())); } catch (e) {}
+    notify('canvas', 'بوم آیسا', 'aisa', { author: nm() });
   }
 
   /* ---------- پیام‌های زنده ---------- */
@@ -560,6 +569,14 @@
       const row = { id: replace ? ex.id : (opts.id || (idp() + 'cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5))), title, url: up.url, path: up.path, strokes: JSON.stringify(cur()), bg: meta.bg, author: secret ? nm() : (partnerName() ? nm() + ' و ' + partnerName() : nm()), created_at: replace ? ex.created_at : Date.now(), fav: replace ? !!ex.fav : false, comments: replace ? (ex.comments || '[]') : '[]', reveal_at: reveal || null, topic: meta.topic || '', mode: secret ? 'secret' : (meta.tpl ? 'tpl:' + meta.tpl : meta.mode) };
       const { error } = await dbClient.from('canvas_art').upsert(row);
       if (error) { artMissing = /canvas_art|relation|schema cache/i.test(error.message || ''); try { await dbClient.storage.from('songs').remove([up.path]); } catch (e) {} throw error; }
+      if (guestNow() && spc() === 'aisa' && !secret) {
+        try {
+          const up2 = await uploadMediaFile(blob, 'png', 'canvas.png');
+          const cp = Object.assign({}, row, { id: row.id.replace(/^ai_/, ''), url: up2.url, path: up2.path, author: nm() + ' 👧' });
+          const r2 = await dbClient.from('canvas_art').upsert(cp);
+          if (r2 && r2.error) { try { await dbClient.storage.from('songs').remove([up2.path]); } catch (e) {} } else if (!replace && typeof notify === 'function') notify('canvas_art', title, cp.id, { author: nm() });
+        } catch (e) { console.warn(e); }
+      }
       artMissing = false; if (replace && ex.path && ex.path !== up.path) { try { dbClient.storage.from('songs').remove([ex.path]); } catch (e) {} } gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined })); if (replace || opts.finish) { editId = null; renderMode(); }
       fx(opts.finish ? 40 : 18); toast2(secret ? '🔒 نقاشی مخفی ذخیره شد و سر وقتش نمایش داده می‌شه' : (opts.finish ? '🏁 نقاشی تموم شد و توی گالری ذخیره شد 💞' : '💾 توی گالری ذخیره شد ✨'));
       if (!secret) send({ t: 'saved' });
@@ -854,7 +871,7 @@
     const root = $('canvasBox'); if (!root) return;
     buildCanvases(); buildCanvases2();
     const scr = $('screen-canvas'); if (scr) { scr.dataset.cvt = theme; scr.classList.toggle('cv-light', !!light); }
-    const seg = `<div class="cv-seg"><button type="button" class="${tab === 'draw' ? 'on' : ''}" data-tab="draw" title="بوم" aria-label="بوم">${ico('canvas', 18)}</button><button type="button" class="${tab === 'gal' ? 'on' : ''}" data-tab="gal" title="گالری" aria-label="گالری">${ico('gal', 18)}</button><button type="button" class="${tab === 'gs' ? 'on' : ''}" data-tab="gs" title="تاریخچهٔ حدس‌ها" aria-label="حدس‌ها">${ico('bulb', 18)}</button></div>` + (guestNow() && invited ? `<div class="cv-seg"><button type="button" style="width:auto;padding:0 12px" class="${spc() === 'aisa' ? 'on' : ''}" data-sp="aisa">بوم من</button><button type="button" style="width:auto;padding:0 12px" class="${spc() === 'us' ? 'on' : ''}" data-sp="us">بوم ما</button></div>` : '');
+    const seg = `<div class="cv-seg"><button type="button" class="${tab === 'draw' ? 'on' : ''}" data-tab="draw" title="بوم" aria-label="بوم">${ico('canvas', 18)}</button><button type="button" class="${tab === 'gal' ? 'on' : ''}" data-tab="gal" title="گالری" aria-label="گالری">${ico('gal', 18)}</button><button type="button" class="${tab === 'gs' ? 'on' : ''}" data-tab="gs" title="تاریخچهٔ حدس‌ها" aria-label="حدس‌ها">${ico('bulb', 18)}</button></div>` + ((guestNow() ? invited : true) ? `<div class="cv-seg"><button type="button" style="width:auto;padding:0 12px" class="${spc() === 'aisa' ? 'on' : ''}" data-sp="aisa">${guestNow() ? 'بوم من' : 'بوم آیسا 👧'}</button><button type="button" style="width:auto;padding:0 12px" class="${spc() === 'us' ? 'on' : ''}" data-sp="us">${guestNow() ? 'بوم ما' : 'بوم ما'}</button></div>` : '');
     if (tab === 'gs') { root.innerHTML = `<div class="cv-app"><div class="cv-top">${seg}</div><div id="cvGs"></div></div>`; bindTabs(); renderGuesses(); return; }
     if (tab === 'gal') { root.innerHTML = `<div class="cv-app"><div class="cv-top">${seg}</div><div id="cvGal"></div></div>`; bindTabs(); renderGallery(); return; }
     root.innerHTML = `<div class="cv-app">
@@ -1065,12 +1082,12 @@
     toast2(invited ? '👧 آیسا دعوت شد؛ می‌تونه بیاد توی بوم ما' : '👧 آیسا از بوم ما بیرون رفت'); renderPop();
   }
   function switchSpace(s) {
-    if (s === spc() || (s === 'us' && !invited)) return;
+    if (s === spc() || (guestNow() && s === 'us' && !invited)) return;
     try { if (ch) { try { ch.unsubscribe(); } catch (e) {} try { dbClient.removeChannel(ch); } catch (e) {} } } catch (e) {}
     clearTimeout(saveT); space = s; ch = null; subscribed = false; peers = {}; remote = {}; mine = null; strokes = []; secretStrokes = []; secret = false; redo = []; meta = META0(); gallery = []; galleryLoaded = false; editId = null; tab = 'draw'; pop = null; guessWord = ''; guessFeed = [];
     ghSpace = spc(); gh = jget(lsk('diary_cv_guesses'), []);
     if (bctx) rebuild(); join(); render(); loadLive(); loadGallery();
-    toast2(s === 'aisa' ? '🎨 بوم خودت' : '👥 بوم ما');
+    toast2(s === 'aisa' ? (guestNow() ? '🎨 بوم خودت' : '👧 بوم آیسا؛ اینجا هر چی بکشی خودش هم می‌بینه') : '👥 بوم ما');
   }
   function load() {
     if (ghSpace !== spc()) { ghSpace = spc(); gh = jget(lsk('diary_cv_guesses'), []); }

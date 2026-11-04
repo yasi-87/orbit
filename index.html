@@ -2503,8 +2503,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-03j';
+const SITE_VERSION = '2026-11-04a';
 const SITE_CHANGES = [
+  '👧 وقتی آیسا نقاشی می‌کشه برامون اعلان میاد؛ نقاشی‌هاش هم توی گالری خودش و هم توی گالری ما ذخیره می‌شن (با ✏️ می‌تونیم بازشون کنیم)، و بالای بوم «بوم آیسا 👧 / بوم ما» داریم تا بریم نقاشی زنده‌اش رو ببینیم و باهاش بکشیم',
   '🤖 دستیار چت حالا ChatGPT واقعیه (به‌جای پفیلا): بنویس «ChatGPT، …» یا «چت‌جی‌پی‌تی، …»؛ برای کار کردنش باید تابع chatgpt روی Supabase راه‌اندازی بشه',
   '🎨 پالت رنگ بوم خیلی بیشتر شد (بیشتر از ۱۰۰ رنگ، توی موبایل و لپ‌تاپ)؛ رنگ‌ها توی پنل رنگ به‌صورت شبکهٔ فشرده و قابل اسکرول هستن',
   '🛠️ پس‌زمینهٔ عکسِ چت: وضعیت آپلود توی پنل 🎨 دیده می‌شه و اگه آپلود نشد، نسخهٔ سبک عکس مستقیم گذاشته می‌شه',
@@ -5261,7 +5262,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} if (window.ProfileSync) ProfileSync.push(); }
 
-const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar', voice: 'voice' };
+const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar', voice: 'voice', canvas: 'canvas', canvas_art: 'canvas' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {
