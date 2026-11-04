@@ -462,7 +462,7 @@
     ['✈️', '✈️🚗🚕🚌🚎🏎️🚓🚑🚲🛵🏍️🚂🚀🛸⛵🚤🏝️🏖️🏕️⛰️🗻🌋🏰🗼🗽🎡🎢🎠🌃🌆🌉🌅⛺🏠🏡'],
     ['⚽', '⚽🏀🏈⚾🎾🏐🏓🎱🥊🏆🥇🎮🕹️🎲🧩🎯🎳🎨🎭🎬🎤🎧🎸🎹🥁🎻📚📖✏️📷📱💻⌚💡🔮🎉🎊🎈🪄🧿']
   ];
-  let emoOpen = false, emoTab = 0;
+  let emoOpen = false, emoTab = 0, emoUsedNow = [], pendEmoCounted = false;
   const splitEmo = str => { try { return Array.from(new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(str), x => x.segment); } catch (e) { return Array.from(str); } };
   function renderEmoji() {
     const el = $('vcEmoji'); if (!el) return; el.style.display = emoOpen ? '' : 'none'; if (!emoOpen) return;
@@ -474,7 +474,26 @@
   function insertEmoji(e) {
     const i = $('vcChatInput'); if (!i) return; const a = i.selectionStart == null ? i.value.length : i.selectionStart, b = i.selectionEnd == null ? a : i.selectionEnd;
     if ((i.value.length + e.length) > (i.maxLength || 500)) return;
-    i.value = i.value.slice(0, a) + e + i.value.slice(b); const pos = a + e.length; try { i.setSelectionRange(pos, pos); } catch (er) {} i.dispatchEvent(new Event('input')); if (window.innerWidth >= 1280) i.focus();
+    i.value = i.value.slice(0, a) + e + i.value.slice(b); const pos = a + e.length; try { i.setSelectionRange(pos, pos); } catch (er) {} i.dispatchEvent(new Event('input')); emoUsedNow.push(e); bumpEmo([e]); if (window.innerWidth >= 1280) i.focus();
+  }
+
+  /* ---------- ⭐ ایموجی‌های پرکاربرد ---------- */
+  const EMO_DEF = ['❤️', '😂', '🥰', '😍', '😘', '🥺', '😭', '💜', '🤣', '😊', '👍', '🙏'];
+  let emoCnt = {}; try { emoCnt = JSON.parse(localStorage.getItem('vc_emo_cnt') || '{}') || {}; } catch (e) {}
+  const emoRe = /(?:\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*)/gu;
+  function bumpEmo(list) {
+    if (!list || !list.length) return; list.forEach(e => { if (e && e.length < 16) emoCnt[e] = (emoCnt[e] || 0) + 1; });
+    const top = Object.entries(emoCnt).sort((a, b) => b[1] - a[1]).slice(0, 40); emoCnt = Object.fromEntries(top);
+    try { localStorage.setItem('vc_emo_cnt', JSON.stringify(emoCnt)); } catch (e) {} renderEmoFav();
+  }
+  const emoIn = t => String(t || '').match(emoRe) || [];
+  function favList() {
+    const used = Object.entries(emoCnt).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(x => x[0]); const out = used.slice(0, 12);
+    for (const d of EMO_DEF) { if (out.length >= 12) break; if (!out.includes(d)) out.push(d); } return out;
+  }
+  function renderEmoFav() {
+    const el = $('vcEmoFav'); if (!el) return;
+    el.innerHTML = '<div class="sc">' + favList().map(e => '<button type="button" data-ef="' + e + '">' + e + '</button>').join('') + '</div><button type="button" class="more" data-efm="1">همه ▾</button>';
   }
   const ctSend = p => { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'ct', payload: Object.assign({ from: ID, name: nm() }, p) }); } catch (e) {} };
   function onCt(p) {
@@ -653,6 +672,7 @@
       catch (e) { pi.up = false; renderComposer(); if (e && e.cancelled) { say('⛔ آپلود لغو شد'); chatSending = false; if (sb) sb.disabled = false; return; } say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'تصویر ارسال نشد')); chatSending = false; if (sb) sb.disabled = false; return; }
     }
     const reply = replyTo ? { id: replyTo.id, name: replyTo.name, text: (replyTo.text || '').slice(0, 120) } : null;
+    if (!pendEmoCounted) bumpEmo(emoIn(text).filter(x => !emoUsedNow.includes(x))); emoUsedNow = []; pendEmoCounted = false;
     const ts = Date.now(), id = 'm_' + ts + '_' + ID, p = { from: ID, id, name: nm(), text, ts, img, reply };
     try { ch.send({ type: 'broadcast', event: 'chat', payload: p }); } catch (e) {}
     clearTimeout(typeIdle); lastTypeSent = 0; ctSend({ k: 'typing', on: 0 }); botMaybe(text);
@@ -692,6 +712,7 @@
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     const ci = $('vcChatInput'); if (ci) ci.addEventListener('input', onTyping);
+    const ef = $('vcEmoFav'); if (ef) ef.addEventListener('click', e => { const b = e.target.closest('[data-ef]'); if (b) { insertEmoji(b.dataset.ef); return; } if (e.target.closest('[data-efm]')) { emoOpen = !emoOpen; renderEmoji(); } }); renderEmoFav();
     const eb = $('vcEmoBtn'); if (eb) eb.addEventListener('click', () => { emoOpen = !emoOpen; renderEmoji(); });
     const gb = $('bgBtn'); if (gb) gb.addEventListener('click', toggleBgPop); applyBg();
     const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
