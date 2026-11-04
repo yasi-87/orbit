@@ -1640,13 +1640,14 @@ body.chat-open #chatDock{display:flex}body.chat-open #chatLauncher{display:none}
 .vc-layout .vc-chat,.vc-layout .vc-diag{max-width:none;margin:0}
 @media (min-width:900px){
   /* لپ‌تاپ: تماس سمت چپ (با تاریخچه‌ش زیرش)، چت سمت راست */
-  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto auto;grid-template-areas:"room hist" "watch watch" "share share" "diag diag";align-items:stretch;align-content:start}
+  .vc-layout{direction:ltr;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto;grid-template-areas:"room share" "hist hist" "diag diag";align-items:stretch;align-content:start}
   .vc-layout > *{direction:rtl}
   .vc-area-room{grid-area:room}
   .vc-area-hist{grid-area:hist}
   .vc-area-hist{display:flex;flex-direction:column}
   .vc-area-hist{min-height:0;overflow:hidden}
   .vc-area-hist .vc-calls{max-height:260px;min-height:70px;flex:1 1 0;overflow-y:auto}
+  .vc-area-share{grid-area:share}
   .vc-area-diag{grid-area:diag}
   .vc-area-watch{grid-area:watch}
   .vc-room{padding:0;gap:10px}.vc-tiles{min-height:60px}.vc-note{display:none}
@@ -1996,8 +1997,8 @@ body.guest #app{padding-left:0 !important}
     <div class="vc-layout">
     <div id="voiceBox" class="vc-area-room"></div>
     <div id="vcAudios"></div>
-    <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
     <div class="vc-chat vc-area-share" id="shareBox"></div>
+    <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
     <details id="vcDiagBox" class="vc-diag vc-area-diag"><summary>🔍 اطلاعات فنی اتصال (اگه تماس وصل نشد، این رو برام بفرست)</summary><pre id="vcDiag"></pre></details>
     </div>
   </div>
@@ -2503,8 +2504,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-04e';
+const SITE_VERSION = '2026-11-04f';
 const SITE_CHANGES = [
+  '🎙️ اتاق صحبت: «تماس‌های ما» رفت پایین صفحه و «اشتراک صفحه» کنار اتاق صحبت قرار گرفت',
   '🧸 پفیلا باهوش‌تر شد (رایگان و بدون کلید): ریاضی (۱۲×۵+۳)، آب‌وهوای هر شهر («هوای تهران»)، و جواب سوال‌های عمومی از ویکی‌پدیا («خیام کیه؟»، «فتوسنتز چیه؟»). اگه بعداً هوش مصنوعی واقعی وصل بشه، اون رو هم استفاده می‌کنه',
   '🤖 ChatGPT: وقتی جواب نمی‌گیره، دلیل دقیق خطا توی پیامش نوشته می‌شه',
   '🤖 ChatGPT: اگه تابع Supabase اسم «dynamic-service» داشته باشه هم وصل می‌شه',
