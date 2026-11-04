@@ -382,6 +382,7 @@
       const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" data-zoom="${esc(m.img)}">` : '';
       html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span>${esc(m.text)}</span>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
     });
+    try { renderEmoFav(); } catch (e) {}
     list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
     if (chatMissing) list.innerHTML += '<div class="vc-empty">برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن.</div>';
     list.scrollTop = list.scrollHeight;
@@ -487,8 +488,14 @@
     try { localStorage.setItem('vc_emo_cnt', JSON.stringify(emoCnt)); } catch (e) {} renderEmoFav();
   }
   const emoIn = t => String(t || '').match(emoRe) || [];
+  let hCache = { n: -1, last: '', c: {} };
+  function histCnt() {
+    const last = msgs.length ? String(msgs[msgs.length - 1].id) : ''; if (hCache.n === msgs.length && hCache.last === last) return hCache.c;
+    const c = {}; msgs.forEach(m => { if (m && m.name !== BOT && m.text) emoIn(m.text).forEach(e => { c[e] = (c[e] || 0) + 1; }); }); hCache = { n: msgs.length, last, c }; return c;
+  }
   function favList() {
-    const used = Object.entries(emoCnt).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(x => x[0]); const out = used.slice(0, 12);
+    const h = histCnt(), tot = Object.assign({}, emoCnt); Object.keys(h).forEach(k => { tot[k] = Math.max(tot[k] || 0, 0) + h[k] * 2; });
+    const used = Object.entries(tot).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).map(x => x[0]); const out = used.slice(0, 12);
     for (const d of EMO_DEF) { if (out.length >= 12) break; if (!out.includes(d)) out.push(d); } return out;
   }
   function renderEmoFav() {
