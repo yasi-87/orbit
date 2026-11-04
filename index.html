@@ -2114,10 +2114,10 @@ body.guest #app{padding-left:0 !important}
 
 <!-- ============ چت کنار صفحه (همه‌جا دم دسته) ============ -->
 <button type="button" id="chatLauncher" aria-label="باز کردن چت" title="چت"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><i id="chatBadge" style="display:none">0</i></button>
-<aside id="chatDock" class="vc-chat" aria-label="چت"><div class="vc-chat-h"><span>💬 چت کوچولو</span><button type="button" id="bgBtn" aria-label="پس‌زمینهٔ چت" title="پس‌زمینهٔ مشترک چت">🎨</button><button type="button" id="botToggle" class="bot-tg on" aria-pressed="true" title="ChatGPT روشنه">🤖 <i></i></button><button type="button" id="chatClose" aria-label="بستن چت" title="بستن"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+<aside id="chatDock" class="vc-chat" aria-label="چت"><div class="vc-chat-h"><span>💬 چت کوچولو</span><button type="button" id="bgBtn" aria-label="پس‌زمینهٔ چت" title="پس‌زمینهٔ مشترک چت">🎨</button><button type="button" id="botToggle" class="bot-tg on" aria-pressed="true" title="پفیلا روشنه">🧸 <i></i></button><button type="button" id="chatClose" aria-label="بستن چت" title="بستن"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
 <div class="vc-chat-list" id="vcChatList"></div>
       <div id="vcTyping" class="vc-typing" aria-live="polite"></div>
-      <div class="vc-bot" id="vcBot" title="ChatGPT، دستیار مشترک"><span>🤖 ChatGPT</span><button type="button" data-bot="جوک بگو">😂 جوک</button><button type="button" data-bot="فال">✨ فال</button><button type="button" data-bot="یه سوال بپرس">❓ سوال</button><button type="button" data-bot="ایده برای دیت">💡 ایده</button><button type="button" data-bot="سکه بنداز">🪙 سکه</button><button type="button" data-bot="تاس بنداز">🎲 تاس</button><button type="button" data-bot="راهنما">؟</button></div>
+      <div class="vc-bot" id="vcBot" title="پفیلا، دستیار مشترک"><span>🧸 پفیلا</span><button type="button" data-bot="جوک بگو">😂 جوک</button><button type="button" data-bot="فال">✨ فال</button><button type="button" data-bot="یه سوال بپرس">❓ سوال</button><button type="button" data-bot="ایده برای دیت">💡 ایده</button><button type="button" data-bot="سکه بنداز">🪙 سکه</button><button type="button" data-bot="تاس بنداز">🎲 تاس</button><button type="button" data-bot="راهنما">؟</button></div>
       <div id="vcComposer" style="display:none"></div>
       <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><button class="btn ghost vc-imgbtn" type="button" id="vcImgBtn" title="فرستادن تصویر" aria-label="فرستادن تصویر">📷</button><input type="file" id="vcImgPick" accept="image/*" hidden /><input id="vcChatInput" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form>
 </aside>
@@ -2503,8 +2503,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-04d';
+const SITE_VERSION = '2026-11-04e';
 const SITE_CHANGES = [
+  '🧸 پفیلا باهوش‌تر شد (رایگان و بدون کلید): ریاضی (۱۲×۵+۳)، آب‌وهوای هر شهر («هوای تهران»)، و جواب سوال‌های عمومی از ویکی‌پدیا («خیام کیه؟»، «فتوسنتز چیه؟»). اگه بعداً هوش مصنوعی واقعی وصل بشه، اون رو هم استفاده می‌کنه',
   '🤖 ChatGPT: وقتی جواب نمی‌گیره، دلیل دقیق خطا توی پیامش نوشته می‌شه',
   '🤖 ChatGPT: اگه تابع Supabase اسم «dynamic-service» داشته باشه هم وصل می‌شه',
   '👧 وقتی آیسا نقاشی می‌کشه برامون اعلان میاد؛ نقاشی‌هاش هم توی گالری خودش و هم توی گالری ما ذخیره می‌شن (با ✏️ می‌تونیم بازشون کنیم)، و بالای بوم «بوم آیسا 👧 / بوم ما» داریم تا بریم نقاشی زنده‌اش رو ببینیم و باهاش بکشیم',
