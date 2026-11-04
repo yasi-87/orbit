@@ -16,11 +16,11 @@ Deno.serve(async (req) => {
       .map((m: { role?: string; content?: string }) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '').slice(0, 800) } as Msg))
       .filter((m: Msg) => m.content);
     if (!msgs.length) return json({ error: 'پیامی نیست' }, 400);
-    const groq = Deno.env.get('GROQ_API_KEY'), gem = Deno.env.get('GEMINI_API_KEY'), oai = Deno.env.get('OPENAI_API_KEY');
-    if (groq || oai) {
-      const url = groq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
-      const model = groq ? (Deno.env.get('GROQ_MODEL') || 'llama-3.3-70b-versatile') : (Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini');
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (groq || oai) }, body: JSON.stringify({ model, max_tokens: 400, temperature: 0.8, messages: [{ role: 'system', content: SYSTEM }, ...msgs] }) });
+    const groq = Deno.env.get('GROQ_API_KEY'), gem = Deno.env.get('GEMINI_API_KEY'), oai = Deno.env.get('OPENAI_API_KEY'), akey = Deno.env.get('AI_KEY');
+    if (akey || groq || oai) {
+      const url = akey ? (Deno.env.get('AI_BASE_URL') || 'https://openrouter.ai/api/v1').replace(/\/$/, '') + '/chat/completions' : groq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+      const model = akey ? (Deno.env.get('AI_MODEL') || 'meta-llama/llama-3.3-70b-instruct:free') : groq ? (Deno.env.get('GROQ_MODEL') || 'llama-3.3-70b-versatile') : (Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini');
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (akey || groq || oai) }, body: JSON.stringify({ model, max_tokens: 400, temperature: 0.8, messages: [{ role: 'system', content: SYSTEM }, ...msgs] }) });
       const j = await r.json();
       if (!r.ok) return json({ error: (j && j.error && j.error.message) || 'خطای سرویس هوش مصنوعی' }, 502);
       return json({ reply: String(j.choices?.[0]?.message?.content || '').trim().slice(0, 1200) });
