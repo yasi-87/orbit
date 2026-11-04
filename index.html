@@ -883,6 +883,7 @@ body.reading-mode .reading-content {
   margin-bottom: 24px;
 }
 
+.msgs-stat{margin-top:10px;text-align:center}.msgs-stat .ps-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1755,7 +1756,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 .gate-box input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(212,165,255,.4);background:rgba(10,10,15,.6);color:var(--text);font:inherit;font-size:1.05rem;text-align:center;direction:ltr;letter-spacing:1px}
 .gate-box .btn{width:100%;margin-top:12px}.gate-err{min-height:1.4em;margin-top:10px;color:#ff8fa8;font-size:.85rem}
 .gate-box.shake{animation:caShake .5s}
-body.guest .nav-btn:not([data-screen=canvas]):not([data-screen=profile]),body.guest #bellBtn,body.guest #updatesBtn,body.guest #notifPanel,body.guest #chatLauncher,body.guest #chatDock,body.guest #bioCard,body.guest #presCard,body.guest .profile-stats,body.guest #catFamily,body.guest #catFamH{display:none !important}
+body.guest .nav-btn:not([data-screen=canvas]):not([data-screen=profile]),body.guest #bellBtn,body.guest #updatesBtn,body.guest #notifPanel,body.guest #chatLauncher,body.guest #chatDock,body.guest #bioCard,body.guest #presCard,body.guest .profile-stats,body.guest #statMsgsBox,body.guest #catFamily,body.guest #catFamH{display:none !important}
 body.guest #app{padding-left:0 !important}
 </style>
 </head>
@@ -2115,6 +2116,11 @@ body.guest #app{padding-left:0 !important}
           <div class="ps-num" id="statSongs">0</div>
           <div class="ps-label">آهنگ</div>
         </div>
+      </div>
+      <div class="profile-stat msgs-stat" id="statMsgsBox">
+        <div class="ps-num" id="statMsgs">0</div>
+        <div class="ps-label">💬 پیام توی چتِ ما</div>
+        <div class="ps-sub" id="statMsgsSub"></div>
       </div>
     </div>
 
@@ -2560,8 +2566,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-05c';
+const SITE_VERSION = '2026-11-05d';
 const SITE_CHANGES = [
+  '💬 توی پروفایل تعداد کل پیام‌های چتمون (و سهم هر کدوم) نشون داده می‌شه',
   '🔤 چت: پیام‌های ترکیبی فارسی و انگلیسی درست چیده می‌شن (هر پیامی که حتی یک حرف فارسی داره راست‌به‌چپه و انگلیسی‌هاش وسط جمله سر جاشون می‌شینن)',
   '👧 نقاشی‌های ما برای آیسا: توی گالری بوم ما، روی هر نقاشی دکمهٔ 👧 هست تا اون رو برای آیسا هم نمایش بدیم (و دوباره پنهانش کنیم)؛ توی تنظیمات بوم هم می‌شه «ذخیره برای آیسا» رو برای همهٔ نقاشی‌های بعدی روشن کرد. نقاشی‌های آیسا هم همیشه توی گالری ما میان',
   '👧 گربهٔ آیسا: همهٔ کمدش باز شد 👗 و خاطره‌های ما رو نشون نمی‌ده؛ حرف‌هاش هم مخصوص خودشه',
@@ -2693,6 +2700,21 @@ async function loadProfileStats() {
     document.getElementById('statComments').textContent = comments.count || 0;
     document.getElementById('statSongs').textContent = songs.count || 0;
   } catch (e) { console.error(e); }
+  loadMsgStats();
+}
+
+/* 💬 تعداد پیام‌های چت (فقط پیام‌های خودمون؛ بدون جواب‌های دستیار) */
+async function loadMsgStats() {
+  const el = document.getElementById('statMsgs'); if (!el) return;
+  try {
+    const base = () => dbClient.from('voice_chat').select('id', { count: 'exact', head: true }).like('id', 'm%');
+    const BOTS = ['پفیلا', 'ChatGPT'];
+    const [all, bots, mine] = await Promise.all([base(), base().in('name', BOTS), base().eq('name', myName() || '-')]);
+    if (all.error) { document.getElementById('statMsgsSub').textContent = ''; return; }
+    const total = Math.max(0, (all.count || 0) - (bots.count || 0)), m = Math.min(total, mine.count || 0), o = Math.max(0, total - m), f = n => Recur.toFa(n);
+    el.textContent = f(total);
+    document.getElementById('statMsgsSub').textContent = total ? 'من ' + f(m) + ' · اون یکی ' + f(o) : '';
+  } catch (e) { console.warn(e); }
 }
 
 /* ============================================================
