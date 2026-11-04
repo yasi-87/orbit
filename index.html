@@ -1590,6 +1590,7 @@ body.reading-mode .reading-content {
 .vc-pres{display:flex;gap:12px;flex-wrap:wrap;padding:4px 14px;font-size:.74rem;color:var(--muted);border-bottom:1px solid rgba(212,165,255,.12)}
 .vc-pres span{display:inline-flex;align-items:center;gap:5px}.vc-pres span.on{color:#3ddc84}
 .vc-pres .pr-dot{position:static;width:9px;height:9px;border:0;display:inline-block}
+.vc-older{align-self:center;background:rgba(212,165,255,.14);border:1px solid rgba(212,165,255,.3);color:inherit;border-radius:14px;padding:6px 14px;font-size:.78rem;cursor:pointer;flex:none}
 .vc-msg .vc-tx{display:block;unicode-bidi:isolate;text-align:start;overflow-wrap:anywhere}
 #vcChatInput{unicode-bidi:isolate}
 .vc-emofav{display:flex;gap:2px;padding:3px 8px;border-top:1px solid rgba(212,165,255,.15);flex:none;align-items:center}
@@ -2566,8 +2567,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-05d';
+const SITE_VERSION = '2026-11-05e';
 const SITE_CHANGES = [
+  '💬 چت: دیگه فقط ۳۰۰ پیام آخر نیست؛ با بالا رفتن (یا دکمهٔ «پیام‌های قدیمی‌تر») همهٔ پیام‌های قدیمی‌ترمون ۳۰۰تا ۳۰۰تا لود می‌شن',
   '💬 توی پروفایل تعداد کل پیام‌های چتمون (و سهم هر کدوم) نشون داده می‌شه',
   '🔤 چت: پیام‌های ترکیبی فارسی و انگلیسی درست چیده می‌شن (هر پیامی که حتی یک حرف فارسی داره راست‌به‌چپه و انگلیسی‌هاش وسط جمله سر جاشون می‌شینن)',
   '👧 نقاشی‌های ما برای آیسا: توی گالری بوم ما، روی هر نقاشی دکمهٔ 👧 هست تا اون رو برای آیسا هم نمایش بدیم (و دوباره پنهانش کنیم)؛ توی تنظیمات بوم هم می‌شه «ذخیره برای آیسا» رو برای همهٔ نقاشی‌های بعدی روشن کرد. نقاشی‌های آیسا هم همیشه توی گالری ما میان',
