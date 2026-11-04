@@ -533,11 +533,12 @@
   }
   const BOT_RE = /^\s*[@＠]?\s*(?:chat\s*-?\s*gpt|چت\s*[‌-]?\s*جی\s*[‌-]?\s*پی\s*[‌-]?\s*تی|پفیلا)/i;
   const LOCAL_Q = /^(?:راهنما|سکه|تاس|help)/;
-  let botBusy = false;
+  let botBusy = false; const GPT_FN = 'chatgpt';
   async function gptAnswer(q, who) {
     const hist = msgs.filter(m => m.text && !String(m.id || '').startsWith('__')).slice(-8).map(m => ({ role: m.name === BOT ? 'assistant' : 'user', content: (m.name === BOT ? '' : (m.name || '') + ': ') + m.text }));
     if (!hist.length || hist[hist.length - 1].role !== 'user') hist.push({ role: 'user', content: who + ': ' + q });
-    const r = await Promise.race([dbClient.functions.invoke('chatgpt', { body: { messages: hist } }), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
+    const call = n => dbClient.functions.invoke(n, { body: { messages: hist } });
+    const r = await Promise.race([call(GPT_FN).then(x => (x && x.error && /not found|404|Failed to send|fetch|relay/i.test(String(x.error.message || x.error))) ? call('dynamic-service') : x, () => call('dynamic-service')), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
     if (r && r.error) throw r.error; const t = r && r.data && r.data.reply; if (!t) throw new Error((r && r.data && r.data.error) || 'empty'); return String(t);
   }
   function botMaybe(text) {
