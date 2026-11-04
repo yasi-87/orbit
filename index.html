@@ -1589,8 +1589,8 @@ body.reading-mode .reading-content {
 .vc-pres{display:flex;gap:12px;flex-wrap:wrap;padding:4px 14px;font-size:.74rem;color:var(--muted);border-bottom:1px solid rgba(212,165,255,.12)}
 .vc-pres span{display:inline-flex;align-items:center;gap:5px}.vc-pres span.on{color:#3ddc84}
 .vc-pres .pr-dot{position:static;width:9px;height:9px;border:0;display:inline-block}
-.vc-msg .vc-tx{display:block;unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}
-#vcChatInput{unicode-bidi:plaintext}
+.vc-msg .vc-tx{display:block;unicode-bidi:isolate;text-align:start;overflow-wrap:anywhere}
+#vcChatInput{unicode-bidi:isolate}
 .vc-emofav{display:flex;gap:2px;padding:3px 8px;border-top:1px solid rgba(212,165,255,.15);flex:none;align-items:center}
 .vc-emofav .sc{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
 .vc-emofav .sc::-webkit-scrollbar{display:none}
@@ -2158,7 +2158,7 @@ body.guest #app{padding-left:0 !important}
       <div id="vcEmoFav" class="vc-emofav"></div>
       <div id="vcEmoji" class="vc-emoji" style="display:none"></div>
       <div id="vcComposer" style="display:none"></div>
-      <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><button class="btn ghost vc-imgbtn" type="button" id="vcImgBtn" title="فرستادن تصویر" aria-label="فرستادن تصویر">📷</button><input type="file" id="vcImgPick" accept="image/*" hidden /><button class="btn ghost vc-imgbtn" type="button" id="vcEmoBtn" title="ایموجی" aria-label="ایموجی">😊</button><input id="vcChatInput" dir="auto" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form>
+      <form id="vcChatForm" class="vc-chat-form" autocomplete="off"><button class="btn ghost vc-imgbtn" type="button" id="vcImgBtn" title="فرستادن تصویر" aria-label="فرستادن تصویر">📷</button><input type="file" id="vcImgPick" accept="image/*" hidden /><button class="btn ghost vc-imgbtn" type="button" id="vcEmoBtn" title="ایموجی" aria-label="ایموجی">😊</button><input id="vcChatInput" dir="rtl" type="text" maxlength="500" placeholder="یه پیام بنویس…" /><button class="btn" type="submit">ارسال</button></form>
 </aside>
 
 <div class="notif-panel" id="notifPanel"></div>
@@ -2560,8 +2560,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-05b';
+const SITE_VERSION = '2026-11-05c';
 const SITE_CHANGES = [
+  '🔤 چت: پیام‌های ترکیبی فارسی و انگلیسی درست چیده می‌شن (هر پیامی که حتی یک حرف فارسی داره راست‌به‌چپه و انگلیسی‌هاش وسط جمله سر جاشون می‌شینن)',
   '👧 نقاشی‌های ما برای آیسا: توی گالری بوم ما، روی هر نقاشی دکمهٔ 👧 هست تا اون رو برای آیسا هم نمایش بدیم (و دوباره پنهانش کنیم)؛ توی تنظیمات بوم هم می‌شه «ذخیره برای آیسا» رو برای همهٔ نقاشی‌های بعدی روشن کرد. نقاشی‌های آیسا هم همیشه توی گالری ما میان',
   '👧 گربهٔ آیسا: همهٔ کمدش باز شد 👗 و خاطره‌های ما رو نشون نمی‌ده؛ حرف‌هاش هم مخصوص خودشه',
   '⌨️ توی بوم با Ctrl+Z یه مرحله برمی‌گردی عقب و با Ctrl+Y (یا Ctrl+Shift+Z) دوباره جلو می‌ری؛ روی مک با ⌘',
