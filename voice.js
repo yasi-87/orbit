@@ -539,7 +539,7 @@
     if (!hist.length || hist[hist.length - 1].role !== 'user') hist.push({ role: 'user', content: who + ': ' + q });
     const call = n => dbClient.functions.invoke(n, { body: { messages: hist } });
     const r = await Promise.race([call(GPT_FN).then(x => (x && x.error && /not found|404|Failed to send|fetch|relay/i.test(String(x.error.message || x.error))) ? call('dynamic-service') : x, () => call('dynamic-service')), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
-    if (r && r.error) throw r.error; const t = r && r.data && r.data.reply; if (!t) throw new Error((r && r.data && r.data.error) || 'empty'); return String(t);
+    if (r && r.error) { let d = ''; try { const c = r.error.context; if (c && c.json) { const j = await c.json(); d = j && (j.error || j.message || j.msg) || ''; } else if (c && c.text) d = await c.text(); } catch (e2) {} const er = new Error((d ? String(d) : '') + ' | ' + String(r.error.message || r.error)); er.detail = d; er.status = r.error.context && r.error.context.status; throw er; } const t = r && r.data && r.data.reply; if (!t) throw new Error((r && r.data && r.data.error) || 'empty'); return String(t);
   }
   function botMaybe(text) {
     if (!botOn || !BOT_RE.test(text || '')) return; const q = text.replace(BOT_RE, '').replace(/^[\s،,:؛]+/, '');
@@ -555,7 +555,7 @@
     if (!q || LOCAL_Q.test(q)) { setTimeout(() => finish(botAnswer(q)), 700 + Math.random() * 500); return; }
     gptAnswer(q, nm()).then(finish).catch(e => {
       const why = String((e && (e.message || e.error)) || e || '');
-      finish('🤖 الان نتونستم از ChatGPT جواب بگیرم' + (/not found|404|Failed to send|fetch|relay/i.test(why) ? ' (تابع chatgpt هنوز روی Supabase راه‌اندازی نشده)' : /OPENAI_API_KEY|401|incorrect/i.test(why) ? ' (کلید OpenAI تنظیم نشده یا اشتباهه)' : '') + '؛ ' + botAnswer(q));
+      finish('🤖 الان نتونستم از ChatGPT جواب بگیرم' + (/not found|404|Failed to send|fetch|relay/i.test(why) ? ' (تابع chatgpt هنوز روی Supabase راه‌اندازی نشده)' : /OPENAI_API_KEY|incorrect api key|invalid_api_key/i.test(why) ? ' (کلید OpenAI تنظیم نشده یا اشتباهه)' : /quota|billing|insufficient/i.test(why) ? ' (اعتبار حساب OpenAI تموم شده؛ توی Billing شارژ کن)' : (e && e.status === 401) || /JWT|401|Unauthorized/i.test(why) ? ' (Verify JWT تابع رو خاموش کن)' : e && e.status ? ' (' + e.status + ': ' + String(e.detail || why).slice(0, 120) + ')' : '') + '؛ ' + botAnswer(q));
     });
   }
 
