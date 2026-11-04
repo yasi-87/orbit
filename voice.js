@@ -364,20 +364,22 @@
   window.OMSound = { play: blip };
 
   /* ---------- 💬 چت کوچولو ---------- */
-  let msgs = [], warnedChat = false, chatMissing = false;
+  let msgs = [], warnedChat = false, chatMissing = false, chatOldest = 0, hasMore = false, loadingOld = false;
+  const PAGE = 300;
   try { msgs = JSON.parse(sessionStorage.getItem(CHAT_KEY) || '[]'); } catch (e) {}
   const saveMsgs = () => { try { sessionStorage.setItem(CHAT_KEY, JSON.stringify(msgs.slice(-60))); } catch (e) {} };
   const isMine = n => { try { return Recur.sameName(n, nm()); } catch (e) { return n === nm(); } };
   function addMsg(m) {
     if (!m || !m.id || msgs.some(x => x.id === m.id)) return false;
-    msgs.push(m); msgs.sort((a, b) => a.ts - b.ts); if (msgs.length > 400) msgs.splice(0, msgs.length - 400); return true;
+    msgs.push(m); msgs.sort((a, b) => a.ts - b.ts); if (msgs.length > 50000) msgs.splice(0, msgs.length - 50000); return true;
   }
   function dayLabel(ts) { try { return Recur.fmtJalaliLong(Recur.epochToWall(ts).iso); } catch (e) { return ''; } }
   /* جهت متن: هر پیامی که حتی یک حرف فارسی/عربی داره راست‌به‌چپه (انگلیسی‌هاش وسط جمله درست می‌شینن)؛ فقط پیام کاملاً انگلیسی چپ‌به‌راسته */
   const txDir = t => { t = String(t || ''); return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(t) || !/[A-Za-z]/.test(t) ? 'rtl' : 'ltr'; };
-  function renderChat() {
+  function renderChat(keep) {
     const list = $('vcChatList'); if (!list) return;
-    let last = '', html = '';
+    const prevH = list.scrollHeight, prevT = list.scrollTop;
+    let last = '', html = hasMore ? '<button type="button" class="vc-older" id="vcOlder">' + (loadingOld ? '⏳ دارم پیام‌های قدیمی‌تر رو می‌گیرم…' : '⬆️ پیام‌های قدیمی‌تر') + '</button>' : '';
     msgs.forEach(m => {
       const d = dayLabel(m.ts); if (d && d !== last) { last = d; html += `<div class="vc-day">${esc(d)}</div>`; }
       const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span dir="${txDir(m.reply.text)}">${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
@@ -387,13 +389,23 @@
     try { renderEmoFav(); } catch (e) {}
     list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
     if (chatMissing) list.innerHTML += '<div class="vc-empty">برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن.</div>';
-    list.scrollTop = list.scrollHeight;
+    if (keep) list.scrollTop = Math.max(0, list.scrollHeight - prevH + prevT); else list.scrollTop = list.scrollHeight;
+  }
+  async function loadOlder() {
+    if (loadingOld || !hasMore || !chatOldest) return; loadingOld = true; renderChat(true);
+    try {
+      const r = await dbClient.from('voice_chat').select('*').lt('ts', chatOldest).order('ts', { ascending: false }).limit(PAGE);
+      if (r.error) throw r.error; const rows = r.data || [];
+      rows.forEach(x => { const id = String(x.id); if (id.startsWith('__')) return; addMsg({ edited: !!x.edited, id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }); });
+      if (rows.length) chatOldest = Math.min(chatOldest, ...rows.map(x => Number(x.ts) || chatOldest)); hasMore = rows.length >= PAGE;
+    } catch (e) { say('⚠️ پیام‌های قدیمی‌تر لود نشد'); }
+    loadingOld = false; renderChat(true);
   }
   async function loadChat() {
     try {
-      const r = await dbClient.from('voice_chat').select('*').order('ts', { ascending: false }).limit(300);
+      const r = await dbClient.from('voice_chat').select('*').order('ts', { ascending: false }).limit(PAGE);
       if (r.error) { chatMissing = /voice_chat|relation|schema cache/i.test(r.error.message || ''); renderChat(); return; }
-      chatMissing = false;
+      chatMissing = false; { const ts = (r.data || []).map(x => Number(x.ts) || 0).filter(Boolean); if (ts.length) chatOldest = Math.min(...ts); hasMore = (r.data || []).length >= PAGE; }
       (r.data || []).filter(x => { const id = String(x.id); if (id.startsWith('__ls_')) return false; if (id === '__bg') { const v = x.text === '-' ? '' : String(x.text || ''); if (okBg(v)) { chatBg = v; try { localStorage.setItem('vc_bg', v); } catch (e) {} } return false; } if (id === '__bot') { botOn = x.text !== '0'; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} return false; } return !id.startsWith('__seen_') || (!isMine(x.name) && (seenBy[x.name] = Math.max(seenBy[x.name] || 0, Number(x.ts) || 0)) && false); }).forEach(x => addMsg({ edited: !!x.edited, id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }));
       saveMsgs(); renderChat(); renderBot(); applyBg(); markSeen();
     } catch (e) {}
@@ -731,6 +743,7 @@
     const cf = $('vcChatForm'); if (cf) { cf.addEventListener('dragover', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); }); cf.addEventListener('drop', e => { const f = imgOf(e.dataTransfer); if (f) { e.preventDefault(); pickImage(f); } }); }
     const cb = $('vcImgBtn'); if (cb && pk) cb.addEventListener('click', () => pk.click());
     const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else if (b.dataset.cmp === 'noedit') { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; } else { if (pendImg && pendImg.ctl && pendImg.up) pendImg.ctl.abort(); else pendImg = null; } renderComposer(); });
+    const cl0 = $('vcChatList'); if (cl0) { cl0.addEventListener('click', e => { if (e.target.closest('#vcOlder')) loadOlder(); }); cl0.addEventListener('scroll', () => { if (cl0.scrollTop < 80 && hasMore && !loadingOld) loadOlder(); }, { passive: true }); }
     const cl = $('vcChatList'); if (cl) cl.addEventListener('click', e => {
       const z = e.target.closest('[data-zoom]'); if (z) { zoom(z.dataset.zoom); return; }
       const eb = e.target.closest('[data-edit]'); if (eb) { startEdit(eb.dataset.edit); return; }
