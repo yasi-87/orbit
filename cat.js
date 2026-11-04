@@ -46,7 +46,8 @@
     purple: { fur: '#c9a8ff', dark: '#a07fe0' }, pink:  { fur: '#ffb3d1', dark: '#ee8db4' },
     white:  { fur: '#f5f2fa', dark: '#d6cfe2' }
   };
-  const isOpen = id => S.unlocked.includes(id);
+  const guestOn = () => typeof guestMode !== 'undefined' && guestMode;
+  const isOpen = id => guestOn() || S.unlocked.includes(id);
 
   /* ---------- شکل گربه (طرح اختصاصی) ---------- */
   function svg(st) {
@@ -123,7 +124,14 @@
   ];
   /* انتخاب بدون تکرار: چند جملهٔ اخیر دوباره نمیان */
   const recentLines = {};
+  const GUEST_POOL = {
+    click: () => ['میو! 🐾', 'نوازشم کن بازم 😽', 'پرررر… خرخر 💜', 'میو میو! (یعنی دوستت دارم)', 'اینجا رو بخار، پشت گوشم!', 'دم‌م رو نکش، فقط قلقلکش بده 🐈', 'امروز چقدر خوشگلی!', 'بیا یه نقاشی قشنگ بکشیم 🎨', 'من طرفدار نقاشی‌هاتم 🖌️', 'پنجه‌هام کوچیکه ولی قلبم بزرگه 🐾❤️', 'لباس‌های کمدم رو امتحان کن، همه‌شون مال توئه 👗'],
+    greet: () => { const n = nameOr('آیسا'); return [`سلام ${n}! بیا نقاشی بکشیم 🎨`, `${n}! دلم برات تنگ شده بود 😽`, 'میو! اومدی؟ خوشحال شدم 💜', `امروز چی می‌کشیم ${n}؟ 🖌️`, 'به به! نقاش کوچولوی من اومد 😺']; },
+    act: () => ['آفرین! 👏', 'چه کار قشنگی 💜', 'میو! دیدم چیکار کردی 🐾', 'ایول! ✨', 'دمت گرم 😼'],
+    move: () => ['میو~ 🐾', 'یه چرخ بزنم 🐈', 'می‌رم یه گشتی بزنم 😸']
+  };
   function pickLine(key, pool) {
+    if (guestOn() && GUEST_POOL[key]) pool = GUEST_POOL[key]();
     const rc = recentLines[key] = recentLines[key] || [], keep = Math.min(pool.length - 1, 12);
     const cand = pool.filter(x => !rc.includes(x)), v = rnd(cand.length ? cand : pool);
     rc.push(v); while (rc.length > keep) rc.shift(); return v;
@@ -152,6 +160,7 @@
   /* ---------- خاطرهٔ تصادفی ---------- */
   const strip = h => { try { return stripHtml(h); } catch (e) { return String(h || '').replace(/<[^>]*>/g, ' '); } };
   async function pickMemory() {
+    if (guestOn()) return null;
     let kinds = ['chapter', 'chapter', 'chapter', 'gallery', 'gallery', 'note'];
     for (let t = 0; t < 8 && kinds.length; t++) {
       const kind = rnd(kinds);
@@ -463,6 +472,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
     sparkle(S.mood === 'love' ? ['💗', '💖', '💕'] : ['💜', '✨', '🐾'], 6);
     if (S.mood === 'dance') { root.classList.add('dance'); setTimeout(() => root.classList.remove('dance'), 4300); }
     const line = wasAsleep ? pickLine('wake', WAKE_LINES) : pickLine('click', CLICK_LINES);
+    if (guestOn()) { curMem = null; openBubble('<div class="cp-say">' + esc(line) + '</div><div class="cp-row"><button class="cp-btn main" data-a="wardrobe">👗 کمد من</button></div>', 9000); wire(); return; }
     openBubble('<div class="cp-say">' + esc(line) + '</div><div class="cp-mem"><small>⏳ دارم یه خاطره پیدا می‌کنم…</small></div>', 14000);
     const fresh = checkUnlocks();
     const m = await pickMemory(); curMem = m;
@@ -513,7 +523,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
       <div class="cp-sec">لباس و وسایل</div><div class="cp-chips">${ids('acc').map(chip).join('')}</div>
       <div class="cp-sec">رنگ</div><div class="cp-chips">${furCream}${ids('fur').map(chip).join('')}</div>
       <div class="cp-sec">حالت</div><div class="cp-chips">${moodNormal}${ids('mood').map(chip).join('')}</div>
-      <div class="cp-sec" id="cpHint">روی آیتم‌های 🔒 بزن تا بفهمی چطور باز می‌شن</div>
+      <div class="cp-sec" id="cpHint">${guestOn() ? 'همهٔ آیتم‌ها برای تو بازه 🎁' : 'روی آیتم‌های 🔒 بزن تا بفهمی چطور باز می‌شن'}</div>
       <div class="cp-row"><button class="cp-btn" data-a="snd">${soundOn() ? '🔊 صدای میو: روشن' : '🔇 صدای میو: خاموش'}</button><button class="cp-btn" data-a="close">بستن</button></div>`, 30000);
     bubble.querySelectorAll('.cp-chip').forEach(c => c.onclick = e => { e.stopPropagation(); pick(c.dataset.id); });
     wire();
