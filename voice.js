@@ -403,7 +403,7 @@
     if (addMsg(m)) { saveMsgs(); renderChat(); renderTyping(); markSeen(); blip('recv'); if (window.ChatDock && !ChatDock.isOpen()) { ChatDock.bump(); say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); } }
   }
   /* ---------- ✓✓ سین، ✍️ در حال نوشتن، 🧸 پفیلا (دستیار مشترک) ---------- */
-  const BOT = 'ChatGPT';
+  const BOT = 'پفیلا';
   let botOn = true, editing = null; try { botOn = localStorage.getItem('vc_bot') !== '0'; } catch (e) {}
   let seenBy = {}, typers = {}, lastTypeSent = 0, typeIdle = null, mySeenSent = 0;
   try { mySeenSent = Number(localStorage.getItem('vc_seen_sent')) || 0; } catch (e) {}
@@ -457,7 +457,7 @@
     if (p.k === 'typing') { typers[p.who ? 'bot' : p.from] = { name: p.who ? BOT : String(p.name || 'اون یکی').slice(0, 30), until: p.on ? Date.now() + 4500 : 0 }; renderTyping(); }
     else if (p.k === 'del') { const n = msgs.length; msgs = msgs.filter(x => x.id !== p.id); if (msgs.length !== n) { saveMsgs(); renderChat(); } }
     else if (p.k === 'edit') { const m = msgs.find(x => x.id === p.id); if (m && typeof p.text === 'string') { m.text = p.text.slice(0, 500); m.edited = true; saveMsgs(); renderChat(); } }
-    else if (p.k === 'bot') { botOn = !!p.on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); say(botOn ? '🤖 ChatGPT روشن شد' : '🤖 ChatGPT خاموش شد'); }
+    else if (p.k === 'bot') { botOn = !!p.on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); say(botOn ? '🧸 پفیلا روشن شد' : '🧸 پفیلا خاموش شد'); }
     else if (p.k === 'bg') { if (okBg(p.v)) { chatBg = p.v; try { localStorage.setItem('vc_bg', chatBg); } catch (e) {} applyBg(); say('🎨 ' + (String(p.name || 'اون یکی').slice(0, 30)) + ' پس‌زمینهٔ چت رو عوض کرد'); } }
     else if (p.k === 'seen') { const n = String(p.name || ''); seenBy[n] = Math.max(seenBy[n] || 0, Number(p.upto) || 0); renderChat(); }
   }
@@ -484,13 +484,13 @@
     clearTimeout(typeIdle); typeIdle = setTimeout(() => { lastTypeSent = 0; ctSend({ k: 'typing', on: 0 }); }, 3000);
   }
   const rndp = a => a[Math.floor(Math.random() * a.length)];
-  const BOT_HELP = 'من ChatGPT‌ام 🤖 دستیار کوچولوی مشترک شماها! بنویس «ChatGPT، …» و یکی از اینا رو بخواه: جوک 😂 · فال ✨ · سوال دونفره ❓ · ایده برای دیت 💡 · سکه 🪙 · تاس 🎲 · «پیتزا یا برگر؟» (برات انتخاب می‌کنم) · تاریخ و ساعت ⏰';
+  const BOT_HELP = 'من پفیلام 🧸 دستیار مشترک شماها! بنویس «پفیلا، …» و یکی از اینا رو بخواه: جوک 😂 · فال ✨ · سوال دونفره ❓ · ایده برای دیت 💡 · سکه 🪙 · تاس 🎲 · «پیتزا یا برگر؟» (برات انتخاب می‌کنم) · تاریخ و ساعت ⏰';
   const JOKES = ['به خرگوشه می‌گن چرا گوشات بلنده؟ می‌گه چون هر چی حرف می‌زنن، من اینا رو بلند گوش می‌دم 🐰', 'یارو می‌ره دکتر می‌گه همه‌ش حس می‌کنم نامرئی‌م. دکتر می‌گه: «بعدی!» 😅', 'به لاک‌پشته می‌گن چرا اینقدر آروم؟ می‌گه عجله نکن، خونه رو که همیشه با خودمه 🐢', 'دو تا ابر عاشق هم شدن؛ بعدش از خوشحالی بارون شدن ☁️💧', 'به کامپیوتره می‌گن چرا خسته‌ای؟ می‌گه امروز کلی «کوکی» خوردم 🍪', 'شنیدی ماه چرا همیشه سرحاله؟ چون هر شب «کامل» می‌شه! 🌕'];
   const QS = ['اگه فردا هیچ کاری نداشتیم، کجا می‌رفتیم؟', 'اولین چیزی که از من یادت می‌یاد چیه؟', 'یه خاطرهٔ خنده‌دار از ما که هیچ‌وقت یادت نمی‌ره؟', 'اگه می‌تونستیم یه روز جای هم باشیم، اول چیکار می‌کردی؟', 'یه آرزوی کوچیک که دوست داری با هم برآورده کنیم؟', 'کدوم آهنگ یاد من می‌ندازتت؟', 'بهترین هدیه‌ای که تا حالا گرفتی چی بوده؟', 'ده سال دیگه خودمون رو کجا می‌بینی؟'];
   const DATES = ['🍿 فیلم‌بازی توی اتاق تماشا با یه ظرف پاپ‌کورن', '🎨 هر دو یه طرح آماده رو توی بوم دو نیمه رنگ کنید', '🌙 پیاده‌روی شبانه و بستنی', '🍕 هرکی یه غذای مورد علاقه‌شو بپزه و عکسش رو برای اون یکی بفرسته', '🎧 یه پلی‌لیست مشترک با ۵ آهنگ از هر کدوم', '📞 یه تماس طولانی بدون هیچ دلیل، فقط برای حرف زدن', '🧩 یه بازی حدس کلمه توی بوم'];
   const FORT = ['امروز یه خبر خوب از یه جای غیرمنتظره می‌رسه ✨', 'یه لبخند ساده، یه روز کامل رو عوض می‌کنه 🌸', 'کسی که دوستش داری الان داره بهت فکر می‌کنه 💜', 'یه سورپرایز کوچیک تو راهه، چشماتو باز نگه دار 🎁', 'امشب خوابای قشنگ می‌بینی 🌙'];
   const SWEET = ['منم شماها رو دوست دارم! 🥹💜', 'قلبم رفت تو حالت لرزش 💓', 'این حرف رو بذارید توی دفترچه‌مون، قشنگ‌ترین جملهٔ امروزه 📖'];
-  function botAnswer(q) {
+  function botAnswer(q, strict) {
     const n = String(q || '').replace(/[؟?!.،,]/g, ' ').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/\s+/g, ' ').trim(), has = (...w) => w.some(x => n.includes(x));
     if (!n || has('راهنما', 'کمک', 'چی بلدی', 'چیکار میکنی', 'چیکار می‌کنی', 'چه کار')) return BOT_HELP;
     if (has('شیر یا خط', 'سکه')) return '🪙 ' + (Math.random() < .5 ? 'شیر' : 'خط') + ' اومد!';
@@ -503,17 +503,18 @@
     if (has('ایده', 'دیت', 'چیکار کنیم', 'کجا بریم', 'برنامه', 'پیشنهاد')) return '💡 پیشنهاد من: ' + rndp(DATES);
     if (has('تاریخ', 'امروز', 'ساعت', 'چندمه', 'چند شنبه')) { try { const w = Recur.epochToWall(Date.now()); return '⏰ امروز ' + Recur.fmtJalaliLong(w.iso) + '، ساعت ' + fa(w.hhmm); } catch (e) { return '⏰ ساعتم خرابه 😅'; } }
     if (has('تشکر', 'مرسی', 'ممنون', 'دمت')) return 'قابل‌شما رو نداشت 🧸';
-    if (has('اسم', 'کی هستی', 'تو کی', 'کی هستی')) return 'من ChatGPT هستم 🤖 یه دستیار کوچولو که اینجا بین شما دوتا زندگی می‌کنه. «راهنما» رو بنویس تا بگم چی بلدم.';
+    if (has('اسم', 'کی هستی', 'تو کی', 'کی هستی')) return 'من پفیلا هستم 🧸 یه دستیار که اینجا بین شما دوتا زندگی می‌کنه. «راهنما» رو بنویس تا بگم چی بلدم.';
     if (has('سلام', 'درود', 'هلو', 'های', 'صبح بخیر', 'شب بخیر')) return rndp(['سلام سلام! 🧸', 'به به! چه خبرا؟ ☁️', 'سلام، من اینجام! 🍬']);
     if (has('خوبی', 'حالت', 'چطوری')) return rndp(['عالیم! امروز کلی پفک خوردم 🧸', 'خوبم، تو چطوری؟ 💜']);
+    if (strict) return null;
     return rndp(['هنوز کوچولوام و همه‌چیز نمی‌دونم 🙈 «راهنما» رو بنویس ببین چی بلدم', 'این رو نفهمیدم، ولی دوستت دارم 🧸', 'بذار فکر کنم… نه، نشد! «راهنما» بنویس 😅']);
   }
   function renderBot() {
-    const b = $('botToggle'); if (b) { b.classList.toggle('on', botOn); b.title = botOn ? 'ChatGPT روشنه (برای خاموش کردن بزن)' : 'ChatGPT خاموشه (برای روشن کردن بزن)'; b.setAttribute('aria-pressed', botOn ? 'true' : 'false'); }
+    const b = $('botToggle'); if (b) { b.classList.toggle('on', botOn); b.title = botOn ? 'پفیلا روشنه (برای خاموش کردن بزن)' : 'پفیلا خاموشه (برای روشن کردن بزن)'; b.setAttribute('aria-pressed', botOn ? 'true' : 'false'); }
     const c = $('vcBot'); if (c) c.style.display = botOn ? '' : 'none';
   }
   function setBot(on) {
-    botOn = !!on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); ctSend({ k: 'bot', on: botOn }); say(botOn ? '🤖 ChatGPT روشن شد' : '🤖 ChatGPT خاموش شد');
+    botOn = !!on; try { localStorage.setItem('vc_bot', botOn ? '1' : '0'); } catch (e) {} renderBot(); ctSend({ k: 'bot', on: botOn }); say(botOn ? '🧸 پفیلا روشن شد' : '🧸 پفیلا خاموش شد');
     try { dbClient.from('voice_chat').upsert({ id: '__bot', name: nm(), text: botOn ? '1' : '0', ts: Date.now() }).then(() => {}, () => {}); } catch (e) {}
   }
   function delMsg(id) {
@@ -541,9 +542,45 @@
     const r = await Promise.race([call(GPT_FN).then(x => (x && x.error && /not found|404|Failed to send|fetch|relay/i.test(String(x.error.message || x.error))) ? call('dynamic-service') : x, () => call('dynamic-service')), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
     if (r && r.error) { let d = ''; try { const c = r.error.context; if (c && c.json) { const j = await c.json(); d = j && (j.error || j.message || j.msg) || ''; } else if (c && c.text) d = await c.text(); } catch (e2) {} const er = new Error((d ? String(d) : '') + ' | ' + String(r.error.message || r.error)); er.detail = d; er.status = r.error.context && r.error.context.status; throw er; } const t = r && r.data && r.data.reply; if (!t) throw new Error((r && r.data && r.data.error) || 'empty'); return String(t);
   }
+
+  /* ---------- 🧠 پفیلای باهوش: ریاضی، هوا، ویکی‌پدیا (بدون کلید و رایگان) ---------- */
+  const toEn = t => String(t || '').replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[×✕]/g, '*').replace(/÷/g, '/').replace(/٫/g, '.').replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+  function mathAns(q) {
+    let e = toEn(q).replace(/(\d+(?:\.\d+)?)\s*(?:درصد|%)\s*(?:از|ِ)?\s*(\d+(?:\.\d+)?)/, '($1/100*$2)').replace(/(\d)\s*[xX]\s*(\d)/g, '$1*$2').replace(/\^/g, '**').replace(/(\d)\s*(?:به توان)\s*(\d)/g, '$1**$2').replace(/(\d)\s+(?:بعلاوه|به علاوه|جمع)\s+(\d)/g, '$1+$2').replace(/(\d)\s+(?:منهای|تفریق)\s+(\d)/g, '$1-$2').replace(/(\d)\s+(?:ضربدر|ضرب در)\s+(\d)/g, '$1*$2').replace(/(\d)\s+(?:تقسیم بر|تقسیم)\s+(\d)/g, '$1/$2');
+    const m = e.match(/[\d.(][\d\s+\-*/%().]*[\d)]/); if (!m) return null; let x = m[0].trim();
+    if (!/\d\s*(?:\*\*|[-+*/%])\s*[\d(]|\(.*\)/.test(x) || /^\d+\/\d+\/\d+$/.test(x)) return null;
+    try { const v = Function('"use strict";return (' + x + ')')(); if (typeof v !== 'number' || !isFinite(v)) return null; return '🧮 ' + x.replace(/\*\*/g, '^').replace(/\*/g, '×') + ' = ' + fa(Number(v.toFixed(6))); } catch (er) { return null; }
+  }
+  const WMO = { 0: 'آسمون صاف ☀️', 1: 'تقریباً صاف 🌤️', 2: 'کمی ابری ⛅', 3: 'ابری ☁️', 45: 'مه‌آلود 🌫️', 48: 'مه‌آلود 🌫️', 51: 'نم‌نم بارون 🌦️', 53: 'نم‌نم بارون 🌦️', 55: 'بارون ریز 🌦️', 61: 'بارون 🌧️', 63: 'بارون 🌧️', 65: 'بارون شدید 🌧️', 71: 'برفی 🌨️', 73: 'برف 🌨️', 75: 'برف سنگین ❄️', 80: 'رگبار 🌦️', 81: 'رگبار 🌧️', 82: 'رگبار شدید ⛈️', 95: 'رعدوبرق ⛈️', 96: 'رعدوبرق و تگرگ ⛈️', 99: 'رعدوبرق و تگرگ ⛈️' };
+  const getJ = async (u, ms) => { const c = new AbortController(), t = setTimeout(() => c.abort(), ms || 8000); try { const r = await fetch(u, { signal: c.signal }); if (!r.ok) throw new Error('http'); return await r.json(); } finally { clearTimeout(t); } };
+  async function weatherAns(n) {
+    const mm = n.match(/هوا(?:ی)?\s+(?:شهر\s+)?([^\s]+(?:\s[^\s]+)?)/); let city = mm ? mm[1] : ''; city = city.replace(/\s*(?:چطوره|چطور|چجوریه|چیه|الان|امروز|فردا|چه)\b.*$/, '').trim(); if (!city) return null;
+    const g = await getJ('https://geocoding-api.open-meteo.com/v1/search?count=1&language=fa&name=' + encodeURIComponent(city)); const p = g.results && g.results[0]; if (!p) return null;
+    const w = await getJ('https://api.open-meteo.com/v1/forecast?current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&latitude=' + p.latitude + '&longitude=' + p.longitude).then(j => j.current); if (!w) return null;
+    return '🌍 هوای ' + (p.name || city) + ' الان: ' + (WMO[w.weather_code] || 'نامشخص') + '، ' + fa(Math.round(w.temperature_2m)) + '° درجه، رطوبت ' + fa(Math.round(w.relative_humidity_2m)) + '٪، باد ' + fa(Math.round(w.wind_speed_10m)) + ' کیلومتر بر ساعت';
+  }
+  const WQ = /(چیه|چیست|کیه|کیست|کی بود|چی بود|چی هست|کجاست|کجا هست|یعنی چی|یعنی چه|معنی|درباره|توضیح|بگو|چه کسی|پایتخت|تاریخچه|رو بگو)/;
+  async function wikiAns(n) {
+    if (!WQ.test(n)) return null;
+    let t = n.replace(/(معنی|یعنی چی|یعنی چه|چیه|چیست|کیه|کیست|کی بود|چی بود|چی هست|کجاست|کجا هست|درباره|توضیح بده|توضیح|بگو|بده|رو بگو|لطفا|پفیلا|chatgpt)/gi, ' ').replace(/\s(?:رو|را|ی|ـ)\s/g, ' ').replace(/\s+/g, ' ').trim(); if (t.length < 2) return null;
+    const sr = await getJ('https://fa.wikipedia.org/w/api.php?action=query&list=search&srlimit=1&format=json&origin=*&srsearch=' + encodeURIComponent(t)); const hit = sr.query && sr.query.search && sr.query.search[0]; if (!hit) return null;
+    const sm = await getJ('https://fa.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(hit.title.replace(/ /g, '_'))); let x = String(sm.extract || '').trim(); if (!x || x.length < 20) return null;
+    if (x.length > 420) { const cut = x.slice(0, 420), i = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('؛ '), cut.lastIndexOf('، ')); x = (i > 120 ? cut.slice(0, i + 1) : cut) + '…'; }
+    return '📚 ' + (sm.title || hit.title) + ': ' + x + ' (ویکی‌پدیا)';
+  }
+  let gptDownUntil = 0;
+  async function smartAnswer(q) {
+    const n = toEn(q).replace(/[؟?!.،,]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (Date.now() > gptDownUntil) { try { return await gptAnswer(q, nm()); } catch (e) { gptDownUntil = Date.now() + 10 * 60000; } }
+    let r = mathAns(q); if (r) return r;
+    if (/هوا/.test(n)) { try { r = await weatherAns(n); if (r) return r; } catch (e) {} }
+    r = botAnswer(q, true); if (r) return r;
+    try { r = await wikiAns(n); if (r) return r; } catch (e) {}
+    return botAnswer(q);
+  }
   function botMaybe(text) {
     if (!botOn || !BOT_RE.test(text || '')) return; const q = text.replace(BOT_RE, '').replace(/^[\s،,:؛]+/, '');
-    if (botBusy) { say('⏳ ChatGPT هنوز داره جواب قبلی رو می‌نویسه'); return; } botBusy = true;
+    if (botBusy) { say('⏳ پفیلا هنوز داره جواب قبلی رو می‌نویسه'); return; } botBusy = true;
     typers.bot = { name: BOT, until: Date.now() + 30000 }; renderTyping(); ctSend({ k: 'typing', on: 1, who: BOT });
     const finish = ans => {
       botBusy = false; const ts = Date.now(), id = 'm_' + ts + '_bot' + ID, p = { from: ID, id, name: BOT, text: ans, ts, img: '', reply: null };
@@ -553,10 +590,7 @@
       try { dbClient.from('voice_chat').upsert({ id, name: BOT, text: ans, ts }).then(() => {}, () => {}); } catch (e) {}
     };
     if (!q || LOCAL_Q.test(q)) { setTimeout(() => finish(botAnswer(q)), 700 + Math.random() * 500); return; }
-    gptAnswer(q, nm()).then(finish).catch(e => {
-      const why = String((e && (e.message || e.error)) || e || '');
-      finish('🤖 الان نتونستم از ChatGPT جواب بگیرم' + (/not found|404|Failed to send|fetch|relay/i.test(why) ? ' (تابع chatgpt هنوز روی Supabase راه‌اندازی نشده)' : /OPENAI_API_KEY|incorrect api key|invalid_api_key/i.test(why) ? ' (کلید OpenAI تنظیم نشده یا اشتباهه)' : /^empty$|^Error: empty/i.test(why) || why === 'empty' ? ' (تابع جواب ChatGPT برنگردوند؛ احتمالاً کد تابع هنوز کد پیش‌فرضِ Supabase است، کد من رو جاش بچسبون و Deploy بزن)' : /timeout/i.test(why) ? ' (تابع دیر جواب داد)' : /quota|billing|insufficient/i.test(why) ? ' (اعتبار حساب OpenAI تموم شده؛ توی Billing شارژ کن)' : (e && e.status === 401) || /JWT|401|Unauthorized/i.test(why) ? ' (Verify JWT تابع رو خاموش کن)' : e && e.status ? ' (' + e.status + ': ' + String(e.detail || why).slice(0, 120) + ')' : '') + '؛ ' + botAnswer(q));
-    });
+    smartAnswer(q).then(finish).catch(() => finish(botAnswer(q)));
   }
 
   /* ---------- 📷 تصویر و ↩︎ ریپلای توی چت ---------- */
@@ -634,7 +668,7 @@
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     const ci = $('vcChatInput'); if (ci) ci.addEventListener('input', onTyping);
     const gb = $('bgBtn'); if (gb) gb.addEventListener('click', toggleBgPop); applyBg();
-    const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'ChatGPT، ' + b.dataset.bot; sendChat(); } });
+    const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
     const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
     const imgOf = dt => { const it = dt && dt.items ? Array.from(dt.items).find(i => i.kind === 'file' && /^image\//.test(i.type)) : null; const f = it ? it.getAsFile() : (dt && dt.files ? Array.from(dt.files).find(x => /^image\//.test(x.type)) : null); return f || null; };
     const ci2 = $('vcChatInput'); if (ci2) ci2.addEventListener('paste', e => { const f = imgOf(e.clipboardData); if (f) { e.preventDefault(); pickImage(f); } });
