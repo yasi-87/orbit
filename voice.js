@@ -451,6 +451,31 @@
     });
     $('vcBgFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; pickBgImage(f); });
   }
+
+  /* ---------- 😊 پنل ایموجی (کنار چت توی لپ‌تاپ، زیر چت توی موبایل) ---------- */
+  const EMO = [
+    ['😀', '😀😃😄😁😆😅😂🤣🥲😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁☹️😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🫣🤭🫢🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👻💀☠️👽🤖💩'],
+    ['💜', '❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟♥️😻😽💌💋🫶🥹🤝👫💑💏🌹🥀💐🌷🌸🌺🌼🧸🎀🎁💍✨⭐🌟💫🔥🌈☀️🌙⚡❄️'],
+    ['👍', '👍👎👌🤌✌️🤞🫰🤟🤘🤙👈👉👆👇☝️👋🤚🖐️✋🖖👏🙌🫶👐🤲🙏✍️💪🦾🫵🤏🤳💅👀👁️👅👄🫦🧠🫀'],
+    ['🐱', '🐱🐶🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐔🐧🐦🐤🦆🦉🦄🐝🦋🐌🐞🐢🐍🐙🦑🐠🐬🐳🦈🐘🦒🦓🐎🐕🐈🐇🦔🦦🦥🌳🌴🌵🍀🍁🍂🌻🍄'],
+    ['🍕', '🍕🍔🍟🌭🥪🌮🌯🥗🍝🍜🍣🍱🍤🍙🍚🍛🥘🍳🥞🧇🥓🍗🍖🥩🧀🍞🥐🥨🍩🍪🎂🍰🧁🍫🍬🍭🍮🍯🍎🍊🍋🍌🍉🍇🍓🫐🍑🍒🥭🍍🥝🍅🥑🌽🥕☕🍵🧋🥤🍹🍷🥂🍺'],
+    ['✈️', '✈️🚗🚕🚌🚎🏎️🚓🚑🚲🛵🏍️🚂🚀🛸⛵🚤🏝️🏖️🏕️⛰️🗻🌋🏰🗼🗽🎡🎢🎠🌃🌆🌉🌅⛺🏠🏡'],
+    ['⚽', '⚽🏀🏈⚾🎾🏐🏓🎱🥊🏆🥇🎮🕹️🎲🧩🎯🎳🎨🎭🎬🎤🎧🎸🎹🥁🎻📚📖✏️📷📱💻⌚💡🔮🎉🎊🎈🪄🧿']
+  ];
+  let emoOpen = false, emoTab = 0;
+  const splitEmo = str => { try { return Array.from(new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(str), x => x.segment); } catch (e) { return Array.from(str); } };
+  function renderEmoji() {
+    const el = $('vcEmoji'); if (!el) return; el.style.display = emoOpen ? '' : 'none'; if (!emoOpen) return;
+    if (!el.dataset.built) { el.dataset.built = '1'; el.innerHTML = '<div class="em-tabs">' + EMO.map((c, i) => '<button type="button" data-et="' + i + '">' + c[0] + '</button>').join('') + '</div><div class="em-grid" id="vcEmGrid"></div>'; el.addEventListener('click', e => { const t = e.target.closest('[data-et]'); if (t) { emoTab = +t.dataset.et; renderEmoji(); return; } const b = e.target.closest('[data-em]'); if (b) insertEmoji(b.dataset.em); }); }
+    el.querySelectorAll('[data-et]').forEach(b => b.classList.toggle('on', +b.dataset.et === emoTab));
+    $('vcEmGrid').innerHTML = splitEmo(EMO[emoTab][1]).filter(x => x.trim()).map(x => '<button type="button" data-em="' + x + '">' + x + '</button>').join('');
+    $('vcEmGrid').scrollTop = 0;
+  }
+  function insertEmoji(e) {
+    const i = $('vcChatInput'); if (!i) return; const a = i.selectionStart == null ? i.value.length : i.selectionStart, b = i.selectionEnd == null ? a : i.selectionEnd;
+    if ((i.value.length + e.length) > (i.maxLength || 500)) return;
+    i.value = i.value.slice(0, a) + e + i.value.slice(b); const pos = a + e.length; try { i.setSelectionRange(pos, pos); } catch (er) {} i.dispatchEvent(new Event('input')); if (window.innerWidth >= 1280) i.focus();
+  }
   const ctSend = p => { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'ct', payload: Object.assign({ from: ID, name: nm() }, p) }); } catch (e) {} };
   function onCt(p) {
     if (!p || p.from === ID) return;
@@ -667,6 +692,7 @@
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     const ci = $('vcChatInput'); if (ci) ci.addEventListener('input', onTyping);
+    const eb = $('vcEmoBtn'); if (eb) eb.addEventListener('click', () => { emoOpen = !emoOpen; renderEmoji(); });
     const gb = $('bgBtn'); if (gb) gb.addEventListener('click', toggleBgPop); applyBg();
     const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
     const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
