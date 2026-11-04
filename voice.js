@@ -555,7 +555,7 @@
     if (!q || LOCAL_Q.test(q)) { setTimeout(() => finish(botAnswer(q)), 700 + Math.random() * 500); return; }
     gptAnswer(q, nm()).then(finish).catch(e => {
       const why = String((e && (e.message || e.error)) || e || '');
-      finish('🤖 الان نتونستم از ChatGPT جواب بگیرم' + (/not found|404|Failed to send|fetch|relay/i.test(why) ? ' (تابع chatgpt هنوز روی Supabase راه‌اندازی نشده)' : /OPENAI_API_KEY|incorrect api key|invalid_api_key/i.test(why) ? ' (کلید OpenAI تنظیم نشده یا اشتباهه)' : /quota|billing|insufficient/i.test(why) ? ' (اعتبار حساب OpenAI تموم شده؛ توی Billing شارژ کن)' : (e && e.status === 401) || /JWT|401|Unauthorized/i.test(why) ? ' (Verify JWT تابع رو خاموش کن)' : e && e.status ? ' (' + e.status + ': ' + String(e.detail || why).slice(0, 120) + ')' : '') + '؛ ' + botAnswer(q));
+      finish('🤖 الان نتونستم از ChatGPT جواب بگیرم' + (/not found|404|Failed to send|fetch|relay/i.test(why) ? ' (تابع chatgpt هنوز روی Supabase راه‌اندازی نشده)' : /OPENAI_API_KEY|incorrect api key|invalid_api_key/i.test(why) ? ' (کلید OpenAI تنظیم نشده یا اشتباهه)' : /^empty$|^Error: empty/i.test(why) || why === 'empty' ? ' (تابع جواب ChatGPT برنگردوند؛ احتمالاً کد تابع هنوز کد پیش‌فرضِ Supabase است، کد من رو جاش بچسبون و Deploy بزن)' : /timeout/i.test(why) ? ' (تابع دیر جواب داد)' : /quota|billing|insufficient/i.test(why) ? ' (اعتبار حساب OpenAI تموم شده؛ توی Billing شارژ کن)' : (e && e.status === 401) || /JWT|401|Unauthorized/i.test(why) ? ' (Verify JWT تابع رو خاموش کن)' : e && e.status ? ' (' + e.status + ': ' + String(e.detail || why).slice(0, 120) + ')' : '') + '؛ ' + botAnswer(q));
     });
   }
 
