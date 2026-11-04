@@ -16,7 +16,7 @@
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
   const say = m => { if (typeof toast === 'function') toast(m); };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const okAv = s => (typeof s === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 30000) ? s : '';
+  const okAv = s => (typeof s === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 60000) ? s : '';
   let myThumb = '', thumbSrc = '';
   /* عکس پروفایل کوچیک‌شده (۹۶ پیکسل) تا توی حضور (presence) جا بشه */
   function makeThumb(cb) {
@@ -26,9 +26,9 @@
     const im = new Image();
     im.onload = () => {
       try {
-        const c = document.createElement('canvas'); c.width = c.height = 96; const x = c.getContext('2d');
+        const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
         const s = Math.min(im.width, im.height), sx = (im.width - s) / 2, sy = (im.height - s) / 2;
-        x.drawImage(im, sx, sy, s, s, 0, 0, 96, 96); myThumb = okAv(c.toDataURL('image/jpeg', 0.7)); thumbSrc = src;
+        x.imageSmoothingQuality = 'high'; x.drawImage(im, sx, sy, s, s, 0, 0, 128, 128); myThumb = okAv(c.toDataURL('image/jpeg', 0.82)); thumbSrc = src;
       } catch (e) { myThumb = ''; }
       cb();
     };
@@ -657,7 +657,7 @@
   async function pickImage(file) {
     if (!file || !/^image\//.test(file.type)) return;
     try {
-      const url = await resizeImageFile(file, 1600, 0.82);
+      const url = await resizeImageFile(file, 2000, 0.9);
       pendImg = { blob: dataUrlToBlob(url), preview: url };
       renderComposer(); const i = $('vcChatInput'); if (i) i.focus();
     } catch (e) { say('⚠️ این تصویر باز نشد'); }

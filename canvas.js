@@ -390,7 +390,7 @@
     const src = (typeof userProfile !== 'undefined' && userProfile.avatar) || '';
     if (!src || src === thumbSrc) return go();
     const im = new Image();
-    im.onload = () => { try { const c = document.createElement('canvas'); c.width = c.height = 72; const x = c.getContext('2d'); const s = Math.min(im.width, im.height); x.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 72, 72); const u = c.toDataURL('image/jpeg', 0.6); if (u.length < 9000) thumb = u; thumbSrc = src; } catch (e) {} go(); };
+    im.onload = () => { try { const c = document.createElement('canvas'); c.width = c.height = 112; const x = c.getContext('2d'); const s = Math.min(im.width, im.height); x.imageSmoothingQuality = "high"; x.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 112, 112); const u = c.toDataURL("image/jpeg", 0.8); if (u.length < 20000) thumb = u; thumbSrc = src; } catch (e) {} go(); };
     im.onerror = go; im.src = src;
   }
   function presence() {

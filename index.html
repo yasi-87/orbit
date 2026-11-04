@@ -2286,7 +2286,7 @@ function resizeImageFile(file, maxSide, quality) {
       w = Math.round(w * scale); h = Math.round(h * scale);
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const rc = canvas.getContext('2d'); rc.imageSmoothingQuality = 'high'; rc.drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
@@ -2295,12 +2295,27 @@ function resizeImageFile(file, maxSide, quality) {
   });
 }
 
+/* عکس مربعیِ برش‌خورده از وسط (برای آواتار): بدون کشیدگی و با کیفیت بهتر */
+function resizeSquareFile(file, size, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
+      x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      const sd = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height), sx = ((img.naturalWidth || img.width) - sd) / 2, sy = ((img.naturalHeight || img.height) - sd) / 2;
+      x.fillStyle = '#fff'; x.fillRect(0, 0, size, size); x.drawImage(img, sx, sy, sd, sd, 0, 0, size, size);
+      URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
+    img.src = url;
+  });
+}
 function uploadAvatar(ev) {
   const file = ev.target.files[0];
   if (!file) return;
   if (file.size > 10 * 1024 * 1024) { toast('⚠️ عکس خیلی بزرگه'); return; }
   // آواتار رو کوچیک می‌کنیم تا توی هر کامنت سنگین نباشه
-  resizeImageFile(file, 160, 0.85).then(dataUrl => {
+  resizeSquareFile(file, 256, 0.9).then(dataUrl => {
     userProfile.avatar = dataUrl;
     saveUserProfile();
     if (window.ProfileSync) ProfileSync.avatarChanged();
@@ -2525,8 +2540,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-04i';
+const SITE_VERSION = '2026-11-04j';
 const SITE_CHANGES = [
+  '🖼️ عکس پروفایل: همیشه آخرین عکس خودِ هر نفر نمایش داده می‌شه (نه عکس قدیمیِ کامنتش)، مربعی و بدون کشیدگی و با کیفیت بالاتر؛ کیفیت عکس‌های گالری، چت و فصل‌ها هم بهتر شد',
   '⭐ نوار ایموجی چت حالا از روی پیام‌های خودِ ما ساخته می‌شه: ایموجی‌هایی که هر دومون تا حالا بیشتر فرستادیم اول نوار هستن',
   '⭐ نوار ایموجی‌های پرکاربرد بالای کادر پیام: ایموجی‌هایی که بیشتر از همه می‌فرستیم خودکار اونجا میان؛ با دکمهٔ 😊 همهٔ ایموجی‌ها باز می‌شن',
   '😊 ایموجی توی چت: دکمهٔ 😊 کنار کادر پیام؛ توی لپ‌تاپ یه پنل عمودی از بالا تا پایین کنار چت باز می‌شه (مثل تلگرام) و توی موبایل زیر چت',
@@ -2755,10 +2771,12 @@ async function commentsGetByChapter(chapterId) {
   const { data, error } = await dbClient.from('comments').select('id,chapter_id,name,text,created_at').eq('chapter_id', chapterId).order('created_at', { ascending: true });
   if (error) { console.error(error); return []; }
   const rows = data || [];
-  const names = [...new Set(rows.map(r => r.name))].filter(n => !(n in avatarCache));
+  const now = Date.now(), names = [...new Set(rows.map(r => r.name))].filter(n => !(n in avatarCache) || now - (avatarCache['@' + n] || 0) > 60000);
   await Promise.all(names.map(async n => {
-    const r = await dbClient.from('comments').select('avatar').eq('name', n).order('created_at', { ascending: false }).limit(1);
-    avatarCache[n] = (r.data && r.data[0] && r.data[0].avatar) || null;
+    let av = null;
+    try { const pr = await dbClient.from('profiles').select('avatar').eq('key', Recur.nameKey(n)).maybeSingle(); if (pr && pr.data && pr.data.avatar) av = pr.data.avatar; } catch (e) {}   // آخرین عکس پروفایلِ خودِ اون آدم
+    if (!av) { try { const r = await dbClient.from('comments').select('avatar').eq('name', n).not('avatar', 'is', null).order('created_at', { ascending: false }).limit(1); av = (r.data && r.data[0] && r.data[0].avatar) || null; } catch (e) {} }
+    avatarCache[n] = av; avatarCache['@' + n] = now;
   }));
   rows.forEach(r => { r.avatar = avatarCache[r.name] || null; });
   return rows;
@@ -3510,7 +3528,7 @@ function addMedia(ev, type) {
   (async () => {
     let src, blob = file, ext = extOf(file);
     if (type === 'image' && file.type !== 'image/gif') {
-      src = await resizeImageFile(file, 1600, 0.82);
+      src = await resizeImageFile(file, 2000, 0.9);
       blob = dataUrlToBlob(src); ext = 'jpg';
     }
     try { src = (await uploadMediaFile(blob, ext, file.name)).url; }
@@ -4062,7 +4080,7 @@ async function uploadGallery(ev) {
     toast(`⏳ آپلود ${i + 1} از ${files.length}...`);
     try {
       let blob = file, ext = extOf(file);
-      if (!isVid && file.type !== 'image/gif') { blob = dataUrlToBlob(await resizeImageFile(file, 2000, 0.85)); ext = 'jpg'; }
+      if (!isVid && file.type !== 'image/gif') { blob = dataUrlToBlob(await resizeImageFile(file, 2560, 0.92)); ext = 'jpg'; }
       const up = await uploadMediaFile(blob, ext, file.name);
       const row = { id: 'gl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), kind: isVid ? 'video' : 'image',
         url: up.url, file_path: up.path, author: myName() || 'ناشناس', created_at: Date.now() };
