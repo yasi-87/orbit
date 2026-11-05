@@ -386,7 +386,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
   ];
   const SLEEP_VOICES = ['v2', 'l1', 'l2'];      // ویس‌های لالایی/خواب؛ یکی‌یکی و پشت‌سرهم پخش می‌شن
   const SND_KEY = 'diary_cat_sound';
-  const soundOn = () => { try { return localStorage.getItem(SND_KEY) !== '0'; } catch (e) { return true; } };
+  const soundOn = () => { if (guestOn()) return false; try { return localStorage.getItem(SND_KEY) !== '0'; } catch (e) { return true; } };
   const siteMuted = () => { try { return typeof muted !== 'undefined' && muted === true; } catch (e) { return false; } };
   const audios = {}; let curSnd = null, lastSnd = 0, lastWho = '', lastFile = '';
   function playFile(f, vol) {
@@ -524,7 +524,7 @@ body.reading-mode .catpal:hover{opacity:1}`;
       <div class="cp-sec">رنگ</div><div class="cp-chips">${furCream}${ids('fur').map(chip).join('')}</div>
       <div class="cp-sec">حالت</div><div class="cp-chips">${moodNormal}${ids('mood').map(chip).join('')}</div>
       <div class="cp-sec" id="cpHint">${guestOn() ? 'همهٔ آیتم‌ها برای تو بازه 🎁' : 'روی آیتم‌های 🔒 بزن تا بفهمی چطور باز می‌شن'}</div>
-      <div class="cp-row"><button class="cp-btn" data-a="snd">${soundOn() ? '🔊 صدای میو: روشن' : '🔇 صدای میو: خاموش'}</button><button class="cp-btn" data-a="close">بستن</button></div>`, 30000);
+      <div class="cp-row">${guestOn() ? '' : `<button class="cp-btn" data-a="snd">${soundOn() ? '🔊 صدای میو: روشن' : '🔇 صدای میو: خاموش'}</button>`}<button class="cp-btn" data-a="close">بستن</button></div>`, 30000);
     bubble.querySelectorAll('.cp-chip').forEach(c => c.onclick = e => { e.stopPropagation(); pick(c.dataset.id); });
     wire();
   }
