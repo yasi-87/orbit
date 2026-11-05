@@ -40,7 +40,7 @@
   let ch = null, subscribed = false, inited = false, built = false, tab = 'draw';
   let strokes = [], secretStrokes = [], redo = [], secret = false;
   const META0 = () => ({ mode: 'free', topic: '', bg: 'cream', turn: '', half: null, timerEnd: 0, drawer: '', tpl: '', level: 'med', wlen: 0, hint: '', rid: '', gEnd: 0 });
-  let meta = META0(), stkCat = 0, tplHow = 'solo', z = { s: 1, x: 0, y: 0 }, zoomEl = null, tplc = null, guessWrong = 0;
+  let meta = META0(), stkCat = 0, tplHow = 'solo', tplLine = (() => { try { return localStorage.getItem('cv_tplline') || 'faint'; } catch (e) { return 'faint'; } })(), z = { s: 1, x: 0, y: 0 }, zoomEl = null, tplc = null, guessWrong = 0;
   let tool = 'pen', color = '#ff4d6d', size = 6, alpha = 1, stickerPick = '❤️', sigMode = false;
   let peers = {}, cursors = {}, remote = {}, mine = null, guessWord = '', guessFeed = [];
   let base, bctx, work, wctx, bgc, bgctx, stage;
@@ -99,62 +99,140 @@
   const starPath = (cx, cy, r) => { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; d += (i ? 'L' : 'M') + (cx + Math.cos(a) * rr).toFixed(1) + ' ' + (cy + Math.sin(a) * rr).toFixed(1); } return d + 'Z'; };
   const HEART = 'M600 700 C250 480 230 220 420 190 C520 175 580 230 600 290 C620 230 680 175 780 190 C970 220 950 480 600 700 Z';
   const TPLS = [
-    { id: 'heart', n: 'قلب', d: g => { g.sh(HEART); g.T(600, 440, .62, () => g.sh(HEART)); g.T(600, 440, .3, () => g.sh(HEART)); [[170, 150], [1030, 150], [150, 720], [1050, 720]].forEach(p => g.T(p[0], p[1], .16, () => g.sh(HEART))); } },
+    { id: 'heart', n: 'قلب', d: g => { g.sh(HEART); g.T(600, 440, .62, () => g.sh(HEART)); g.T(600, 440, .3, () => g.sh(HEART)); [[170, 150], [1030, 150], [150, 720], [1050, 720]].forEach(p => g.T(p[0], p[1], .16, () => g.sh(HEART)));
+      g.T(600, 440, .12, () => g.sh(HEART)); [[330, 330], [870, 330], [600, 560], [420, 480], [780, 480]].forEach(p => g.ci(p[0], p[1], 14)); [[250, 290], [950, 290], [430, 210], [770, 210]].forEach(p => g.T(p[0], p[1], .1, () => g.sh(HEART)));
+      for (let i = 0; i < 9; i++) g.ci(120 + i * 120, 800, 12); for (let i = 0; i < 8; i++) g.ci(180 + i * 120, 55, 9); g.ln('M60 110 C60 70 100 50 140 50'); g.ln('M1140 110 C1140 70 1100 50 1060 50'); } },
     { id: 'flower', n: 'گل', d: g => {
       g.sh('M585 430 C580 560 590 680 580 810 L620 810 C610 680 620 560 615 430 Z');
       g.sh('M600 640 C500 570 430 590 400 650 C470 705 560 695 600 640 Z'); g.sh('M610 560 C700 500 770 520 800 580 C730 630 650 620 610 560 Z');
       for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.el(600 + Math.cos(a) * 165, 330 + Math.sin(a) * 165, 50, 105, a + Math.PI / 2); }
-      g.ci(600, 330, 85); g.ci(600, 330, 45); g.ln('M120 810 L1080 810'); } },
+      g.ci(600, 330, 85); g.ci(600, 330, 45);
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.el(600 + Math.cos(a) * 165, 330 + Math.sin(a) * 165, 22, 62, a + Math.PI / 2); }
+      for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; g.ci(600 + Math.cos(a) * 65, 330 + Math.sin(a) * 65, 9); }
+      g.ln('M590 600 C560 580 500 600 450 640'); g.ln('M610 520 C660 500 720 520 760 560');
+      [[220, 700, .5], [980, 690, .45], [360, 740, .35]].forEach(f => { g.ln('M' + f[0] + ' 810 L' + f[0] + ' ' + (810 - 170 * f[2] * 2)); const cy = 810 - 190 * f[2] * 2; for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.el(f[0] + Math.cos(a) * 42 * f[2] * 2, cy + Math.sin(a) * 42 * f[2] * 2, 17 * f[2] * 2, 30 * f[2] * 2, a + Math.PI / 2); } g.ci(f[0], cy, 14 * f[2] * 2); });
+      for (let i = 0; i < 7; i++) { const x = 110 + i * 140; g.ln('M' + x + ' 810 L' + (x + 8) + ' 770 L' + (x + 20) + ' 810'); }
+      g.ln('M120 810 L1080 810'); g.sh('M880 150 C850 120 900 90 920 120 C940 90 990 120 960 150 C950 170 900 175 880 150 Z'); g.ci(150, 130, 26); g.ci(150, 130, 12); } },
     { id: 'cat', n: 'گربه', d: g => {
       g.sh('M820 740 C960 740 1020 640 980 540 C960 500 920 520 940 560 C970 620 930 690 820 700 Z');
       g.sh('M390 560 C340 680 340 790 440 800 L760 800 C860 790 860 680 810 560 Z');
       g.sh('M390 300 L360 100 L560 210 Z'); g.sh('M810 300 L840 100 L640 210 Z'); g.sh('M410 250 L390 160 L500 215 Z'); g.sh('M790 250 L810 160 L700 215 Z');
       g.el(600, 400, 230, 200); g.el(520, 380, 34, 44); g.el(680, 380, 34, 44); g.ci(520, 392, 15); g.ci(680, 392, 15);
       g.sh('M575 450 L625 450 L600 482 Z'); g.ln('M600 482 L600 512'); g.ln('M600 512 C580 545 550 545 535 515'); g.ln('M600 512 C620 545 650 545 665 515');
-      g.ln('M420 450 L300 430'); g.ln('M420 485 L300 495'); g.ln('M780 450 L900 430'); g.ln('M780 485 L900 495'); g.el(600, 640, 90, 60); } },
+      g.ln('M420 450 L300 430'); g.ln('M420 485 L300 495'); g.ln('M780 450 L900 430'); g.ln('M780 485 L900 495'); g.el(600, 640, 90, 60);
+      g.sh('M520 330 L540 270 L560 335 Z'); g.sh('M580 320 L600 250 L620 320 Z'); g.sh('M640 335 L660 270 L680 330 Z');
+      g.ln('M440 540 C530 580 670 580 760 540'); g.ci(600, 590, 24); g.ln('M600 566 L600 614');
+      g.ci(470, 470, 5); g.ci(450, 485, 5); g.ci(730, 470, 5); g.ci(750, 485, 5); g.ci(520, 392, 5); g.ci(680, 392, 5);
+      g.el(450, 790, 48, 22); g.el(750, 790, 48, 22); g.ln('M420 790 L420 800'); g.ln('M450 785 L450 800'); g.ln('M480 790 L480 800'); g.ln('M720 790 L720 800'); g.ln('M750 785 L750 800'); g.ln('M780 790 L780 800');
+      g.ln('M900 590 L960 612'); g.ln('M930 540 L985 550'); g.ln('M950 520 L990 480');
+      g.ci(190, 720, 80); g.ln('M120 690 C170 720 230 690 265 730'); g.ln('M125 750 C180 710 230 760 260 700'); g.ln('M190 640 C200 700 160 760 190 800'); g.ln('M270 740 C330 760 340 800 400 800');
+      [[90, 110], [1090, 90], [1010, 250]].forEach(p => g.star(p[0], p[1], 30)); g.ln('M60 810 L1140 810'); } },
     { id: 'rabbit', n: 'خرگوش', d: g => {
       g.el(500, 170, 55, 150, -0.08); g.el(700, 170, 55, 150, 0.08); g.el(500, 180, 26, 108, -0.08); g.el(700, 180, 26, 108, 0.08);
       g.el(600, 700, 175, 125); g.el(480, 805, 75, 30); g.el(720, 805, 75, 30); g.el(600, 720, 90, 70);
       g.el(600, 420, 205, 175); g.ci(530, 400, 30); g.ci(670, 400, 30); g.ci(534, 404, 12); g.ci(666, 404, 12); g.ci(455, 480, 36); g.ci(745, 480, 36);
-      g.sh('M577 455 L623 455 L600 482 Z'); g.ln('M600 482 L600 512'); g.ln('M600 512 C580 540 555 536 545 516'); g.ln('M600 512 C620 540 645 536 655 516'); } },
+      g.sh('M577 455 L623 455 L600 482 Z'); g.ln('M600 482 L600 512'); g.ln('M600 512 C580 540 555 536 545 516'); g.ln('M600 512 C620 540 645 536 655 516');
+      g.ln('M450 470 L330 450'); g.ln('M450 500 L330 510'); g.ln('M750 470 L870 450'); g.ln('M750 500 L870 510');
+      g.sh('M880 560 C930 540 960 600 930 680 C910 740 880 790 860 800 C850 740 850 620 880 560 Z'); g.ln('M885 600 L915 610'); g.ln('M880 650 L920 660'); g.ln('M872 710 L905 715');
+      g.sh('M880 560 C860 520 850 490 870 470 C880 500 900 520 910 550 Z'); g.sh('M900 565 C930 520 960 510 980 520 C960 550 930 570 900 565 Z');
+      for (let i = 0; i < 6; i++) g.ln('M' + (120 + i * 70) + ' 830 L' + (130 + i * 70) + ' 790 L' + (145 + i * 70) + ' 830');
+      for (let i = 0; i < 4; i++) { const x = 190 + i * 70, y = 760 - (i % 2) * 40; for (let k = 0; k < 5; k++) { const a = k * 2 * Math.PI / 5; g.ci(x + Math.cos(a) * 18, y + Math.sin(a) * 18, 10); } g.ci(x, y, 8); }
+      g.ci(600, 740, 30); g.ln('M500 700 C530 690 560 700 570 720'); g.ln('M700 700 C670 690 640 700 630 720'); g.sh(starPath(150, 150, 34)); g.sh(starPath(1050, 150, 28)); g.ci(1000, 330, 20); g.ci(200, 330, 16); } },
     { id: 'butterfly', n: 'پروانه', d: g => {
       g.sh('M580 380 C450 120 150 150 170 350 C185 470 400 480 580 430 Z'); g.sh('M620 380 C750 120 1050 150 1030 350 C1015 470 800 480 620 430 Z');
       g.sh('M585 450 C430 480 250 560 300 700 C350 780 520 700 585 520 Z'); g.sh('M615 450 C770 480 950 560 900 700 C850 780 680 700 615 520 Z');
       g.ci(320, 300, 70); g.ci(880, 300, 70); g.ci(380, 640, 45); g.ci(820, 640, 45); g.ci(320, 300, 30); g.ci(880, 300, 30);
-      g.ln('M590 205 C570 150 540 120 520 110'); g.ln('M610 205 C630 150 660 120 680 110'); g.el(600, 440, 24, 190); g.ci(600, 225, 30); } },
+      g.ln('M590 205 C570 150 540 120 520 110'); g.ln('M610 205 C630 150 660 120 680 110'); g.el(600, 440, 24, 190); g.ci(600, 225, 30);
+      g.ci(320, 300, 14); g.ci(880, 300, 14); g.ci(380, 640, 22); g.ci(820, 640, 22); g.ci(380, 640, 8); g.ci(820, 640, 8);
+      [[250, 230], [400, 210], [470, 330], [230, 380], [350, 400]].forEach(p => { g.ci(p[0], p[1], 20); g.ci(1200 - p[0], p[1], 20); });
+      [[330, 700], [440, 650], [470, 590]].forEach(p => { g.ci(p[0], p[1], 14); g.ci(1200 - p[0], p[1], 14); });
+      g.ln('M580 400 C500 330 400 300 330 300'); g.ln('M620 400 C700 330 800 300 870 300'); g.ln('M585 480 C500 530 420 570 380 640'); g.ln('M615 480 C700 530 780 570 820 640');
+      g.ci(520, 110, 14); g.ci(680, 110, 14); for (let i = 0; i < 5; i++) g.ln('M' + (590 + i * 5) + ' ' + (520 + i * 28) + ' l20 -6');
+      g.sh('M110 760 C80 700 150 690 160 740 C190 700 240 740 200 780 C180 800 130 800 110 760 Z'); g.sh('M1020 760 C990 700 1060 690 1070 740 C1100 700 1150 740 1110 780 C1090 800 1040 800 1020 760 Z'); g.ci(150, 90, 24); g.ci(1050, 90, 24); g.ln('M560 810 C580 780 620 780 640 810'); } },
     { id: 'house', n: 'خونه', d: g => {
       g.rc(730, 230, 60, 110); g.rc(330, 380, 540, 350); g.sh('M290 390 L600 160 L910 390 Z');
       g.sh('M555 730 L555 560 C555 500 645 500 645 560 L645 730 Z'); g.rc(400, 450, 100, 100); g.ln('M450 450 L450 550'); g.ln('M400 500 L500 500');
       g.rc(700, 450, 100, 100); g.ln('M750 450 L750 550'); g.ln('M700 500 L800 500');
       g.ci(1010, 140, 60); g.sh('M130 230 C100 230 90 190 120 180 C120 140 180 130 195 165 C230 145 270 170 260 205 C290 210 285 245 250 245 Z');
-      g.rc(965, 600, 30, 130); g.ci(980, 540, 90); g.ln('M60 730 L1140 730'); g.ci(630, 640, 7); } },
+      g.rc(965, 600, 30, 130); g.ci(980, 540, 90); g.ln('M60 730 L1140 730'); g.ci(630, 640, 7);
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 8 - r; c++) { const y = 210 + r * 42, w = 62; g.ln('M' + (390 + r * 28 + c * w) + ' ' + y + ' q' + (w / 2) + ' 34 ' + w + ' 0'); }
+      for (let r = 0; r < 6; r++) g.ln('M330 ' + (410 + r * 54) + ' L' + (r % 2 ? 400 : 380) + ' ' + (410 + r * 54)); for (let r = 0; r < 6; r++) g.ln('M870 ' + (410 + r * 54) + ' L' + (r % 2 ? 800 : 820) + ' ' + (410 + r * 54));
+      g.rc(390, 560, 120, 24); [[410, 540], [450, 535], [490, 540]].forEach(p => g.ci(p[0], p[1], 12)); g.rc(690, 560, 120, 24); [[710, 540], [750, 535], [790, 540]].forEach(p => g.ci(p[0], p[1], 12));
+      g.ci(600, 300, 42); g.ci(600, 300, 22); g.ln('M600 258 L600 342'); g.ln('M558 300 L642 300');
+      [[560, 760], [620, 785], [590, 815], [650, 750]].forEach(p => g.el(p[0], p[1], 34, 14)); g.ln('M440 730 L440 690'); [0, 1, 2, 3, 4, 5, 6, 7].forEach(i => { g.ln('M' + (70 + i * 30) + ' 730 L' + (70 + i * 30) + ' 650'); }); g.ln('M60 670 L300 670');
+      g.ci(980, 540, 40); g.ci(940, 560, 20); g.ci(1020, 520, 20); g.sh('M1080 600 C1060 560 1110 550 1120 590 C1140 560 1170 600 1140 620 C1130 640 1090 640 1080 600 Z');
+      g.ln('M120 880 L120 880'); g.sh(starPath(630, 90, 30)); g.sh(starPath(330, 90, 22)); } },
     { id: 'mandala', n: 'ماندالا', d: g => {
       const C = (n, r, rx, ry) => { for (let i = 0; i < n; i++) { const a = i * 2 * Math.PI / n; g.el(600 + Math.cos(a) * r, 420 + Math.sin(a) * r, rx, ry, a + Math.PI / 2); } };
-      g.ci(600, 420, 392); C(16, 300, 42, 78); g.ci(600, 420, 232); C(12, 165, 32, 58); g.ci(600, 420, 100); C(8, 62, 18, 32); g.ci(600, 420, 28); } },
+      g.ci(600, 420, 392); C(16, 300, 42, 78); C(16, 300, 20, 46); g.ci(600, 420, 232); C(12, 165, 32, 58); C(12, 165, 14, 30); g.ci(600, 420, 100); C(8, 62, 18, 32); g.ci(600, 420, 28); g.ci(600, 420, 12);
+      for (let i = 0; i < 16; i++) { const a = (i + .5) * 2 * Math.PI / 16; g.ci(600 + Math.cos(a) * 300, 420 + Math.sin(a) * 300, 13); g.ci(600 + Math.cos(a) * 365, 420 + Math.sin(a) * 365, 8); g.ci(600 + Math.cos(i * 2 * Math.PI / 16) * 265, 420 + Math.sin(i * 2 * Math.PI / 16) * 265, 7); }
+      for (let i = 0; i < 12; i++) { const a = (i + .5) * 2 * Math.PI / 12; g.ci(600 + Math.cos(a) * 165, 420 + Math.sin(a) * 165, 8); g.ci(600 + Math.cos(a) * 218, 420 + Math.sin(a) * 218, 6); }
+      for (let i = 0; i < 8; i++) { const a = (i + .5) * 2 * Math.PI / 8; g.ci(600 + Math.cos(a) * 62, 420 + Math.sin(a) * 62, 6); } } },
     { id: 'sunset', n: 'غروب', d: g => {
       g.rc(8, 8, 1184, 824); g.ci(600, 470, 140);
       for (let i = 0; i < 9; i++) { const a = Math.PI + (i + .5) * Math.PI / 9; g.ln('M' + (600 + Math.cos(a) * 170) + ' ' + (470 + Math.sin(a) * 170) + ' L' + (600 + Math.cos(a) * 235) + ' ' + (470 + Math.sin(a) * 235)); }
       g.sh('M8 470 L140 330 L260 400 L390 470 Z'); g.sh('M810 470 L960 300 L1080 400 L1192 340 L1192 470 Z');
       g.rc(8, 470, 1184, 362); g.ln('M100 560 q30 -20 60 0 t60 0 t60 0 t60 0'); g.ln('M820 580 q30 -20 60 0 t60 0 t60 0 t60 0'); g.ln('M460 760 q30 -20 60 0 t60 0 t60 0 t60 0');
       g.sh('M560 650 L760 650 L720 705 L600 705 Z'); g.ln('M660 650 L660 540'); g.sh('M668 548 L668 640 L750 640 Z');
-      g.sh('M130 150 C100 150 90 110 120 100 C120 60 180 50 195 85 C230 65 270 90 260 125 C290 130 285 165 250 165 Z'); } },
+      g.sh('M130 150 C100 150 90 110 120 100 C120 60 180 50 195 85 C230 65 270 90 260 125 C290 130 285 165 250 165 Z');
+      g.ci(600, 470, 90); g.ci(600, 470, 40); g.sh('M600 380 L630 330 L560 345 Z');
+      g.sh('M560 300 C530 300 520 270 545 262 C548 235 590 230 600 255 C625 245 650 265 640 285 C660 290 655 310 635 310 Z'); g.sh('M860 220 C835 220 828 197 848 190 C850 168 886 164 893 186 C913 180 933 196 925 214 C942 218 938 235 920 235 Z');
+      for (let i = 0; i < 8; i++) g.ln('M' + (40 + i * 150) + ' 800 q30 -30 60 0 t60 0'); for (let i = 0; i < 6; i++) g.ln('M' + (30 + i * 200) + ' 610 q40 -20 80 0 t80 0');
+      [[330, 120], [450, 70], [750, 90], [1000, 120], [1100, 200], [60, 260]].forEach(p => g.sh(starPath(p[0], p[1], 22)));
+      g.sh('M180 470 L200 380 L230 420 L250 360 L290 470 Z'); g.sh('M900 470 L940 380 L980 430 L1020 390 L1060 470 Z');
+      g.sh('M670 650 L690 600 L720 650 Z'); g.ci(655, 700, 10); g.ci(700, 690, 10); } },
     { id: 'fish', n: 'ماهی', d: g => {
       g.sh('M830 420 L1050 280 C1000 400 1000 440 1050 560 Z'); g.sh('M480 270 C520 190 640 190 680 270 Z'); g.sh('M500 570 C530 645 600 655 640 575 Z');
       g.el(560, 420, 300, 170); g.ci(400, 380, 34); g.ci(405, 382, 14); g.ln('M470 300 C430 380 430 460 470 540'); g.ln('M262 430 C300 452 330 452 350 436');
       for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { const x = 560 + c * 62 + (r % 2) * 30, y = 330 + r * 70; g.ln('M' + x + ' ' + y + ' a32 32 0 0 1 0 64'); }
-      g.ci(200, 260, 30); g.ci(160, 170, 20); g.ci(235, 115, 14); g.ci(900, 700, 24); g.ci(950, 640, 15); } },
+      g.ci(200, 260, 30); g.ci(160, 170, 20); g.ci(235, 115, 14); g.ci(900, 700, 24); g.ci(950, 640, 15);
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { const x = 560 + c * 62 + (r % 2) * 30; g.ci(x + 22, 362 + r * 70, 8); }
+      for (let i = 0; i < 4; i++) g.ln('M' + (880 + i * 40) + ' ' + (360 + i * 16) + ' L' + (1010 + i * 6) + ' ' + (330 + i * 30)); g.ln('M930 380 L1000 400'); g.ln('M930 440 L1000 430');
+      g.ci(405, 382, 5); g.ln('M360 500 C390 520 420 520 440 500');
+      g.sh('M120 840 C100 760 150 700 130 620 C170 700 190 760 160 840 Z'); g.sh('M200 840 C180 780 220 730 205 660 C240 730 255 790 235 840 Z'); g.sh('M1000 840 C990 780 1030 740 1010 680 C1050 740 1060 790 1050 840 Z');
+      g.sh('M720 760 C700 700 800 690 820 750 C850 770 850 800 800 810 L740 810 C700 810 690 780 720 760 Z'); g.ln('M740 790 C760 740 770 730 780 720'); g.ln('M770 800 C790 750 800 740 810 730'); g.ci(110, 560, 12); g.ci(80, 500, 8); g.ci(600, 110, 12); g.ci(660, 60, 8); } },
     { id: 'cupcake', n: 'کاپ‌کیک', d: g => {
       g.el(600, 800, 340, 30); g.sh('M400 520 L460 780 L740 780 L800 520 Z');
       g.ln('M480 520 L516 780'); g.ln('M560 520 L572 780'); g.ln('M640 520 L628 780'); g.ln('M720 520 L684 780');
       g.sh('M360 520 C340 440 400 400 440 410 C440 340 520 310 560 340 C590 280 700 280 730 340 C780 310 850 350 840 410 C880 410 870 470 840 520 Z');
-      g.ci(630, 240, 42); g.ln('M630 198 C640 160 670 140 700 130'); [[500, 450], [610, 410], [720, 440], [560, 360], [690, 350], [790, 480]].forEach(p => g.ci(p[0], p[1], 15)); } },
+      g.ci(630, 240, 42); g.ln('M630 198 C640 160 670 140 700 130'); [[500, 450], [610, 410], [720, 440], [560, 360], [690, 350], [790, 480]].forEach(p => g.ci(p[0], p[1], 15));
+      [[430, 480], [540, 495], [660, 490], [760, 505], [470, 400], [610, 340], [760, 400], [580, 455]].forEach((p, i) => g.el(p[0], p[1], 14, 6, i * 0.8));
+      g.ln('M370 480 C440 500 500 470 560 500 C620 470 700 510 770 490 C800 490 820 500 835 495'); g.ln('M410 420 C470 440 520 410 580 430'); g.ln('M650 410 C710 430 760 410 800 430');
+      g.ln('M440 600 L720 600'); g.ln('M450 680 L730 680'); g.ln('M420 520 L800 520');
+      g.sh('M630 200 C600 190 590 160 610 150 C620 175 640 180 650 195 Z'); g.ln('M400 790 L800 790');
+      [[220, 150], [980, 140], [150, 480], [1060, 470], [260, 700], [960, 690]].forEach(p => g.sh(starPath(p[0], p[1], 28))); for (let i = 0; i < 9; i++) g.ci(180 + i * 105, 70, 10); g.ci(210, 760, 40); g.ci(1000, 770, 30); g.ln('M170 760 L250 760'); } },
     { id: 'rocket', n: 'موشک', d: g => {
       const body = 'M600 100 C720 200 760 380 740 560 L460 560 C440 380 480 200 600 100 Z';
       g.sh('M520 560 C500 680 560 740 600 810 C640 740 700 680 680 560 Z'); g.sh('M560 560 C555 630 585 670 600 705 C615 670 645 630 640 560 Z');
       g.sh('M465 440 C400 500 350 580 350 690 L475 595 Z'); g.sh('M735 440 C800 500 850 580 850 690 L725 595 Z');
       g.sh(body); g.clip(body, () => { g.ln('M400 450 L800 450'); g.ln('M400 505 L800 505'); }); g.ci(600, 320, 62); g.ci(600, 320, 38);
       [[150, 140, 40], [1050, 120, 34], [220, 400, 26], [1000, 420, 30], [160, 700, 34], [1040, 730, 28]].forEach(p => g.sh(starPath(p[0], p[1], p[2])));
-      g.ci(980, 250, 0.1); } }
+      g.ci(600, 320, 20);
+      g.ci(600, 455, 10); g.ci(540, 455, 10); g.ci(660, 455, 10); g.ci(600, 530, 12); g.ci(540, 530, 12); g.ci(660, 530, 12);
+      g.sh('M465 600 L420 700 L475 680 Z'); g.sh('M735 600 L780 700 L725 680 Z'); g.ln('M455 480 L475 480'); g.ln('M725 480 L745 480');
+      g.sh('M540 140 C560 120 580 110 600 100 C620 110 640 120 660 140 C640 150 560 150 540 140 Z'); g.ln('M520 810 L520 840'); g.ln('M600 840 L600 810'); g.ln('M680 810 L680 840');
+      g.ci(190, 560, 70); g.ln('M110 560 C170 590 220 590 270 560'); g.ln('M130 520 C180 540 210 540 255 520'); g.ci(165, 540, 12); g.ci(215, 585, 10);
+      g.ci(1020, 560, 54); g.el(1020, 560, 100, 20, -0.3); g.ci(300, 250, 8); g.ci(900, 330, 8); g.ci(120, 300, 6); g.ci(1100, 350, 6);
+      g.sh('M930 740 C910 740 905 720 920 715 C922 695 950 692 956 708 C972 704 988 716 982 730 C996 733 994 748 978 748 Z'); g.sh('M230 790 C210 790 205 770 220 765 C222 745 250 742 256 758 C272 754 288 766 282 780 C296 783 294 798 278 798 Z'); } }
+  ,
+    { id: 'owl', n: 'جغد', d: g => {
+      g.sh('M360 330 L330 130 L500 230 Z'); g.sh('M840 330 L870 130 L700 230 Z');
+      g.el(600, 500, 260, 280); g.el(600, 550, 170, 200);
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 5 - (r % 2); c++) g.ln('M' + (505 + c * 48 + (r % 2) * 24) + ' ' + (470 + r * 62) + ' q24 34 48 0');
+      g.ci(500, 380, 105); g.ci(700, 380, 105); g.ci(500, 380, 70); g.ci(700, 380, 70); g.ci(500, 380, 30); g.ci(700, 380, 30); g.ci(488, 366, 8); g.ci(688, 366, 8);
+      g.sh('M565 430 L635 430 L600 520 Z');
+      g.sh('M330 460 C230 520 220 680 300 760 C360 700 380 560 360 470 Z'); g.sh('M870 460 C970 520 980 680 900 760 C840 700 820 560 840 470 Z');
+      for (let i = 0; i < 4; i++) { g.ln('M' + (310 - i * 8) + ' ' + (520 + i * 55) + ' q30 20 50 0'); g.ln('M' + (890 + i * 8) + ' ' + (520 + i * 55) + ' q-30 20 -50 0'); }
+      g.sh('M480 765 L440 795 M480 765 L480 795 M480 765 L520 795'); g.sh('M720 765 L680 795 M720 765 L720 795 M720 765 L760 795');
+      g.rc(60, 785, 1080, 45); g.ln('M60 808 L1140 808'); g.ln('M200 785 L200 830'); g.ln('M520 785 L520 830'); g.ln('M860 785 L860 830');
+      g.sh(starPath(150, 110, 34)); g.sh(starPath(1050, 120, 30)); g.ci(1000, 330, 50); g.ci(1015, 320, 40); g.ln('M60 330 L100 330'); g.ci(150, 280, 12); g.ci(1080, 480, 10); g.ci(120, 400, 8);
+      for (let i = 0; i < 3; i++) { g.el(560 + i * 40, 215, 14, 28, 0); } } },
+    { id: 'mandala2', n: 'ماندالا گل‌دار', d: g => {
+      const C = (n, r, rx, ry, off) => { for (let i = 0; i < n; i++) { const a = (i + (off || 0)) * 2 * Math.PI / n; g.el(600 + Math.cos(a) * r, 420 + Math.sin(a) * r, rx, ry, a + Math.PI / 2); } };
+      const D = (n, r, rad, off) => { for (let i = 0; i < n; i++) { const a = (i + (off || 0)) * 2 * Math.PI / n; g.ci(600 + Math.cos(a) * r, 420 + Math.sin(a) * r, rad); } };
+      g.ci(600, 420, 400); D(36, 372, 14); g.ci(600, 420, 340); C(24, 295, 28, 50); C(24, 295, 12, 26); D(24, 250, 9, .5); g.ci(600, 420, 232);
+      C(12, 185, 36, 66); C(12, 185, 18, 38); C(12, 185, 7, 14); D(12, 128, 12, .5); g.ci(600, 420, 100); C(6, 66, 20, 38); C(6, 66, 9, 18); g.ci(600, 420, 36); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; g.ci(600 + Math.cos(a) * 20, 420 + Math.sin(a) * 20, 7); } g.ci(600, 420, 8);
+      D(24, 318, 6, .5); D(12, 232, 10, .5); } }
   ];
   const tplCache = {};
   function tplData(id) {
@@ -173,22 +251,24 @@
     def.d(g);
     const dt = x.getImageData(0, 0, W, H).data, mask = new Uint8Array(W * H);
     for (let i = 0, j = 0; i < dt.length; i += 4, j++) if (dt[i + 3] >= 110 && dt[i] < 120) mask[j] = 1;
-    return tplCache[id] = { canvas: c, mask, inv: null };
+    const f = document.createElement('canvas'); f.width = W; f.height = H; const fx = f.getContext('2d'); fx.fillStyle = '#fff'; fx.fillRect(0, 0, W, H); fx.globalAlpha = 0.16; fx.drawImage(c, 0, 0);
+    return tplCache[id] = { canvas: c, faint: f, mask, inv: null, finv: null };
   }
+  const tplSrc = t => tplLine === 'faint' ? t.faint : t.canvas;
   function tplInv(t) {
-    if (t.inv) return t.inv;
-    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(t.canvas, 0, 0);
+    const fa = tplLine === 'faint', key = fa ? 'finv' : 'inv'; if (t[key]) return t[key];
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(fa ? t.faint : t.canvas, 0, 0);
     const d = x.getImageData(0, 0, W, H), a = d.data; for (let i = 0; i < a.length; i += 4) { a[i] = 255 - a[i]; a[i + 1] = 255 - a[i + 1]; a[i + 2] = 255 - a[i + 2]; } x.putImageData(d, 0, 0);
-    return t.inv = c;
+    return t[key] = c;
   }
   function drawTplOn(ctx, id, bg) {
     const t = tplData(id); if (!t) return; ctx.save();
-    if (bg === 'night') { ctx.globalCompositeOperation = 'screen'; ctx.drawImage(tplInv(t), 0, 0); } else { ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(t.canvas, 0, 0); }
+    if (bg === 'night') { ctx.globalCompositeOperation = 'screen'; ctx.drawImage(tplInv(t), 0, 0); } else { ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(tplSrc(t), 0, 0); }
     ctx.restore();
   }
   function paintTpl() {
     if (!tplc) return; const x = tplc.getContext('2d'); x.clearRect(0, 0, W, H); const t = tplData(meta.tpl);
-    if (t) x.drawImage(meta.bg === 'night' ? tplInv(t) : t.canvas, 0, 0);
+    if (t) x.drawImage(meta.bg === 'night' ? tplInv(t) : tplSrc(t), 0, 0);
     tplc.className = meta.bg === 'night' ? 'night' : '';
   }
   const hexRgb = h => { h = String(h || '#000').replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&'); const n = parseInt(h, 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -974,7 +1054,7 @@
       <div class="cv-prow"><div class="cv-pv"><i id="cvPvDot" style="width:${Math.min(40, size)}px;height:${Math.min(40, size)}px;background:${pv};opacity:${tool === 'eraser' ? 1 : alpha}"></i></div><input type="range" id="cvSize" min="1" max="60" value="${size}"></div>
       ${tool === 'eraser' ? '' : `<h6>شفافیت</h6><div class="cv-prow"><input type="range" id="cvAlpha" min="5" max="100" value="${Math.round(alpha * 100)}"></div>`}`; }
     if (n === 'stk') return `<h6>استیکر</h6><div class="cv-cats">${STK.map((c, i) => `<button type="button" data-sc="${i}" title="${esc(c.n)}" class="${i === stkCat ? 'on' : ''}">${c.ic}</button>`).join('')}</div><div class="cv-grid2 em scr">${STK[stkCat].l.map(s => `<button type="button" data-s="${s}" class="${s === stickerPick ? 'on' : ''}">${s}</button>`).join('')}</div>`;
-    if (n === 'tpl') return `<h6>طرح آماده · رنگ‌آمیزی</h6><div class="cv-chips" style="margin:0 0 8px"><button type="button" data-th2="solo" class="${tplHow === 'solo' ? 'on' : ''}">با هم رنگ کنیم</button><button type="button" data-th2="half" class="${tplHow === 'half' ? 'on' : ''}">دو نیمه (هرکی یه طرف)</button></div><div class="cv-tpls">${TPLS.map(t => `<button type="button" data-tp2="${t.id}" class="${meta.tpl === t.id ? 'on' : ''}" title="${esc(t.n)}"><img alt="" src="${tplThumb(t.id)}"><small>${esc(t.n)}</small></button>`).join('')}</div>${meta.tpl ? `<div class="cv-chips"><button type="button" data-tp2="">برداشتن طرح</button></div>` : ''}<h6 style="margin-top:8px">با سطل رنگ 🪣 داخل خط‌ها رو پر کن</h6>`;
+    if (n === 'tpl') return `<h6>طرح آماده · رنگ‌آمیزی</h6><div class="cv-chips" style="margin:0 0 8px"><button type="button" data-th2="solo" class="${tplHow === 'solo' ? 'on' : ''}">با هم رنگ کنیم</button><button type="button" data-th2="half" class="${tplHow === 'half' ? 'on' : ''}">دو نیمه (هرکی یه طرف)</button></div><div class="cv-chips" style="margin:0 0 8px"><button type="button" data-tl="faint" class="${tplLine === 'faint' ? 'on' : ''}">✏️ خط محو (خودمون پررنگ کنیم)</button><button type="button" data-tl="bold" class="${tplLine === 'bold' ? 'on' : ''}">خط پررنگ</button></div><div class="cv-tpls">${TPLS.map(t => `<button type="button" data-tp2="${t.id}" class="${meta.tpl === t.id ? 'on' : ''}" title="${esc(t.n)}"><img alt="" src="${tplThumb(t.id)}"><small>${esc(t.n)}</small></button>`).join('')}</div>${meta.tpl ? `<div class="cv-chips"><button type="button" data-tp2="">برداشتن طرح</button></div>` : ''}<h6 style="margin-top:8px">با سطل رنگ 🪣 داخل خط‌ها رو پر کن</h6>`;
     if (n === 'bg') return `<h6>پس‌زمینه</h6><div class="cv-grid2 sq">${Object.keys(BGS).map(k => `<button type="button" data-bg="${k}" title="${BGS[k]}" style="background:${BG_CSS[k]}" class="${meta.bg === k ? 'on' : ''}"></button>`).join('')}</div>`;
     if (n === 'mode') return `<h6>حالت بازی</h6><div class="cv-mg">${MODES.map(m => `<button type="button" data-md="${m[0]}" title="${m[2]}" aria-label="${m[2]}" class="${(m[0] === 'secret' ? secret : (!secret && meta.mode === m[0])) ? 'on' : ''}">${ico(m[1], 22)}</button>`).join('')}</div>
       <div class="cv-chips">${[1, 2, 3, 5].map(m => `<button type="button" data-tm="${m}" title="${m} دقیقه" class="${timedMin === m ? 'on' : ''}">${fa(m)}</button>`).join('')}</div>
@@ -998,6 +1078,7 @@
     const al = $('cvAlpha'); if (al) al.oninput = e => { alpha = +e.target.value / 100; const d = $('cvPvDot'); if (d) d.style.opacity = alpha; renderRailDot(); };
     el.querySelectorAll('[data-sc]').forEach(b => b.onclick = () => { stkCat = +b.dataset.sc; renderPop(); });
     el.querySelectorAll('[data-th2]').forEach(b => b.onclick = () => { tplHow = b.dataset.th2; renderPop(); });
+    el.querySelectorAll('[data-tl]').forEach(b => b.onclick = () => { tplLine = b.dataset.tl; try { localStorage.setItem('cv_tplline', tplLine); } catch (e) {} paintTpl(); renderPop(); });
     el.querySelectorAll('[data-tp2]').forEach(b => b.onclick = () => { useTpl(b.dataset.tp2); });
     el.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { setMeta({ level: b.dataset.lv }); if (meta.mode === 'guess' && same(meta.drawer, nm())) newWord(); renderPop(); });
     el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { stickerPick = b.dataset.s; pop = null; renderPop(); renderRail(); });
