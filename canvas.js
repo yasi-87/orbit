@@ -740,9 +740,24 @@
     document.body.appendChild(d);
     const close = () => { clearTimeout(rpTimer); d.remove(); };
     d.querySelector('.cv-x').onclick = close; d.addEventListener('click', e => { if (e.target === d) close(); });
-    const renderCm = () => { let l = []; try { l = JSON.parse(g.comments || '[]'); } catch (e) {} d.querySelector('#cvCm').innerHTML = l.length ? l.map(c => `<div class="cv-c"><b>${esc(c.by)}</b> ${esc(c.text)} <small>${esc(dateOf(c.ts))}</small></div>`).join('') : '<div class="cv-empty" style="padding:6px">هنوز نظری نیست 💬</div>'; };
+    const getL = () => { let l = []; try { l = JSON.parse(g.comments || '[]'); } catch (e) {} return Array.isArray(l) ? l : []; };
+    const saveL = async l => { g.comments = JSON.stringify(l); renderCm(); try { await dbClient.from('canvas_art').update({ comments: g.comments }).eq('id', id); } catch (_) {} renderGallery(); };
+    const same = (a, b) => typeof sameName === 'function' ? sameName(a, b) : String(a || '').trim() === String(b || '').trim();
+    function renderCm() {
+      const l = getL(), box = d.querySelector('#cvCm');
+      box.innerHTML = l.length ? l.map((c, k) => `<div class="cv-c" data-k="${k}"><div class="cv-ch"><span class="cv-ca">${esc(String(c.by || '?').trim().charAt(0).toUpperCase())}</span><b class="cv-cn">${esc(c.by || 'ناشناس')}</b><small>${esc(dateOf(c.ts))}${c.edited ? ' · ویرایش‌شده' : ''}</small><span class="cv-cb">${same(c.by, nm()) ? `<button type="button" data-ce="${k}" title="ویرایش">✏️</button>` : ''}<button type="button" data-cd="${k}" title="حذف">✕</button></span></div><div class="cv-ct">${esc(c.text)}</div></div>`).join('') : '<div class="cv-empty" style="padding:6px">هنوز نظری نیست 💬</div>';
+      box.querySelectorAll('[data-cd]').forEach(b => b.onclick = async () => { if (!confirm('این کامنت حذف بشه؟')) return; const l2 = getL(); l2.splice(+b.dataset.cd, 1); await saveL(l2); });
+      box.querySelectorAll('[data-ce]').forEach(b => b.onclick = () => {
+        const k = +b.dataset.ce, row = box.querySelector('.cv-c[data-k="' + k + '"]'), tx = row.querySelector('.cv-ct'); if (row.querySelector('.cv-ed')) return;
+        const ed = document.createElement('div'); ed.className = 'cv-ed'; ed.innerHTML = '<textarea maxlength="200" rows="2"></textarea><div><button type="button" class="btn">💾 ذخیره</button><button type="button" class="btn ghost">انصراف</button></div>';
+        const ta = ed.querySelector('textarea'); ta.value = getL()[k] ? getL()[k].text : ''; tx.style.display = 'none'; tx.after(ed); ta.focus();
+        const [sv, cn] = ed.querySelectorAll('button'); cn.onclick = () => { ed.remove(); tx.style.display = ''; };
+        sv.onclick = async () => { const t = ta.value.trim(); if (!t) { toast2('⚠️ متن نمی‌تونه خالی باشه'); return; } const l2 = getL(); if (!l2[k]) return; l2[k].text = t.slice(0, 200); l2[k].edited = true; await saveL(l2); };
+        ta.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); cn.click(); } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sv.click(); } });
+      });
+    }
     renderCm();
-    d.querySelector('.cv-cmf').onsubmit = async e => { e.preventDefault(); const i = e.target.querySelector('input'), t = i.value.trim(); if (!t) return; let l = []; try { l = JSON.parse(g.comments || '[]'); } catch (_) {} l.push({ by: nm(), text: t.slice(0, 200), ts: Date.now() }); g.comments = JSON.stringify(l); i.value = ''; renderCm(); try { await dbClient.from('canvas_art').update({ comments: g.comments }).eq('id', id); } catch (_) {} renderGallery(); };
+    d.querySelector('.cv-cmf').onsubmit = async e => { e.preventDefault(); const i = e.target.querySelector('input'), t = i.value.trim(); if (!t) return; const l = getL(); l.push({ by: nm(), text: t.slice(0, 200), ts: Date.now() }); i.value = ''; await saveL(l); const b = d.querySelector('#cvCm'); b.scrollTop = b.scrollHeight; };
     d.querySelector('[data-m=dl]').onclick = () => dlArt(id);
     d.querySelector('[data-m=pdf]').onclick = () => pdfArt(id);
     d.querySelector('[data-m=edit]').onclick = () => editArt(id);
@@ -844,7 +859,11 @@
 .cv-mbox h3{margin:0 0 2px}.cv-mbox small{color:#b9a8d8}
 .cv-x{position:absolute;top:10px;left:12px;background:none;border:0;color:inherit;font-size:1.2rem;cursor:pointer}
 .cv-mstage{margin:10px 0;border-radius:12px;overflow:hidden;background:#fff}.cv-mstage img,.cv-mstage canvas{width:100%;display:block}
-.cv-cm{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:8px 0}.cv-c{background:rgba(255,255,255,.07);border-radius:10px;padding:6px 10px;font-size:.86rem}.cv-c small{margin-right:6px}
+.cv-cm{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:8px 0}.cv-c{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:9px 12px;font-size:.9rem}.cv-c:hover{background:rgba(212,165,255,.06);border-color:rgba(212,165,255,.2)}
+.cv-ch{display:flex;align-items:center;gap:8px;margin-bottom:5px}.cv-ca{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#d4a5ff,#ff9ecb);color:#1a0a20;font-weight:700;font-size:.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cv-cn{color:#d4a5ff;font-weight:600;font-size:.85rem}.cv-c small{margin-right:auto;font-size:.7rem;opacity:.6}.cv-cb{display:flex;gap:4px;opacity:.35;transition:.2s}.cv-c:hover .cv-cb{opacity:1}
+.cv-cb button{width:24px;height:24px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:inherit;font-size:.72rem;cursor:pointer}.cv-cb button:hover{background:rgba(212,165,255,.35)}.cv-cb button[data-cd]{color:#ff7ba0;background:rgba(255,80,120,.15)}
+.cv-ct{line-height:1.7;white-space:pre-wrap;word-break:break-word}.cv-ed textarea{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.35);background:rgba(10,10,15,.5);color:inherit;font:inherit;resize:vertical}.cv-ed div{display:flex;gap:6px;margin-top:6px}
 .cv-cmf{display:flex;gap:8px}.cv-cmf input{flex:1;min-width:0;padding:9px 12px;border-radius:12px;border:1px solid rgba(212,165,255,.35);background:rgba(10,10,15,.5);color:inherit;font:inherit}
 .cv-fx{position:fixed;bottom:-30px;z-index:3000;pointer-events:none;animation:cvFly 2.6s ease-out forwards}
 @keyframes cvFly{0%{transform:translateY(0) rotate(0);opacity:0}15%{opacity:1}100%{transform:translateY(-95vh) rotate(40deg);opacity:0}}
