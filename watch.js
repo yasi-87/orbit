@@ -13,7 +13,7 @@
   const fa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'یکی از ما';
   const REACTS = ['❤️', '😂', '😮', '😢', '👏', '🔥'];
-  const VIDEO_RE = /\.(mp4|webm|ogv|m4v|mov)(\?|#|$)/i;
+  const VIDEO_RE = /\.(mp4|webm|ogv|m4v|mov|mkv)(\?|#|$)/i;
 
   let ch = null, subscribed = false, room = null, P = { playing: false, pos: 0, at: 0 };
   let peers = {}, seen = [], seenMissing = false, seenLoaded = false;
@@ -257,7 +257,7 @@
   }
 
   /* ---------- 🎞️ آوردن فیلم با لینک مستقیم یا آپلود از سیستم ---------- */
-  const NOPLAY = /\.(mkv|avi|wmv|flv|ts)(\?|#|$)/i;
+  const NOPLAY = /\.(avi|wmv|flv|ts)(\?|#|$)/i;
   async function saveToArchive(title, url, category) {
     try {
       const row = { id: 'ln_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), category, title: title.slice(0, 80), url, author: nm(), created_at: Date.now() };
@@ -269,7 +269,7 @@
     let url = ($('wtLink') && $('wtLink').value || '').trim(), title = ($('wtLinkT') && $('wtLinkT').value || '').trim();
     if (!url) { toast2('⚠️ لینک فیلم رو بنویس'); return; } if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
     try { new URL(url); } catch (e) { toast2('⚠️ این لینک درست نیست'); return; }
-    if (NOPLAY.test(url)) { toast2('⚠️ فرمت mkv/avi توی مرورگر پخش نمی‌شه؛ فایل mp4 یا webm بده'); return; }
+    if (NOPLAY.test(url)) { toast2('⚠️ فرمت avi/wmv/flv توی مرورگر پخش نمی‌شه؛ فایل mp4، webm یا mkv بده'); return; }
     const cat = ($('wtCat') && $('wtCat').value) || 'movie', direct = !!($('wtDirect') && $('wtDirect').checked) || VIDEO_RE.test(url);
     title = title || decodeURIComponent((url.split('?')[0].split('/').pop() || 'فیلم').replace(/\.[^.]+$/, '')).slice(0, 80) || 'فیلم';
     if ($('wtSave') && $('wtSave').checked) saveToArchive(title, url, cat);
@@ -278,11 +278,11 @@
   async function startFromFile(file) {
     if (!file) return; if (!/^video\//.test(file.type) && !VIDEO_RE.test(file.name || '')) { toast2('⚠️ این فایل ویدیو نیست'); return; }
     if (file.size > 200 * 1024 * 1024) { toast2('⚠️ فایل بزرگه! حداکثر ۲۰۰ مگابایت'); return; }
-    if (!/\.(mp4|webm|m4v|mov|ogv)$/i.test(file.name || '')) toast2('ℹ️ فقط mp4 / webm / mov توی همهٔ مرورگرها پخش می‌شه');
+    if (/\.mkv$/i.test(file.name || '')) toast2('ℹ️ mkv توی کروم و ادج پخش می‌شه (کدک H.264/AAC)؛ سافاری و فایرفاکس ممکنه پخشش نکنن'); else if (!/\.(mp4|webm|m4v|mov|ogv)$/i.test(file.name || '')) toast2('ℹ️ فقط mp4 / webm / mov / mkv پخش می‌شه');
     const cat = ($('wtCat') && $('wtCat').value) || 'movie', title = (file.name || 'فیلم').replace(/\.[^.]+$/, '').slice(0, 80); toast2('⏳ در حال آپلود فیلم… (پیشرفتش پایین صفحه‌ست)');
     try {
       const ext = ((file.name || '').split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'mp4';
-      const up = await uploadMediaFile(file, ext, file.name); if ($('wtSave') && $('wtSave').checked) saveToArchive(title, up.url, cat);
+      const up = await uploadMediaFile(!file.type && ext === 'mkv' ? new Blob([file], { type: 'video/x-matroska' }) : file, ext, file.name); if ($('wtSave') && $('wtSave').checked) saveToArchive(title, up.url, cat);
       create({ id: '', title, url: up.url, category: cat, direct: true });
     } catch (e) { toast2('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'songs') : 'آپلود نشد')); }
   }
@@ -372,9 +372,9 @@
     return `<div class="wt-h">🍿 اتاق تماشا <span class="sp"></span><button type="button" class="btn" data-wt="pick">🎬 انتخاب فیلم از آرشیو سرگرمی</button></div>
       <div class="wt-body">
         <div class="wt-new"><div class="wt-sec">🔗 فیلم با لینک مستقیم یا 📤 آپلود از سیستم (بدون نیاز به آرشیو)</div>
-          <div class="wt-row"><input type="text" id="wtLink" dir="ltr" inputmode="url" placeholder="لینک مستقیم فیلم (…mp4 یا webm)" /><input type="text" id="wtLinkT" maxlength="80" placeholder="اسم فیلم (اختیاری)" /></div>
+          <div class="wt-row"><input type="text" id="wtLink" dir="ltr" inputmode="url" placeholder="لینک مستقیم فیلم (…mp4 / webm / mkv)" /><input type="text" id="wtLinkT" maxlength="80" placeholder="اسم فیلم (اختیاری)" /></div>
           <div class="wt-row"><select id="wtCat"><option value="movie">🎬 فیلم</option><option value="series">📺 سریال</option></select><label><input type="checkbox" id="wtDirect" /> لینک مستقیم ویدیوئه (بدون پسوند mp4)</label><label><input type="checkbox" id="wtSave" checked /> توی آرشیو هم بمونه</label></div>
-          <div class="wt-row"><button type="button" class="btn" data-wt="link">▶️ شروع تماشا با لینک</button><button type="button" class="btn ghost" data-wt="up">📤 آپلود فیلم از سیستم</button><input type="file" id="wtUp" accept="video/*,.mp4,.webm,.mov,.m4v" hidden /></div>
+          <div class="wt-row"><button type="button" class="btn" data-wt="link">▶️ شروع تماشا با لینک</button><button type="button" class="btn ghost" data-wt="up">📤 آپلود فیلم از سیستم</button><input type="file" id="wtUp" accept="video/*,.mp4,.webm,.mov,.m4v,.mkv" hidden /></div>
           <div class="wt-sec">لینک سایت‌هایی مثل یوتیوب یا آپارات مستقیم نیستن؛ برای اونا از آرشیو استفاده کن تا «ساعت مشترک» همگامشون کنه. mkv و avi توی مرورگر پخش نمی‌شن.</div></div>
         ${picker ? (list.length ? `<div class="wt-pick">${list.map(x => `<button type="button" class="wt-it" data-wid="${esc(x.id)}"><span>${x.category === 'series' ? '📺' : '🎬'}</span><b>${esc(x.title)}</b>${isSeen(x.url) ? '<small>✅ دیده‌شده</small>' : ''}<small dir="ltr">${esc(hostOf(x.url))}</small></button>`).join('')}</div>`
           : '<div class="wt-empty">هنوز فیلم یا سریالی توی آرشیو سرگرمی نذاشتیم؛ از بخش 🎬 سرگرمی اضافه کنید 💜</div>')
@@ -419,7 +419,7 @@
     ['play', 'pause', 'seeked'].forEach(ev => v.addEventListener(ev, () => { local(); }));
     ['waiting', 'playing', 'stalled', 'canplay'].forEach(ev => v.addEventListener(ev, sendStat));
     v.addEventListener('ended', () => { sendStat(); if (!closing) finish(); });
-    v.addEventListener('error', () => toast2('⚠️ این ویدیو توی سایت پخش نشد؛ لینکش مستقیم نیست یا قفله'));
+    v.addEventListener('error', () => toast2(/\.mkv(\?|#|$)/i.test((room && room.item && room.item.url) || '') ? '⚠️ این mkv توی مرورگرت پخش نشد (کدک یا مرورگر پشتیبانی نمی‌کنه؛ کروم/ادج و H.264+AAC لازمه)' : '⚠️ این ویدیو توی سایت پخش نشد؛ لینکش مستقیم نیست یا قفله'));
     keepHb();
     subCache = subCache; activeSub = (room.subs && room.subs[0] && room.subs[0].id) || ''; subShift = 0;
     Promise.all((room.subs || []).map(prepSub)).then(() => { mountSubs(); renderSubUi(); });
