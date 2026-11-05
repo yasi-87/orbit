@@ -78,8 +78,8 @@
     if (!isRetry) { tries = 0; diag.lc = {}; diag.rc = 0; diag.errs = []; }
     clearTimeout(retryT); clearTimeout(connT); watchStart = Date.now();
     watching = sharerId; wname = name || ''; wstate = 'connecting'; remoteSet = false; pendingIce = [];
-    lg((tries >= 3 ? '[فقط از طریق رله] ' : '') + (isRetry ? 'تلاش دوباره ' + tries + ' ← ' : 'شروع دیدن ← ') + (name || sharerId));
-    wpc = new RTCPeerConnection(tries >= 3 ? Object.assign({}, ICE, { iceTransportPolicy: 'relay' }) : ICE); wstream = null; const me = wpc;
+    lg((tries >= 3 && diag.lc.relay ? '[فقط از طریق رله] ' : '') + (isRetry ? 'تلاش دوباره ' + tries + ' ← ' : 'شروع دیدن ← ') + (name || sharerId));
+    wpc = new RTCPeerConnection(tries >= 3 && diag.lc.relay ? Object.assign({}, ICE, { iceTransportPolicy: 'relay' }) : ICE); wstream = null; const me = wpc;
     wpc.ontrack = e => { wstream = e.streams[0] || new MediaStream([e.track]); lg('تصویر رسید'); attach(); };
     wpc.onicecandidate = e => { if (e.candidate) { const t = e.candidate.type || (/ typ (\w+)/.exec(e.candidate.candidate || '') || [])[1] || '?'; diag.lc[t] = (diag.lc[t] || 0) + 1; send({ t: 'ice', to: sharerId, c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); } };
     wpc.onicecandidateerror = e => { diag.errs.push((e.url || '') + ' ' + e.errorCode + ' ' + (e.errorText || '')); if (diag.errs.length > 6) diag.errs.shift(); };
