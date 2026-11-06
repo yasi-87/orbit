@@ -426,13 +426,26 @@
     const p = pos(e);
     const now = Date.now(); if (now - curT > 70 && !secret) { curT = now; send({ t: 'cur', x: p[0] / W, y: p[1] / H }); }
     if (!mine) return; e.preventDefault();
-    const l = mine.pts[mine.pts.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
-    if (deny(p[0])) return;
-    mine.pts.push(p); pend.push(p); dirty = true;
-    if (!sendT) sendT = setTimeout(() => { sendT = null; sendSeg(false); }, 50);
+    // ✍️ نرم‌کننده: لرزش دست و نوسان موس رو می‌گیره تا دست‌خط خط‌خطی نشه (نقطه‌ها به‌صورت نمایی به‌سمت مکان واقعی می‌رن؛ هرچی سریع‌تر بکشی تأخیرش کمتره)
+    const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+    for (const ev of evs) {
+      const r = ev === e ? p : pos(ev); if (deny(r[0])) return;
+      let q = r;
+      if (mine.tool !== 'eraser') {
+        const a = mine.sm || mine.pts[mine.pts.length - 1], dd = Math.hypot(r[0] - a[0], r[1] - a[1]), k = Math.min(0.7, Math.max(0.14, dd / 36));
+        q = [a[0] + (r[0] - a[0]) * k, a[1] + (r[1] - a[1]) * k];
+      }
+      mine.sm = q; mine.raw = r;
+      const l = mine.pts[mine.pts.length - 1]; if (Math.hypot(q[0] - l[0], q[1] - l[1]) < 2.2) continue;
+      q = [Math.round(q[0] * 10) / 10, Math.round(q[1] * 10) / 10];
+      mine.pts.push(q); pend.push(q); dirty = true;
+    }
+    if (pend.length && !sendT) sendT = setTimeout(() => { sendT = null; sendSeg(false); }, 50);
   }
   function pUp() {
-    if (!mine) return; clearTimeout(sendT); sendT = null; sendSeg(false);
+    if (!mine) return;
+    if (mine.raw && mine.pts.length > 1 && mine.tool !== 'eraser') { const l = mine.pts[mine.pts.length - 1], r = mine.raw; if (Math.hypot(r[0] - l[0], r[1] - l[1]) > 0.5) { const m = [(l[0] + r[0]) / 2, (l[1] + r[1]) / 2]; [m, r].forEach(q => { mine.pts.push(q); pend.push(q); }); } }
+    clearTimeout(sendT); sendT = null; sendSeg(false);
     const s = mine; mine = null; commit(s); send({ t: 'end', id: s.id }); aisaPing();
   }
   function sendSeg(first) {
