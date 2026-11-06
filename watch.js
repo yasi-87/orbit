@@ -501,6 +501,7 @@
 .wt-row label{display:flex;gap:4px;align-items:center;color:var(--muted,#aaa)}
 .wt-sub{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.84rem}.wt-sub select{flex:1;min-width:130px;padding:7px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:#241a3a;color:#f3ecff;font:inherit}
 .wt-sub .btn{padding:6px 12px;font-size:.8rem}.wt-sub .sh{display:inline-flex;align-items:center;gap:4px;direction:ltr}.wt-sub .sh button{width:28px;height:28px;border-radius:8px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer}.wt-sub .sh small{min-width:40px;text-align:center}
+.wt-info{font-size:.78rem;color:var(--muted,#aaa);line-height:1.8}.wt-info .bad{color:#ffb3a6}.wt-info details{margin-top:4px}.wt-info pre{direction:ltr;text-align:left;white-space:pre-wrap;background:rgba(0,0,0,.3);border-radius:8px;padding:8px;font-size:.72rem;user-select:all}
 .wt-ss{flex-basis:100%;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.05);font-size:.8rem}.wt-ss>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.wt-ss b{min-width:78px;color:var(--muted,#aaa);font-weight:600}.wt-ss button{border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:.78rem}.wt-ss button.on{background:rgba(212,165,255,.4);border-color:#d4a5ff}
 .wt-tb{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:6px}.wt-tb button{border:0;border-radius:10px;padding:6px 10px;font-size:.78rem;cursor:pointer;background:rgba(10,8,20,.8);color:#fff;opacity:.85}.wt-tb button:hover{opacity:1;background:rgba(212,165,255,.6);color:#1a1030}
 .wt-stage .wt-tb .wt-tchat{display:none}
@@ -530,6 +531,7 @@ body.wt-theater-on{overflow:hidden}
     box.innerHTML = `<div class="wt-h">🍿 اتاق تماشا: «${esc(r.item.title)}» <span class="sp"></span><small style="color:var(--muted,#aaa)">ساخته‌شده توسط ${esc(r.by || '')}</small></div>
       <div class="wt-body">${stage}
         ${isVideo() ? '<div class="wt-sub" id="wtSub"></div>' : '<div class="wt-sec">💬 زیرنویس فقط برای فیلم‌های لینک مستقیم/آپلودی فعاله.</div>'}
+        ${isVideo() ? '<div class="wt-info" id="wtInfo"></div>' : ''}
         <div class="wt-react" id="wtReact">${REACTS.map(e => `<button type="button" data-re="${e}" aria-label="واکنش ${e}">${e}</button>`).join('')}</div>
         <div class="wt-people" id="wtPeople"></div>
         <div class="wt-sec">💬 برای چت کردن موقع تماشا، از چت کنار اتاق صحبت استفاده کنید.</div>
@@ -586,6 +588,19 @@ body.wt-theater-on{overflow:hidden}
     box.querySelectorAll('[data-wid]').forEach(b => b.onclick = () => { const it = moviesFromArchive().find(x => x.id === b.dataset.wid); if (it) create(it); });
     box.querySelectorAll('[data-re]').forEach(b => b.onclick = () => react(b.dataset.re));
   }
+  /* وضعیت پخش: رزولوشن + افت فریم. اگه فیلم برای دستگاه سنگین باشه (همون چیزی که لرزش می‌ده) راه سبک‌کردنش رو نشون می‌ده */
+  let infoPrev = { t: 0, d: 0, n: 0 }, infoHtml = '';
+  function infoTick() {
+    const el = $('wtInfo'), v = vid(); if (!el || !v || !v.videoWidth) return;
+    const q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : null;
+    let bad = false, loss = '';
+    if (q && q.totalVideoFrames > 60) { const d = q.droppedVideoFrames - infoPrev.d, n = q.totalVideoFrames - infoPrev.n; if (n > 30) { const pc = Math.round(d / n * 100); infoPrev = { t: Date.now(), d: q.droppedVideoFrames, n: q.totalVideoFrames }; bad = pc >= 8; loss = ' · افت فریم الان: ' + fa(pc) + '٪'; infoPrev.last = loss; infoPrev.bad = bad; } else { loss = infoPrev.last || ''; bad = !!infoPrev.bad; } }
+    const big = v.videoWidth > 1300, mkv = /\.mkv(\?|#|$)/i.test((room && room.item && room.item.url) || '');
+    const html = '📐 ' + v.videoWidth + '×' + v.videoHeight + loss + (bad || big ? ' <span class="bad">· ' + (bad ? 'فیلم برای این دستگاه سنگینه (لرزش از همینه)' : 'رزولوشن بالاست و ممکنه موبایل رو اذیت کنه') + '</span>' : '') +
+      (bad || big ? `<details><summary>🪶 چطور سبکش کنم؟</summary>فیلم رو با HandBrake یا ffmpeg به <b>H.264 · 720p · ۸ بیت · صدای AAC</b> تبدیل کن و دوباره آپلود کن؛ روی هر موبایلی روون پخش می‌شه. با ffmpeg (زیرنویس‌های داخلی هم می‌مونه):<pre>ffmpeg -i in.mkv -map 0:v:0 -map 0:a:0 -map 0:s? -vf scale=-2:720 -c:v libx264 -preset medium -crf 24 -profile:v main -pix_fmt yuv420p -c:a aac -b:a 128k -c:s copy out.mkv</pre>برای mp4 (کوچک‌تر ولی بدون زیرنویس داخلی) آخرش <code>-sn out.mp4</code> بذار. توی HandBrake هم: Video Encoder = H.264، Framerate = Same as source، Resolution Limit = 720p، Audio = AAC.</details>` : '');
+    if (html !== infoHtml) { infoHtml = html; const open = el.querySelector('details') && el.querySelector('details').open; el.innerHTML = html; if (open && el.querySelector('details')) el.querySelector('details').open = true; }
+  }
+  setInterval(infoTick, 3000);
   function bindVideo() {
     const v = vid(); if (!v) return;
     v.addEventListener('seeked', () => { if (remoteSeek) { remoteSeek = false; clearTimeout(remoteSeekT); hold(900); return; } local(); });
