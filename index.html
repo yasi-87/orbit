@@ -2570,8 +2570,9 @@ document.getElementById('gateForm').addEventListener('submit', e => {
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-05l';
+const SITE_VERSION = '2026-11-06a';
 const SITE_CHANGES = [
+  '🎵 نوار موسیقی پس‌زمینه بعد از رفرش (Ctrl+Shift+R) دیگه نمی‌پره؛ همون لحظه نشون داده می‌شه و اگه مرورگر پخش خودکار رو نذاشت، با اولین کلیک شروع می‌شه',
   '🤔 بازی حدس کلمهٔ بوم: کلمه‌ها تکراری نمی‌آن (تا همه‌شون تموم نشه) و کلمه‌ها چند برابر شدن',
   '💬 کامنت نقاشی‌های بوم مثل کامنت دفترچه شد (اسم و متن جدا و خوانا) و می‌شه کامنت خودت رو ویرایش و هر کامنتی رو حذف کرد',
   '🎬 اتاق تماشا: فرمت mkv هم اضافه شد (با لینک و آپلود؛ توی کروم و ادج با کدک H.264/AAC پخش می‌شه)',
@@ -4500,6 +4501,7 @@ async function removeNote(id) {
 let ambientPlaying = false;
 let ambientShown = false;
 let ambientBlocked = false;
+let ambientUserPaused = false;
 let muted = false;
 let lastVolume = 0.35;
 let voiceDuck = 1;   // وقتی توی تماسیم، آهنگ خیلی کم می‌شه تا صدای طرف مقابل اصلی باشه
@@ -4594,13 +4596,22 @@ function playAmbient() {
   if (ambientPlaying) return;
   if (currentSong) return; // اگه کاربر آهنگ پلی کرده، پس‌زمینه رو نزن
   bgAudio.volume = effVol();
-  bgAudio.play().then(() => {
-    ambientPlaying = true; ambientShown = true; ambientBlocked = false;
+  // نوار پلیر همون لحظه نشون داده می‌شه؛ نه بعد از جواب مرورگر (بعد از Ctrl+Shift+R مرورگر ممکنه دیر جواب بده یا پخش خودکار رو رد کنه)
+  ambientShown = true; refreshFloatingPlayer();
+  let p; try { p = bgAudio.play(); } catch (e) { p = Promise.reject(e); }
+  (p || Promise.resolve()).then(() => {
+    ambientPlaying = true; ambientBlocked = false;
     startLoopWatchdog();
     refreshFloatingPlayer();
   }).catch(() => {
-    ambientShown = true; ambientBlocked = true;
+    ambientBlocked = true;
     refreshFloatingPlayer();
+    // پخش خودکار رد شد → با اولین کلیک/لمس/کلید خودش شروع می‌شه
+    const go = () => {
+      ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.removeEventListener(ev, go, true));
+      if (!ambientPlaying && !currentSong && !ambientUserPaused) { playAmbient(); }
+    };
+    ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, go, true));
   });
 }
 
@@ -4608,13 +4619,13 @@ document.getElementById('mpPlay').addEventListener('click', () => {
   if (currentSong) { togglePlayPause(); return; }
   if (bgAudio.paused) {
     bgAudio.play().then(() => {
-      ambientPlaying = true; ambientBlocked = false;
+      ambientPlaying = true; ambientBlocked = false; ambientUserPaused = false;
       startLoopWatchdog();
       refreshFloatingPlayer();
     }).catch(()=>{});
   } else {
     bgAudio.pause();
-    ambientPlaying = false;
+    ambientPlaying = false; ambientUserPaused = true;
     stopLoopWatchdog();
     refreshFloatingPlayer();
   }
