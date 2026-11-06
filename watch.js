@@ -17,7 +17,7 @@
 
   let ch = null, subscribed = false, room = null, P = { playing: false, pos: 0, at: 0 };
   let peers = {}, seen = [], seenMissing = false, seenLoaded = false;
-  let applying = false, applyT = null, tickT = null, statT = null, hbT = null, cdT = null, cd = 0, leader = false;
+  let remoteSeek = false, remoteSeekT = null, applying = false, applyT = null, tickT = null, statT = null, hbT = null, cdT = null, cd = 0, leader = false;
   let watchedSec = 0, lastTick = 0, picker = false, inited = false, closing = false;
 
   const send = p => { try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'wt', payload: Object.assign({ from: ID, name: nm() }, p) }); } catch (e) {} };
@@ -98,7 +98,7 @@
   function closeRoom(broadcast, done) {
     if (!room) return;
     if (broadcast) send({ t: 'close', rid: room.id, done: !!done });
-    clearInterval(tickT); clearInterval(statT); clearInterval(hbT); clearInterval(cdT); tickT = statT = hbT = cdT = null;
+    clearInterval(tickT); clearInterval(statT); clearInterval(hbT); clearInterval(cdT); tickT = statT = hbT = cdT = null; document.body.classList.remove('wt-video-on'); remoteSeek = false;
     room = null; peers = {}; P = { playing: false, pos: 0, at: 0 }; cd = 0; document.body.classList.remove('wt-theater-on');
     render();
   }
@@ -119,7 +119,7 @@
   /* ---------- پخش همزمان ---------- */
   const stateMsg = () => ({ t: 'state', rid: room && room.id, playing: isPlaying() || (cd > 0), pos: curPos() });
   function local(extra) {
-    if (!room || applying) return;
+    if (!room || applying || remoteSeek) return;
     leader = true;
     send(Object.assign({ t: 'state', rid: room.id, playing: isPlaying(), pos: curPos() }, extra || {}));
     sendStat(); keepHb();
@@ -136,7 +136,8 @@
       const v = vid(); if (!v) return;
       hold(700);
       const want = p.pos + (p.playing ? 0.2 : 0);
-      if (Math.abs((v.currentTime || 0) - want) > (p.hb ? 1.5 : 0.7)) { try { v.currentTime = want; } catch (e) {} }
+      // برای جلوگیری از «پینگ‌پونگ» پرش بین دو گوشی: تا وقتی جابه‌جایی که از اون طرف اومده تموم نشده، رویدادهای خودمون رو نفرست
+      if (!v.seeking && Math.abs((v.currentTime || 0) - want) > (p.hb ? 2.5 : 0.8)) { remoteSeek = true; clearTimeout(remoteSeekT); remoteSeekT = setTimeout(() => { remoteSeek = false; }, 6000); try { v.currentTime = want; } catch (e) { remoteSeek = false; } }
       if (p.playing && v.paused) v.play().catch(() => toast2('👆 یه بار روی ویدیو بزن تا همزمان شروع بشه'));
       if (!p.playing && !v.paused) v.pause();
     } else {
@@ -188,8 +189,9 @@
     const el = $('wtPeople'); if (!el || !room) return;
     const now = Date.now(), me = { name: nm() + ' (تو)', st: myStatus(), pos: curPos(), me: true };
     const list = [me].concat(Object.keys(peers).filter(k => now - peers[k].ts < 12000).map(k => peers[k]));
-    el.innerHTML = list.map(x => `<div class="wt-p${x.me ? ' me' : ''}"><b>${esc(x.name || 'یکی از ما')}</b><span>${ST[x.st] || ST.idle}</span><i>${fa(clock(x.pos))}</i></div>`).join('')
+    const html = list.map(x => `<div class="wt-p${x.me ? ' me' : ''}"><b>${esc(x.name || 'یکی از ما')}</b><span>${ST[x.st] || ST.idle}</span><i>${fa(clock(x.pos))}</i></div>`).join('')
       + (list.length < 2 ? '<div class="wt-p wait">⏳ منتظر اون یکی هستیم…</div>' : '');
+    if (el.__h !== html) { el.__h = html; el.innerHTML = html; }
   }
 
   /* ---------- واکنش‌ها ---------- */
@@ -475,6 +477,7 @@
 .wt-sub .btn{padding:6px 12px;font-size:.8rem}.wt-sub .sh{display:inline-flex;align-items:center;gap:4px;direction:ltr}.wt-sub .sh button{width:28px;height:28px;border-radius:8px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer}.wt-sub .sh small{min-width:40px;text-align:center}
 .wt-tb{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:6px}.wt-tb button{border:0;border-radius:10px;padding:6px 10px;font-size:.78rem;cursor:pointer;background:rgba(10,8,20,.72);color:#fff;opacity:.85;backdrop-filter:blur(4px)}.wt-tb button:hover{opacity:1;background:rgba(212,165,255,.6);color:#1a1030}
 .wt-stage .wt-tb .wt-tchat{display:none}
+@media (max-width:1279px){body.wt-video-on #chatLauncher{display:none!important}.wt-stage .wt-tb .wt-tchat{display:inline-block}.wt-tb{top:6px;left:6px}}
 .wt-stage.wt-theater{position:fixed;z-index:110;top:0;left:0;right:0;bottom:0;margin:0;border-radius:0;display:flex;align-items:center;justify-content:center;max-height:none}
 .wt-stage.wt-theater video{width:100%;height:100%;max-height:none;object-fit:contain}
 .wt-stage.wt-theater .wt-tb .wt-tchat{display:inline-block}
@@ -491,7 +494,7 @@ body.wt-theater-on{overflow:hidden}
     ensureCss();
     if (box.dataset.rid === (room ? room.id : '') && room && isVideo() && vid()) { renderPeople(); return; }  // ویدیو رو دوباره نساز
     box.dataset.rid = room ? room.id : '';
-    document.body.classList.remove('wt-theater-on');
+    document.body.classList.remove('wt-theater-on'); document.body.classList.toggle('wt-video-on', !!(room && isVideo()));
     if (!room) { box.innerHTML = renderIdle(); bind(); return; }
     const r = room;
     const stage = isVideo()
@@ -558,7 +561,8 @@ body.wt-theater-on{overflow:hidden}
   }
   function bindVideo() {
     const v = vid(); if (!v) return;
-    ['play', 'pause', 'seeked'].forEach(ev => v.addEventListener(ev, () => { local(); }));
+    v.addEventListener('seeked', () => { if (remoteSeek) { remoteSeek = false; clearTimeout(remoteSeekT); hold(900); return; } local(); });
+    ['play', 'pause'].forEach(ev => v.addEventListener(ev, () => { local(); }));
     ['waiting', 'playing', 'stalled', 'canplay'].forEach(ev => v.addEventListener(ev, sendStat));
     v.addEventListener('ended', () => { sendStat(); if (!closing) finish(); });
     v.addEventListener('error', () => toast2(/\.mkv(\?|#|$)/i.test((room && room.item && room.item.url) || '') ? '⚠️ این mkv توی مرورگرت پخش نشد (کدک یا مرورگر پشتیبانی نمی‌کنه؛ کروم/ادج و H.264+AAC لازمه)' : '⚠️ این ویدیو توی سایت پخش نشد؛ لینکش مستقیم نیست یا قفله'));
