@@ -106,7 +106,7 @@
   function leaveWatch(silent) {
     if (wpc) { try { wpc.close(); } catch (e) {} }
     wpc = null; wstream = null; watching = null; wstate = ''; remoteSet = false; pendingIce = [];
-    if (!silent) { clearTimeout(retryT); clearTimeout(connT); tries = 0; send({ t: 'leave' }); render(); }
+    if (!silent) { document.body.classList.remove('ss-theater-on'); clearTimeout(retryT); clearTimeout(connT); tries = 0; send({ t: 'leave' }); render(); }
   }
   function attach() {
     const v = $('ssVideo'); if (!v || !wstream) return;
@@ -148,7 +148,13 @@
 .ss-h .sp{flex:1}
 .ss-b{padding:12px;display:flex;flex-direction:column;gap:10px;align-items:center}
 .ss-note{color:var(--muted,#aaa);font-size:.84rem;line-height:1.8;text-align:center}
-.ss-video{width:100%;max-height:520px;background:#000;border-radius:12px;display:block}
+.ss-video{width:100%;max-height:440px;object-fit:contain;background:#000;border-radius:12px;display:block}
+.ss-video.ss-theater{position:fixed;z-index:110;top:0;left:0;right:0;bottom:0;width:100%;height:100%;max-height:none;border-radius:0}
+body.ss-theater-on{overflow:hidden}body.ss-theater-on .ss-row{position:fixed;z-index:111;top:8px;left:8px;background:rgba(10,8,20,.72);padding:6px;border-radius:12px;backdrop-filter:blur(4px)}
+body.ss-theater-on .ss-row [data-ss=retry],body.ss-theater-on .ss-row [data-ss=leave]{display:none}
+.ss-tchat{display:none}body.ss-theater-on .ss-tchat{display:inline-block}
+@media (min-width:900px){body.chat-open .ss-video.ss-theater{left:330px;width:calc(100vw - 330px)}body.ss-theater-on.chat-open .ss-row{left:338px}}
+@media (max-width:899px){body.chat-open .ss-video.ss-theater{height:calc(100vh - min(72vh,540px) - 16px)}}
 .ss-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
 .ss-live{color:#ff8fa8;font-weight:700}
 .ss-chk{display:flex;gap:6px;align-items:center;font-size:.84rem;color:var(--muted,#aaa)}`;
@@ -166,7 +172,7 @@
       if (keepVideo) { const st = $('ssState'); if (st) st.textContent = stateText(); return; }
       html = `<div class="ss-h">🖥️ صفحهٔ ${esc(wname || 'اون یکی')} <span class="sp"></span><span class="ss-note" id="ssState">${stateText()}</span></div>
         <div class="ss-b"><video class="ss-video" id="ssVideo" autoplay playsinline muted></video>
-        <div class="ss-row"><button type="button" class="btn ghost" data-ss="unmute">🔊 صدا</button><button type="button" class="btn ghost" data-ss="full">⛶ تمام‌صفحه</button><button type="button" class="btn ghost" data-ss="retry">🔄 تلاش دوباره</button><button type="button" class="btn ghost" data-ss="leave">✕ بستن</button></div></div>`;
+        <div class="ss-row"><button type="button" class="btn ghost" data-ss="unmute">🔊 صدا</button><button type="button" class="btn ghost" data-ss="full">⛶ تمام‌صفحه با چت</button><button type="button" class="btn ghost ss-tchat" data-ss="tchat">💬 چت</button><button type="button" class="btn ghost" data-ss="retry">🔄 تلاش دوباره</button><button type="button" class="btn ghost" data-ss="leave">✕ بستن</button></div></div>`;
       box.dataset.k = 'w' + watching; box.innerHTML = html; bind(); attach(); return;
     } else {
       html = `<div class="ss-h">🖥️ اشتراک صفحه</div>
@@ -176,6 +182,14 @@
     }
     box.dataset.k = sharing ? 's' : ''; box.innerHTML = html; bind();
   }
+  /* ⛶ تمام‌صفحه با چت: تصویر کل پنجره رو می‌گیره ولی چت کنارش می‌مونه (تمام‌صفحهٔ مرورگر چت رو قایم می‌کرد) */
+  function theater(force) {
+    const v = $('ssVideo'); if (!v) return; const on = force == null ? !v.classList.contains('ss-theater') : !!force;
+    v.classList.toggle('ss-theater', on); document.body.classList.toggle('ss-theater-on', on);
+    const b = document.querySelector('[data-ss=full]'); if (b) b.textContent = on ? '✕ خروج از تمام‌صفحه' : '⛶ تمام‌صفحه با چت';
+    if (on) { try { if (!document.body.classList.contains('chat-open')) ChatDock.open(); } catch (e) {} }
+  }
+  document.addEventListener('keydown', e => { const v = $('ssVideo'); if (e.key === 'Escape' && v && v.classList.contains('ss-theater')) theater(false); });
   const stateText = () => wstate === 'connected' ? '🟢 وصل' : wstate === 'failed' ? '🔴 وصل نشد' : wstate === 'retrying' ? '🔄 تلاش دوباره (' + tries + ' از ' + MAX_TRIES + ')…' : '⏳ در حال وصل شدن…';
   function bind() {
     const box = $('shareBox'); if (!box) return;
@@ -186,7 +200,8 @@
       else if (a === 'leave') leaveWatch(false);
       else if (a === 'retry') { if (watching) { const id = watching, n = wname; tries = 0; watch(id, n, true); } else if (remoteLive) { watch(remoteLive.id, remoteLive.name); } }
       else if (a === 'unmute' && v) { v.muted = !v.muted; b.textContent = v.muted ? '🔊 صدا' : '🔇 بی‌صدا'; }
-      else if (a === 'full' && v) { try { (v.requestFullscreen || v.webkitRequestFullscreen).call(v); } catch (e) {} }
+      else if (a === 'full' && v) theater();
+      else if (a === 'tchat') { try { document.body.classList.contains('chat-open') ? ChatDock.close() : ChatDock.open(); } catch (e) {} }
     });
   }
 
