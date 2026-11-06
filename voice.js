@@ -665,15 +665,33 @@
     let h = '';
     if (editing) h += `<div class="vc-cmp"><span>✏️ ویرایش پیام</span><button type="button" data-cmp="noedit" aria-label="لغو ویرایش">✕</button></div>`;
     if (replyTo) h += `<div class="vc-cmp"><span>↩︎ پاسخ به <b>${esc(replyTo.name)}</b>: ${esc((replyTo.text || '📷 تصویر').slice(0, 60))}</span><button type="button" data-cmp="noreply" aria-label="لغو ریپلای">✕</button></div>`;
-    if (pendImg) h += `<div class="vc-cmp${pendImg.up ? ' up' : ''}"><img src="${esc(pendImg.preview)}" alt=""><span id="vcUpTxt">${pendImg.up ? 'در حال آپلود…' : 'تصویر آماده ارسال'}</span><button type="button" data-cmp="noimg" aria-label="${pendImg.up ? 'لغو آپلود' : 'حذف تصویر'}">✕</button>${pendImg.up ? '<div class="vc-upb"><i id="vcUpBar"></i></div>' : ''}</div>`;
+    if (pendImg) { const pi = pendImg, st = pi.failed ? '⚠️ آپلود نشد؛ دکمهٔ ارسال دوباره امتحان می‌کنه' : pi.up ? (pi.auto ? '⏳ بعد از آپلود خودش ارسال می‌شه · ' : '') + (pi.label || 'در حال آپلود…') : 'تصویر آماده ارسال'; h += `<div class="vc-cmp${pi.up ? ' up' : ''}"><img src="${esc(pi.preview)}" alt=""><span id="vcUpTxt">${st}</span><button type="button" data-cmp="noimg" aria-label="${pi.up ? 'لغو آپلود' : 'حذف تصویر'}">✕</button>${pi.up ? '<div class="vc-upb"><i id="vcUpBar" style="width:' + (pi.pct || 0) + '%"></i></div>' : ''}</div>`; }
     el.innerHTML = h; el.style.display = h ? '' : 'none';
+  }
+  const kb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' مگابایت' : Math.max(1, Math.round(n / 1024)).toLocaleString('fa-IR') + ' کیلوبایت';
+  /* آپلود از همون لحظهٔ انتخاب عکس شروع می‌شه؛ تا تموم نشده هم می‌شه چت کرد. اگه «ارسال» رو قبل از تموم‌شدن بزنی، عکس (با متنی که نوشتی) بعد از آپلود خودش می‌ره */
+  function startUpload(pi) {
+    pi.up = true; pi.failed = false; pi.pct = 0; pi.label = 'در حال آپلود…'; pi.ctl = { abort() {} }; renderComposer();
+    uploadMediaFile(pi.blob, 'jpg', 'chat.jpg', { ctl: pi.ctl, onProgress: (l, t) => { const pc = Math.min(100, Math.round(l / t * 100)); pi.pct = pc; pi.label = pc.toLocaleString('fa-IR') + '٪ · ' + kb(l) + ' از ' + kb(t); if (pendImg !== pi) return; const b = $('vcUpBar'), x = $('vcUpTxt'); if (b) b.style.width = pc + '%'; if (x) x.textContent = (pi.auto ? '⏳ بعد از آپلود خودش ارسال می‌شه · ' : '') + pi.label; } })
+      .then(up => {
+        pi.up = false; pi.url = up.url; if (pendImg !== pi) return;
+        if (pi.auto) { const a = pi.auto; pendImg = null; renderComposer(); if (!ch || !subscribed) { say('⏳ وصل نشد؛ عکس ارسال نشد'); return; } postMsg(a.text, pi.url, a.reply); renderChat(); }
+        else renderComposer();
+      })
+      .catch(e => {
+        pi.up = false; if (pendImg !== pi) return;
+        if (e && e.cancelled) { pendImg = null; say('⛔ آپلود لغو شد'); }
+        else { pi.failed = true; pi.auto = null; say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'تصویر آپلود نشد')); }
+        renderComposer();
+      });
   }
   async function pickImage(file) {
     if (!file || !/^image\//.test(file.type)) return;
     try {
       const url = await resizeImageFile(file, 2000, 0.9);
-      pendImg = { blob: dataUrlToBlob(url), preview: url };
-      renderComposer(); const i = $('vcChatInput'); if (i) i.focus();
+      if (pendImg && pendImg.up && pendImg.ctl) pendImg.ctl.abort();
+      const pi = pendImg = { blob: dataUrlToBlob(url), preview: url, up: true };
+      startUpload(pi); const i = $('vcChatInput'); if (i) i.focus();
     } catch (e) { say('⚠️ این تصویر باز نشد'); }
   }
   function zoom(src) {
@@ -684,21 +702,24 @@
   async function sendChat() {
     const inp = $('vcChatInput'); if (!inp || chatSending) return; const text = inp.value.trim().slice(0, 500); if (editing) { if (!text) { delMsg(editing.id); return; } applyEdit(text); return; } if (!text && !pendImg) return;
     if (!ch || !subscribed) { say('⏳ هنوز وصل نشده؛ چند لحظه دیگه'); return; }
-    chatSending = true; const sb = $('vcChatForm') && $('vcChatForm').querySelector('button[type=submit]'); if (sb) sb.disabled = true;
     let img = '';
-    if (pendImg) {
-      const pi = pendImg; pi.up = true; pi.ctl = { abort() {} }; renderComposer();
-      const kb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' مگابایت' : Math.max(1, Math.round(n / 1024)).toLocaleString('fa-IR') + ' کیلوبایت';
-      try { const up = await uploadMediaFile(pi.blob, 'jpg', 'chat.jpg', { ctl: pi.ctl, onProgress: (l, t) => { const pc = Math.min(100, Math.round(l / t * 100)), b = $('vcUpBar'), x = $('vcUpTxt'); if (b) b.style.width = pc + '%'; if (x) x.textContent = pc.toLocaleString('fa-IR') + '٪ · ' + kb(l) + ' از ' + kb(t); } }); img = up.url; }
-      catch (e) { pi.up = false; renderComposer(); if (e && e.cancelled) { say('⛔ آپلود لغو شد'); chatSending = false; if (sb) sb.disabled = false; return; } say('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'voice_chat') : 'تصویر ارسال نشد')); chatSending = false; if (sb) sb.disabled = false; return; }
+    if (pendImg && !pendImg.auto) {
+      const pi = pendImg, rp = replyTo ? { id: replyTo.id, name: replyTo.name, text: (replyTo.text || '').slice(0, 120) } : null;
+      if (pi.failed) startUpload(pi);
+      if (pi.up) { pi.auto = { text, reply: rp }; inp.value = ''; replyTo = null; renderComposer(); inp.focus(); return; }   // هنوز آپلود نشده: صف می‌شه و می‌شه چت کرد
+      img = pi.url; pendImg = null;
     }
-    const reply = replyTo ? { id: replyTo.id, name: replyTo.name, text: (replyTo.text || '').slice(0, 120) } : null;
+    if (!text && !img) return;
+    postMsg(text, img, replyTo ? { id: replyTo.id, name: replyTo.name, text: (replyTo.text || '').slice(0, 120) } : null);
+    replyTo = null; renderComposer(); renderChat(); inp.value = ''; inp.focus();
+  }
+  function postMsg(text, img, reply) {
+    const inp = $('vcChatInput');
     if (!pendEmoCounted) bumpEmo(emoIn(text).filter(x => !emoUsedNow.includes(x))); emoUsedNow = []; pendEmoCounted = false;
     const ts = Date.now(), id = 'm_' + ts + '_' + ID, p = { from: ID, id, name: nm(), text, ts, img, reply };
     try { ch.send({ type: 'broadcast', event: 'chat', payload: p }); } catch (e) {}
     clearTimeout(typeIdle); lastTypeSent = 0; ctSend({ k: 'typing', on: 0 }); botMaybe(text);
-    addMsg({ id, name: p.name, text, ts, img, reply }); saveMsgs(); pendImg = null; replyTo = null; renderComposer(); renderChat(); blip('send'); inp.value = ''; inp.focus();
-    chatSending = false; if (sb) sb.disabled = false;
+    addMsg({ id, name: p.name, text, ts, img, reply }); saveMsgs(); blip('send');
     const full = { id, name: p.name, text, ts, img: img || null, reply_id: reply ? reply.id : null, reply_name: reply ? reply.name : null, reply_text: reply ? reply.text : null };
     const bad = r => r && r.error && /voice_chat|relation|schema cache/i.test(r.error.message || '');
     dbClient.from('voice_chat').upsert(full).then(r => {
@@ -742,7 +763,7 @@
     const ci2 = $('vcChatInput'); if (ci2) ci2.addEventListener('paste', e => { const f = imgOf(e.clipboardData); if (f) { e.preventDefault(); pickImage(f); } });
     const cf = $('vcChatForm'); if (cf) { cf.addEventListener('dragover', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); }); cf.addEventListener('drop', e => { const f = imgOf(e.dataTransfer); if (f) { e.preventDefault(); pickImage(f); } }); }
     const cb = $('vcImgBtn'); if (cb && pk) cb.addEventListener('click', () => pk.click());
-    const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else if (b.dataset.cmp === 'noedit') { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; } else { if (pendImg && pendImg.ctl && pendImg.up) pendImg.ctl.abort(); else pendImg = null; } renderComposer(); });
+    const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else if (b.dataset.cmp === 'noedit') { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; } else { if (pendImg && pendImg.up && pendImg.ctl) pendImg.ctl.abort(); pendImg = null; } renderComposer(); });
     const cl0 = $('vcChatList'); if (cl0) { cl0.addEventListener('click', e => { if (e.target.closest('#vcOlder')) loadOlder(); }); cl0.addEventListener('scroll', () => { if (cl0.scrollTop < 80 && hasMore && !loadingOld) loadOlder(); }, { passive: true }); }
     const cl = $('vcChatList'); if (cl) cl.addEventListener('click', e => {
       const z = e.target.closest('[data-zoom]'); if (z) { zoom(z.dataset.zoom); return; }
