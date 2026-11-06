@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&family=Gulzar&family=Lalezar&family=Amiri:ital@0;1&family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Pacifico&family=Shadows+Into+Light&family=Indie+Flower&family=Great+Vibes&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&family=Aref+Ruqaa&family=Markazi+Text&family=Cairo&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" media="print" onload="this.media='all'">
@@ -1770,6 +1771,18 @@ body.guest #app{padding-left:0 !important}
   <button class="btn" type="submit">🔓 ورود</button>
   <button class="btn ghost" type="button" id="gateBio" style="display:none">🖐️ ورود با اثر انگشت</button><div class="gate-err" id="gateErr"></div>
 </form></div>
+<script>
+/* ⚡ صفحهٔ رمز همون لحظه نشون داده می‌شه؛ منتظر دانلود کتابخونه‌ها و بقیهٔ سایت نمی‌مونه. اگه رمز رو زودتر از آماده‌شدن بزنی، خودش بعد از آماده شدن ثبتش می‌کنه */
+(function () {
+  var g = document.getElementById('gate'); if (g) g.classList.add('show');
+  var f = document.getElementById('gateForm'), i = document.getElementById('gatePass');
+  if (i) i.focus();
+  if (f) f.addEventListener('submit', function (e) {
+    if (window.__gateReady) return; e.preventDefault(); window.__gatePending = true;
+    var er = document.getElementById('gateErr'); if (er) er.textContent = '⏳ دارم سایت رو آماده می‌کنم؛ همین‌که آماده شد وارد می‌شی…';
+  });
+})();
+</script>
 
 
 
@@ -2178,7 +2191,8 @@ body.guest #app{padding-left:0 !important}
 <input type="file" accept="image/*" hidden id="coverChangeInput" onchange="onCoverChange(event)" />
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="document.write('<script src=&quot;https://unpkg.com/@supabase/supabase-js@2&quot;><\/script>')"></script>
+<script>if (!window.supabase) document.write('<script src="https://fastly.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');</script>
 <script src="./recur.js"></script>
 <script src="./cat.js" defer></script>
 <script src="./poster.js" defer></script>
@@ -2567,11 +2581,13 @@ document.getElementById('gateForm').addEventListener('submit', e => {
     if (gateFails >= 5) { gateLockUntil = Date.now() + 30000; gateFails = 0; err.textContent = 'چند بار اشتباه شد؛ ۳۰ ثانیه صبر کن ⏳'; }
   }
 });
+window.__gateReady = true; if (window.__gatePending) { window.__gatePending = false; const er = document.getElementById('gateErr'); if (er) er.textContent = ''; try { document.getElementById('gateForm').requestSubmit(); } catch (e) {} }
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-06i';
+const SITE_VERSION = '2026-11-06j';
 const SITE_CHANGES = [
+  '⚡ سرعت باز شدن سایت: صفحهٔ رمز همون لحظه میاد (منتظر دانلود کتابخونه‌ها نمی‌مونه) و اگه سرور اصلی کتابخونه کند یا بسته بود از سرور جایگزین می‌گیره',
   '🎨 اتاق تماشا: اندازه، رنگ، پس‌زمینه، نوع قلم و جای زیرنویس رو می‌شه عوض کرد (دکمهٔ «🎨 ظاهر» کنار زیرنویس؛ فقط برای خودت و یادش می‌مونه)',
   '📱 اتاق تماشا روی موبایل: دکمهٔ شناور چت دیگه روی فیلم نمی‌افته و با لمس فیلم چت باز نمی‌شه (دکمهٔ 💬 چت بالای فیلمه)؛ لرزش و پرش تصویر موقع پخش همزمان کم شد',
   '🎞️ اتاق تماشا: وقتی فیلم mkv با زیرنویس چسبیده (soft-sub) آپلود می‌کنی، زیرنویس خودش از خود فایل خونده و برای هر دو فعال می‌شه (ترجیح با فارسی، بعد انگلیسی)',
