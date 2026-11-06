@@ -234,7 +234,7 @@
       const cues = subCache[sub.id]; if (!cues) return;
       let t = v._wtTracks[sub.id]; if (!t) t = v._wtTracks[sub.id] = v.addTextTrack('subtitles', sub.label || 'زیرنویس', 'fa');
       t.mode = 'hidden'; while (t.cues && t.cues.length) t.removeCue(t.cues[0]);
-      cues.forEach(c => { try { const q = new VTTCue(Math.max(0, c.s + subShift), Math.max(0.01, c.e + subShift), c.t); q.line = 'auto'; t.addCue(q); } catch (e) {} });
+      cues.forEach(c => { try { const q = new VTTCue(Math.max(0, c.s + subShift), Math.max(0.01, c.e + subShift), c.t); q.line = subSt.pos === 'top' ? 1 : 'auto'; t.addCue(q); } catch (e) {} });
       t.mode = sub.id === activeSub ? 'showing' : 'disabled';
     });
   }
@@ -353,17 +353,42 @@
     catch (e) { say2(''); toast2('⚠️ استخراج زیرنویس نشد'); console.warn(e); }
     finally { embBusy = false; }
   }
+
+  /* ---------- ظاهر زیرنویس (فقط برای خودت؛ توی همین مرورگر یادش می‌مونه) ---------- */
+  const SUBFONT = { normal: 'inherit', bold: 'inherit', serif: 'Georgia,"Times New Roman",serif', mono: 'ui-monospace,Consolas,monospace' };
+  const SUBCOL = { white: '#ffffff', yellow: '#ffe45c', green: '#7dffb0', cyan: '#7fe7ff', pink: '#ff9ecb' };
+  const SUBBG = { none: ['transparent', 'text-shadow:0 0 3px #000,0 0 3px #000,1px 1px 2px #000,-1px -1px 2px #000'], soft: ['rgba(0,0,0,.45)', ''], box: ['rgba(0,0,0,.78)', ''], solid: ['#000', ''] };
+  let subSt = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem('wt_substyle') || '{}') || {}; } catch (e) {} return Object.assign({ size: 110, col: 'white', bg: 'box', font: 'normal', pos: 'bottom' }, o); })();
+  function applySubStyle() {
+    let st = document.getElementById('wtSubStyle'); if (!st) { st = document.createElement('style'); st.id = 'wtSubStyle'; document.head.appendChild(st); }
+    const bg = SUBBG[subSt.bg] || SUBBG.box;
+    st.textContent = '.wt-stage video::cue{font-size:' + subSt.size + '%;color:' + (SUBCOL[subSt.col] || '#fff') + ';background:' + bg[0] + ';font-family:' + (SUBFONT[subSt.font] || 'inherit') + ';font-weight:' + (subSt.font === 'bold' ? '800' : '500') + ';' + bg[1] + ';line-height:1.55}';
+    try { localStorage.setItem('wt_substyle', JSON.stringify(subSt)); } catch (e) {}
+  }
+  let subStOpen = false;
+  function subStyleUi() {
+    const sw = (k, map, labelFn) => Object.keys(map).map(x => `<button type="button" data-sk="${k}" data-sv="${x}" class="${subSt[k] === x ? 'on' : ''}" ${k === 'col' ? 'style="background:' + map[x] + ';color:#000;min-width:26px"' : ''}>${k === 'col' ? '' : labelFn(x)}</button>`).join('');
+    return `<div class="wt-ss"><div><b>اندازه</b><button type="button" data-sz="-10">A−</button><small>${fa(subSt.size)}٪</small><button type="button" data-sz="10">A+</button></div>
+      <div><b>رنگ</b>${sw('col', SUBCOL)}</div>
+      <div><b>پس‌زمینه</b>${sw('bg', SUBBG, x => ({ none: 'بدون (سایه)', soft: 'کم‌رنگ', box: 'تیره', solid: 'مشکی' })[x])}</div>
+      <div><b>قلم</b>${sw('font', SUBFONT, x => ({ normal: 'عادی', bold: 'ضخیم', serif: 'نوشتاری', mono: 'تایپ' })[x])}</div>
+      <div><b>جای زیرنویس</b>${['bottom', 'top'].map(x => `<button type="button" data-sk="pos" data-sv="${x}" class="${subSt.pos === x ? 'on' : ''}">${x === 'top' ? 'بالا' : 'پایین'}</button>`).join('')}<button type="button" data-sk="reset">↺ پیش‌فرض</button></div></div>`;
+  }
+
   function renderSubUi() {
     const el = $('wtSub'); if (!el || !room) return; const subs = room.subs || [];
     el.innerHTML = `<b>💬 زیرنویس</b><select id="wtSubSel" aria-label="انتخاب زیرنویس"><option value="">${subs.length ? 'بدون زیرنویس' : 'هنوز زیرنویسی نیست'}</option>${subs.map(x => `<option value="${esc(x.id)}"${x.id === activeSub ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select>
       <button type="button" class="btn ghost" data-ws="file" title="آپلود فایل زیرنویس از سیستم">📄 آپلود</button><button type="button" class="btn ghost" data-ws="url" title="لینک فایل زیرنویس">🔗 لینک</button><button type="button" class="btn ghost" data-ws="emb" title="خوندن زیرنویسِ چسبیده به خود فیلم (mkv)">🎞️ داخل فیلم</button>
-      <span class="sh" title="اگه زیرنویس جلو یا عقبه، همین‌جا تنظیمش کن (فقط برای خودت)"><button type="button" data-ws="m" aria-label="زودتر">−</button><small>${fa(subShift.toFixed(1))}s</small><button type="button" data-ws="p" aria-label="دیرتر">+</button></span>
-      <input type="file" id="wtSubFile" accept=".srt,.vtt,.txt,text/vtt,application/x-subrip" hidden /><div id="wtSubSt" style="flex-basis:100%;font-size:.78rem;color:var(--muted,#aaa)"></div>`;
+      <button type="button" class="btn ghost" data-ws="st" title="اندازه، رنگ و شکل زیرنویس">🎨 ظاهر</button><span class="sh" title="اگه زیرنویس جلو یا عقبه، همین‌جا تنظیمش کن (فقط برای خودت)"><button type="button" data-ws="m" aria-label="زودتر">−</button><small>${fa(subShift.toFixed(1))}s</small><button type="button" data-ws="p" aria-label="دیرتر">+</button></span>
+      <input type="file" id="wtSubFile" accept=".srt,.vtt,.txt,text/vtt,application/x-subrip" hidden /><div id="wtSubSt" style="flex-basis:100%;font-size:.78rem;color:var(--muted,#aaa)"></div>${subStOpen ? subStyleUi() : ''}`;
     const sel = $('wtSubSel'); if (sel) sel.onchange = () => { activeSub = sel.value; mountSubs(); };
+    el.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { if (b.dataset.sk === 'reset') subSt = { size: 110, col: 'white', bg: 'box', font: 'normal', pos: 'bottom' }; else subSt[b.dataset.sk] = b.dataset.sv; applySubStyle(); mountSubs(); renderSubUi(); });
+    el.querySelectorAll('[data-sz]').forEach(b => b.onclick = () => { subSt.size = Math.max(60, Math.min(300, subSt.size + (+b.dataset.sz))); applySubStyle(); renderSubUi(); });
     const f = $('wtSubFile'); if (f) f.onchange = () => { const fl = f.files && f.files[0]; f.value = ''; if (fl) subFromFile(fl); };
     el.querySelectorAll('[data-ws]').forEach(b => b.onclick = () => {
       const a = b.dataset.ws;
       if (a === 'file') $('wtSubFile').click();
+      else if (a === 'st') { subStOpen = !subStOpen; renderSubUi(); }
       else if (a === 'emb') embeddedSubs();
       else if (a === 'url') { const u = (prompt('لینک مستقیم فایل زیرنویس (srt یا vtt):') || '').trim(); if (u) subFromUrl(u); }
       else { subShift = Math.round((subShift + (a === 'p' ? 0.5 : -0.5)) * 10) / 10; mountSubs(); renderSubUi(); }
@@ -475,6 +500,7 @@
 .wt-row label{display:flex;gap:4px;align-items:center;color:var(--muted,#aaa)}
 .wt-sub{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.84rem}.wt-sub select{flex:1;min-width:130px;padding:7px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:#241a3a;color:#f3ecff;font:inherit}
 .wt-sub .btn{padding:6px 12px;font-size:.8rem}.wt-sub .sh{display:inline-flex;align-items:center;gap:4px;direction:ltr}.wt-sub .sh button{width:28px;height:28px;border-radius:8px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer}.wt-sub .sh small{min-width:40px;text-align:center}
+.wt-ss{flex-basis:100%;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.05);font-size:.8rem}.wt-ss>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.wt-ss b{min-width:78px;color:var(--muted,#aaa);font-weight:600}.wt-ss button{border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:.78rem}.wt-ss button.on{background:rgba(212,165,255,.4);border-color:#d4a5ff}
 .wt-tb{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:6px}.wt-tb button{border:0;border-radius:10px;padding:6px 10px;font-size:.78rem;cursor:pointer;background:rgba(10,8,20,.72);color:#fff;opacity:.85;backdrop-filter:blur(4px)}.wt-tb button:hover{opacity:1;background:rgba(212,165,255,.6);color:#1a1030}
 .wt-stage .wt-tb .wt-tchat{display:none}
 @media (max-width:1279px){body.wt-video-on #chatLauncher{display:none!important}.wt-stage .wt-tb .wt-tchat{display:inline-block}.wt-tb{top:6px;left:6px}}
@@ -484,7 +510,7 @@
 body.wt-theater-on{overflow:hidden}
 @media (min-width:900px){body.chat-open .wt-stage.wt-theater{left:330px}}
 @media (max-width:899px){body.chat-open .wt-stage.wt-theater{bottom:calc(min(72vh,540px) + 16px)}}
-.wt-stage video::cue{font-size:1.1em;background:rgba(0,0,0,.7);color:#fff}
+
 @media (min-width:900px){.vc-area-watch{grid-column:1 / -1}}`;
 
   function ensureCss() { if ($('wtCss')) return; const st = document.createElement('style'); st.id = 'wtCss'; st.textContent = CSS; document.head.appendChild(st); }
@@ -576,7 +602,7 @@ body.wt-theater-on{overflow:hidden}
     if (!seenLoaded) loadSeen(); else render();
     if (typeof funLoaded !== 'undefined' && !funLoaded && typeof loadFun === 'function') loadFun().then(() => { if (!room) render(); });
   }
-  function init() { if (inited) return; inited = true; ensureCss(); setTimeout(join, 2500); }
+  function init() { if (inited) return; inited = true; ensureCss(); applySubStyle(); setTimeout(join, 2500); }
   window.Watch = { _mkvScan: mkvScan, _mkvCues: mkvCues, load, create, isSeen, init, _room: () => room, _state: () => ({ room, peers, P, cd, watchedSec, seen }), _id: ID, finish, close: () => closeRoom(true, false) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
