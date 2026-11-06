@@ -83,11 +83,23 @@
     try { if (typeof setFunCat === 'function') setFunCat(item.category === 'series' ? 'series' : 'movie'); } catch (e) {}
     if (typeof currentScreen !== 'undefined' && currentScreen !== 'fun' && typeof showScreen === 'function') showScreen('fun');
   }
+  /* ⛶ تمام‌صفحه با چت: ویدیو کل پنجره رو می‌گیره ولی چت کنارش می‌مونه (تمام‌صفحهٔ واقعی مرورگر چت رو قایم می‌کرد) */
+  function theater(force) {
+    const st = $('wtStage'); if (!st || !isVideo()) return; const on = force == null ? !st.classList.contains('wt-theater') : !!force;
+    st.classList.toggle('wt-theater', on); document.body.classList.toggle('wt-theater-on', on);
+    const b = st.querySelector('[data-wt=theater]'); if (b) b.textContent = on ? '✕ خروج از تمام‌صفحه' : '⛶ تمام‌صفحه با چت';
+    if (on) { try { if (!document.body.classList.contains('chat-open')) ChatDock.open(); } catch (e) {} }
+  }
+  document.addEventListener('keydown', e => {
+    const st = $('wtStage'); if (!st || !isVideo()) return; const t = e.target, typing = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+    if (e.key === 'Escape' && st.classList.contains('wt-theater')) { theater(false); }
+    else if ((e.key === 'f' || e.key === 'F') && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); theater(); }
+  });
   function closeRoom(broadcast, done) {
     if (!room) return;
     if (broadcast) send({ t: 'close', rid: room.id, done: !!done });
     clearInterval(tickT); clearInterval(statT); clearInterval(hbT); clearInterval(cdT); tickT = statT = hbT = cdT = null;
-    room = null; peers = {}; P = { playing: false, pos: 0, at: 0 }; cd = 0;
+    room = null; peers = {}; P = { playing: false, pos: 0, at: 0 }; cd = 0; document.body.classList.remove('wt-theater-on');
     render();
   }
   async function finish() {
@@ -224,17 +236,119 @@
       t.mode = sub.id === activeSub ? 'showing' : 'disabled';
     });
   }
+
+  /* ---------- 🎞️ زیرنویس داخل خود فایل mkv (مثل VLC) ---------- */
+  // یه خوندنِ جریانی از فایل Matroska: فهرست ترک‌های زیرنویس رو از اول فایل می‌خونه و بعد (با موافقت کاربر) کل فایل رو یک‌بار پیمایش می‌کنه.
+  const EBML_MASTER = new Set([0x18538067, 0x1654AE6B, 0x1549A966, 0x1F43B675, 0xA0, 0xAE]);
+  async function mkvScan(url, o) {
+    o = o || {}; const ctl = new AbortController(); if (o.ctl) o.ctl.abort = () => ctl.abort();
+    const res = await fetch(url, { signal: ctl.signal, headers: o.probe ? { Range: 'bytes=0-4194303' } : {} });
+    if (!res.ok && res.status !== 206) throw new Error('http ' + res.status);
+    const size = o.probe ? 0 : (Number(res.headers.get('content-length')) || 0), rd = res.body.getReader();
+    let buf = new Uint8Array(0), off = 0, done = false, got = 0;
+    const fill = async n => {
+      while (buf.length - off < n && !done) {
+        const r = await rd.read(); if (r.done) { done = true; break; } got += r.value.length;
+        if (off >= buf.length) { buf = r.value; off = 0; } else { const nb = new Uint8Array(buf.length - off + r.value.length); nb.set(buf.subarray(off)); nb.set(r.value, buf.length - off); buf = nb; off = 0; }
+        if (o.onProgress && size) o.onProgress(got, size);
+      }
+      return buf.length - off >= n;
+    };
+    const skip = async n => { while (n > 0) { if (off >= buf.length) { if (done) return; await fill(1); if (!(buf.length - off)) return; } const t = Math.min(n, buf.length - off); off += t; n -= t; } };
+    const vint = (isId) => {   // برمی‌گردونه [مقدار، طول، ناشناخته؟]
+      const b = buf[off]; if (b === 0) return null; let len = 1, m = 0x80; while (!(b & m)) { len++; m >>= 1; }
+      if (len > 8 || buf.length - off < len) return null;
+      let v = isId ? b : (b & (m - 1)), allOnes = (b & (m - 1)) === (m - 1);
+      for (let i = 1; i < len; i++) { const x = buf[off + i]; v = v * 256 + x; if (x !== 255) allOnes = false; }
+      return [v, len, !isId && allOnes];
+    };
+    const tracks = [], cues = []; let cur = null, tcScale = 1e6, clTc = 0, lastCue = null, wanted = o.wanted || null;
+    try {
+      for (;;) {
+        if (!(await fill(1))) break; await fill(12);
+        const idv = vint(true); if (!idv) break; off += idv[1]; const id = idv[0];
+        if (!(buf.length - off)) await fill(8); const sv = vint(false); if (!sv) break; off += sv[1]; const sz = sv[2] ? Infinity : sv[0];
+        if (id === 0x1F43B675 && o.probe) break;
+        if (EBML_MASTER.has(id)) { if (id === 0xAE) { cur = { num: 0, type: 0, codec: '', lang: '', name: '', priv: null }; tracks.push(cur); } continue; }
+        if (id === 0xA3 || id === 0xA1) {
+          if (!wanted) { await skip(sz); continue; }  // (probe)
+          await fill(Math.min(sz, 16)); const tv = vint(false); if (!tv) { await skip(sz); continue; }
+          const num = tv[0], hdr = tv[1] + 3;
+          if (!wanted.has(num)) { lastCue = null; await skip(sz); continue; }
+          if (!(await fill(sz))) break;
+          const rel = (buf[off + tv[1]] << 8 | buf[off + tv[1] + 1]) << 16 >> 16, data = buf.slice(off + hdr, off + sz); off += sz;
+          lastCue = { num, s: (clTc + rel) * tcScale / 1e9, data, dur: null }; cues.push(lastCue); continue;
+        }
+        const leaf = [0xD7, 0x83, 0x86, 0x22B59C, 0x536E, 0x63A2, 0x2AD7B1, 0xE7, 0x9B];
+        if (leaf.includes(id) && sz < 1e6) {
+          if (!(await fill(sz))) break; const p = buf.slice(off, off + sz); off += sz;
+          const uint = () => p.reduce((a, x) => a * 256 + x, 0), str = () => new TextDecoder().decode(p).replace(/\0+$/, '');
+          if (id === 0xD7 && cur) cur.num = uint(); else if (id === 0x83 && cur) cur.type = uint(); else if (id === 0x86 && cur) cur.codec = str();
+          else if (id === 0x22B59C && cur) cur.lang = str(); else if (id === 0x536E && cur) cur.name = str(); else if (id === 0x63A2 && cur) cur.priv = p;
+          else if (id === 0x2AD7B1) tcScale = uint() || 1e6; else if (id === 0xE7) clTc = uint();
+          else if (id === 0x9B && lastCue && lastCue.dur == null) lastCue.dur = uint() * tcScale / 1e9;
+          continue;
+        }
+        await skip(sz);
+      }
+    } finally { try { ctl.abort(); } catch (e) {} }
+    return { tracks: tracks.filter(t => t.type === 17), cues, tcScale };
+  }
+  function mkvCues(raw, track) {
+    const ass = /ASS|SSA/i.test(track.codec), td = new TextDecoder(), out = [];
+    raw.filter(c => c.num === track.num).forEach(c => {
+      let t = td.decode(c.data);
+      if (ass) { t = t.split(',').slice(8).join(','); t = t.replace(/\{[^}]*\}/g, '').replace(/\\N/gi, '\n').replace(/\\h/g, ' '); }
+      t = t.replace(/\r/g, '').trim(); if (!t) return;
+      out.push({ s: c.s, e: c.s + (c.dur || 3), t });
+    });
+    out.sort((a, b) => a.s - b.s);
+    for (let i = 0; i < out.length - 1; i++) if (out[i].e > out[i + 1].s + 5) out[i].e = Math.min(out[i].e, out[i + 1].s);   // هم‌پوشانی زیاد رو کم کن
+    return out;
+  }
+  const LANGS = { fas: 'فارسی', per: 'فارسی', fa: 'فارسی', eng: 'English', en: 'English', ara: 'عربی', tur: 'ترکی', fre: 'فرانسه', fra: 'فرانسه', ger: 'آلمانی', deu: 'آلمانی', spa: 'اسپانیایی', und: '' };
+  const trLabel = t => ((LANGS[(t.lang || '').toLowerCase()] ?? t.lang) || '') + (t.name ? ' ' + t.name : '') || 'زیرنویس';
+  let embBusy = false;
+  async function embeddedSubs() {
+    if (!room || !isVideo() || embBusy) return; const url = room.item.url;
+    const say2 = m => { const e = $('wtSubSt'); if (e) e.textContent = m; };
+    if (!/\.mkv(\?|#|$)/i.test(url) && !/\.webm(\?|#|$)/i.test(url)) { toast2('ℹ️ استخراج زیرنویس داخلی فعلاً فقط برای فایل‌های mkv ممکنه (mp4 معمولاً زیرنویس داخلی قابل خوندن توی مرورگر نداره)'); return; }
+    embBusy = true;
+    try {
+      say2('⏳ دارم ترک‌های زیرنویس فایل رو می‌خونم…');
+      let info; try { info = await mkvScan(url, { probe: true }); } catch (e) { say2(''); toast2('⚠️ فایل خونده نشد؛ لینک باید اجازهٔ دسترسی بده (CORS) — فایل‌های آپلودشده توی خود سایت مشکلی ندارن'); return; }
+      const txt = info.tracks.filter(t => /^S_TEXT/i.test(t.codec));
+      if (!info.tracks.length) { say2(''); toast2('ℹ️ این فایل زیرنویس داخلی نداره'); return; }
+      if (!txt.length) { say2(''); toast2('⚠️ زیرنویس‌های این فایل تصویری هستن (PGS/VobSub) و قابل تبدیل به متن نیستن'); return; }
+      let pick = txt[0];
+      if (txt.length > 1) {
+        const menu = txt.map((t, i) => (i + 1) + ') ' + trLabel(t) + ' [' + t.codec.replace('S_TEXT/', '') + ']').join('\n');
+        const a = parseInt(prompt('این فایل چند زیرنویس داخلی داره؛ شمارهٔ مورد نظر رو بنویس:\n' + menu, '1') || '', 10); if (!a || a < 1 || a > txt.length) { say2(''); return; } pick = txt[a - 1];
+      }
+      const ctl = { abort() {} }; let lastPc = -1;
+      say2('⏳ دارم زیرنویس «' + trLabel(pick) + '» رو از فایل درمیارم… (کل فایل یک‌بار خونده می‌شه)');
+      const res = await mkvScan(url, { wanted: new Set([pick.num]), ctl, onProgress: (g, t) => { const pc = Math.floor(g / t * 100); if (pc !== lastPc) { lastPc = pc; say2('⏳ استخراج زیرنویس «' + trLabel(pick) + '»: ' + fa(pc) + '٪'); } } });
+      const cues = mkvCues(res.cues, pick); if (!cues.length) { say2(''); toast2('⚠️ توی این ترک زیرنویسی پیدا نشد'); return; }
+      say2('');
+      const label = ('داخل فایل · ' + trLabel(pick)).slice(0, 34), id = 's_' + Date.now().toString(36);
+      try { const up = await uploadMediaFile(new Blob([toVtt(cues)], { type: 'text/vtt' }), 'vtt', 'sub.vtt'); addSub({ id, label, url: up.url, by: nm() }, cues); }
+      catch (e) { addSub({ id, label: label + ' (فقط برای من)', url: '', by: nm() }, cues); }
+    } catch (e) { say2(''); toast2('⚠️ استخراج زیرنویس نشد'); console.warn(e); }
+    finally { embBusy = false; }
+  }
+
   function renderSubUi() {
     const el = $('wtSub'); if (!el || !room) return; const subs = room.subs || [];
     el.innerHTML = `<b>💬 زیرنویس</b><select id="wtSubSel" aria-label="انتخاب زیرنویس"><option value="">${subs.length ? 'بدون زیرنویس' : 'هنوز زیرنویسی نیست'}</option>${subs.map(x => `<option value="${esc(x.id)}"${x.id === activeSub ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select>
-      <button type="button" class="btn ghost" data-ws="file" title="آپلود فایل زیرنویس از سیستم">📄 آپلود</button><button type="button" class="btn ghost" data-ws="url" title="لینک فایل زیرنویس">🔗 لینک</button>
+      <button type="button" class="btn ghost" data-ws="file" title="آپلود فایل زیرنویس از سیستم">📄 آپلود</button><button type="button" class="btn ghost" data-ws="url" title="لینک فایل زیرنویس">🔗 لینک</button><button type="button" class="btn ghost" data-ws="emb" title="خوندن زیرنویسِ چسبیده به خود فیلم (mkv)">🎞️ داخل فیلم</button>
       <span class="sh" title="اگه زیرنویس جلو یا عقبه، همین‌جا تنظیمش کن (فقط برای خودت)"><button type="button" data-ws="m" aria-label="زودتر">−</button><small>${fa(subShift.toFixed(1))}s</small><button type="button" data-ws="p" aria-label="دیرتر">+</button></span>
-      <input type="file" id="wtSubFile" accept=".srt,.vtt,.txt,text/vtt,application/x-subrip" hidden />`;
+      <input type="file" id="wtSubFile" accept=".srt,.vtt,.txt,text/vtt,application/x-subrip" hidden /><div id="wtSubSt" style="flex-basis:100%;font-size:.78rem;color:var(--muted,#aaa)"></div>`;
     const sel = $('wtSubSel'); if (sel) sel.onchange = () => { activeSub = sel.value; mountSubs(); };
     const f = $('wtSubFile'); if (f) f.onchange = () => { const fl = f.files && f.files[0]; f.value = ''; if (fl) subFromFile(fl); };
     el.querySelectorAll('[data-ws]').forEach(b => b.onclick = () => {
       const a = b.dataset.ws;
       if (a === 'file') $('wtSubFile').click();
+      else if (a === 'emb') embeddedSubs();
       else if (a === 'url') { const u = (prompt('لینک مستقیم فایل زیرنویس (srt یا vtt):') || '').trim(); if (u) subFromUrl(u); }
       else { subShift = Math.round((subShift + (a === 'p' ? 0.5 : -0.5)) * 10) / 10; mountSubs(); renderSubUi(); }
     });
@@ -342,6 +456,14 @@
 .wt-row label{display:flex;gap:4px;align-items:center;color:var(--muted,#aaa)}
 .wt-sub{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.84rem}.wt-sub select{flex:1;min-width:130px;padding:7px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:#241a3a;color:#f3ecff;font:inherit}
 .wt-sub .btn{padding:6px 12px;font-size:.8rem}.wt-sub .sh{display:inline-flex;align-items:center;gap:4px;direction:ltr}.wt-sub .sh button{width:28px;height:28px;border-radius:8px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer}.wt-sub .sh small{min-width:40px;text-align:center}
+.wt-tb{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:6px}.wt-tb button{border:0;border-radius:10px;padding:6px 10px;font-size:.78rem;cursor:pointer;background:rgba(10,8,20,.72);color:#fff;opacity:.85;backdrop-filter:blur(4px)}.wt-tb button:hover{opacity:1;background:rgba(212,165,255,.6);color:#1a1030}
+.wt-stage .wt-tb .wt-tchat{display:none}
+.wt-stage.wt-theater{position:fixed;z-index:110;top:0;left:0;right:0;bottom:0;margin:0;border-radius:0;display:flex;align-items:center;justify-content:center;max-height:none}
+.wt-stage.wt-theater video{width:100%;height:100%;max-height:none;object-fit:contain}
+.wt-stage.wt-theater .wt-tb .wt-tchat{display:inline-block}
+body.wt-theater-on{overflow:hidden}
+@media (min-width:900px){body.chat-open .wt-stage.wt-theater{left:330px}}
+@media (max-width:899px){body.chat-open .wt-stage.wt-theater{bottom:calc(min(72vh,540px) + 16px)}}
 .wt-stage video::cue{font-size:1.1em;background:rgba(0,0,0,.7);color:#fff}
 @media (min-width:900px){.vc-area-watch{grid-column:1 / -1}}`;
 
@@ -352,10 +474,11 @@
     ensureCss();
     if (box.dataset.rid === (room ? room.id : '') && room && isVideo() && vid()) { renderPeople(); return; }  // ویدیو رو دوباره نساز
     box.dataset.rid = room ? room.id : '';
+    document.body.classList.remove('wt-theater-on');
     if (!room) { box.innerHTML = renderIdle(); bind(); return; }
     const r = room;
     const stage = isVideo()
-      ? `<div class="wt-stage" id="wtStage"><video id="wtVideo" src="${esc(r.item.url)}" controls playsinline preload="metadata"></video></div>`
+      ? `<div class="wt-stage" id="wtStage"><video id="wtVideo" src="${esc(r.item.url)}" controls controlslist="nofullscreen" playsinline preload="metadata"></video><div class="wt-tb"><button type="button" data-wt="theater" title="تمام‌صفحه؛ چت کنارش می‌مونه (کلید F)">⛶ تمام‌صفحه با چت</button><button type="button" class="wt-tchat" data-wt="tchat" title="باز/بسته کردن چت">💬 چت</button></div></div>`
       : `<div class="wt-stage" id="wtStage"><div class="wt-clock" id="wtClock"></div></div>`;
     box.innerHTML = `<div class="wt-h">🍿 اتاق تماشا: «${esc(r.item.title)}» <span class="sp"></span><small style="color:var(--muted,#aaa)">ساخته‌شده توسط ${esc(r.by || '')}</small></div>
       <div class="wt-body">${stage}
@@ -375,7 +498,7 @@
           <div class="wt-row"><input type="text" id="wtLink" dir="ltr" inputmode="url" placeholder="لینک مستقیم فیلم (…mp4 / webm / mkv)" /><input type="text" id="wtLinkT" maxlength="80" placeholder="اسم فیلم (اختیاری)" /></div>
           <div class="wt-row"><select id="wtCat"><option value="movie">🎬 فیلم</option><option value="series">📺 سریال</option></select><label><input type="checkbox" id="wtDirect" /> لینک مستقیم ویدیوئه (بدون پسوند mp4)</label><label><input type="checkbox" id="wtSave" checked /> توی آرشیو هم بمونه</label></div>
           <div class="wt-row"><button type="button" class="btn" data-wt="link">▶️ شروع تماشا با لینک</button><button type="button" class="btn ghost" data-wt="up">📤 آپلود فیلم از سیستم</button><input type="file" id="wtUp" accept="video/*,.mp4,.webm,.mov,.m4v,.mkv" hidden /></div>
-          <div class="wt-sec">لینک سایت‌هایی مثل یوتیوب یا آپارات مستقیم نیستن؛ برای اونا از آرشیو استفاده کن تا «ساعت مشترک» همگامشون کنه. mkv و avi توی مرورگر پخش نمی‌شن.</div></div>
+          <div class="wt-sec">لینک سایت‌هایی مثل یوتیوب یا آپارات مستقیم نیستن؛ برای اونا از آرشیو استفاده کن تا «ساعت مشترک» همگامشون کنه. avi و wmv توی مرورگر پخش نمی‌شن؛ mkv فقط با کدک H.264/AAC.</div></div>
         ${picker ? (list.length ? `<div class="wt-pick">${list.map(x => `<button type="button" class="wt-it" data-wid="${esc(x.id)}"><span>${x.category === 'series' ? '📺' : '🎬'}</span><b>${esc(x.title)}</b>${isSeen(x.url) ? '<small>✅ دیده‌شده</small>' : ''}<small dir="ltr">${esc(hostOf(x.url))}</small></button>`).join('')}</div>`
           : '<div class="wt-empty">هنوز فیلم یا سریالی توی آرشیو سرگرمی نذاشتیم؛ از بخش 🎬 سرگرمی اضافه کنید 💜</div>')
           : '<div class="wt-empty">یه فیلم یا سریال از آرشیو سرگرمی انتخاب کنید تا اتاق تماشا برای هر دومون باز بشه؛ پخش و توقف همزمانه و می‌تونیم واکنش بدیم 💞</div>'}
@@ -408,6 +531,8 @@
       else if (a === 'finish') finish();
       else if (a === 'link') startFromLink();
       else if (a === 'up') { const u = $('wtUp'); if (u) u.click(); }
+      else if (a === 'theater') theater();
+      else if (a === 'tchat') { try { document.body.classList.contains('chat-open') ? ChatDock.close() : ChatDock.open(); } catch (e) {} }
       else if (a === 'close') { if (confirm('اتاق تماشا برای هر دو بسته بشه؟')) closeRoom(true, false); }
     });
     const wu = $('wtUp'); if (wu) wu.onchange = () => { const f = wu.files && wu.files[0]; wu.value = ''; startFromFile(f); };
@@ -431,6 +556,6 @@
     if (typeof funLoaded !== 'undefined' && !funLoaded && typeof loadFun === 'function') loadFun().then(() => { if (!room) render(); });
   }
   function init() { if (inited) return; inited = true; ensureCss(); setTimeout(join, 2500); }
-  window.Watch = { load, create, isSeen, init, _room: () => room, _state: () => ({ room, peers, P, cd, watchedSec, seen }), _id: ID, finish, close: () => closeRoom(true, false) };
+  window.Watch = { _mkvScan: mkvScan, _mkvCues: mkvCues, load, create, isSeen, init, _room: () => room, _state: () => ({ room, peers, P, cd, watchedSec, seen }), _id: ID, finish, close: () => closeRoom(true, false) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
