@@ -196,7 +196,7 @@
 
   /* ---------- واکنش‌ها ---------- */
   function floatReact(e, who) {
-    const host = $('wtStage'); if (!host) return;
+    const host = $('wtFl') || $('wtStage'); if (!host) return;
     const s = document.createElement('div'); s.className = 'wt-fl'; s.textContent = e; s.style.left = (10 + Math.random() * 80) + '%'; s.title = who || '';
     host.appendChild(s); setTimeout(() => s.remove(), 2400);
   }
@@ -468,8 +468,9 @@
 .wt-it:hover{border-color:var(--accent,#d4a5ff);background:rgba(212,165,255,.12)}
 .wt-it b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wt-it small{color:var(--muted,#aaa)}
-.wt-stage{position:relative;border-radius:14px;overflow:hidden;background:#000;min-height:120px}
-.wt-stage video{display:block;width:100%;max-height:340px;background:#000}
+.wt-stage{position:relative;background:#000;min-height:120px;border-radius:14px}
+.wt-flbox{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.wt-stage video{display:block;width:100%;max-height:340px;background:#000;border-radius:14px;transform:translateZ(0);backface-visibility:hidden}
 .wt-clock{padding:18px 10px;text-align:center;background:linear-gradient(135deg,rgba(212,165,255,.14),rgba(255,160,200,.1))}
 .wt-clock .big{font-size:2.4rem;font-weight:700;letter-spacing:2px;direction:ltr;font-variant-numeric:tabular-nums}
 .wt-clock .cd{font-size:3rem;font-weight:800;color:var(--accent,#d4a5ff);min-height:1.2em}
@@ -501,11 +502,11 @@
 .wt-sub{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.84rem}.wt-sub select{flex:1;min-width:130px;padding:7px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:#241a3a;color:#f3ecff;font:inherit}
 .wt-sub .btn{padding:6px 12px;font-size:.8rem}.wt-sub .sh{display:inline-flex;align-items:center;gap:4px;direction:ltr}.wt-sub .sh button{width:28px;height:28px;border-radius:8px;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;cursor:pointer}.wt-sub .sh small{min-width:40px;text-align:center}
 .wt-ss{flex-basis:100%;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.05);font-size:.8rem}.wt-ss>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.wt-ss b{min-width:78px;color:var(--muted,#aaa);font-weight:600}.wt-ss button{border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.06);color:inherit;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:.78rem}.wt-ss button.on{background:rgba(212,165,255,.4);border-color:#d4a5ff}
-.wt-tb{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:6px}.wt-tb button{border:0;border-radius:10px;padding:6px 10px;font-size:.78rem;cursor:pointer;background:rgba(10,8,20,.72);color:#fff;opacity:.85;backdrop-filter:blur(4px)}.wt-tb button:hover{opacity:1;background:rgba(212,165,255,.6);color:#1a1030}
+.wt-tb{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:6px}.wt-tb button{border:0;border-radius:10px;padding:6px 10px;font-size:.78rem;cursor:pointer;background:rgba(10,8,20,.8);color:#fff;opacity:.85}.wt-tb button:hover{opacity:1;background:rgba(212,165,255,.6);color:#1a1030}
 .wt-stage .wt-tb .wt-tchat{display:none}
 @media (max-width:1279px){body.wt-video-on #chatLauncher{display:none!important}.wt-stage .wt-tb .wt-tchat{display:inline-block}.wt-tb{top:6px;left:6px}}
-.wt-stage.wt-theater{position:fixed;z-index:110;top:0;left:0;right:0;bottom:0;margin:0;border-radius:0;display:flex;align-items:center;justify-content:center;max-height:none}
-.wt-stage.wt-theater video{width:100%;height:100%;max-height:none;object-fit:contain}
+.wt-stage.wt-theater{border-radius:0;position:fixed;z-index:110;top:0;left:0;right:0;bottom:0;margin:0;border-radius:0;display:flex;align-items:center;justify-content:center;max-height:none}
+.wt-stage.wt-theater video{width:100%;height:100%;max-height:none;object-fit:contain;border-radius:0}
 .wt-stage.wt-theater .wt-tb .wt-tchat{display:inline-block}
 body.wt-theater-on{overflow:hidden}
 @media (min-width:900px){body.chat-open .wt-stage.wt-theater{left:330px}}
@@ -524,7 +525,7 @@ body.wt-theater-on{overflow:hidden}
     if (!room) { box.innerHTML = renderIdle(); bind(); return; }
     const r = room;
     const stage = isVideo()
-      ? `<div class="wt-stage" id="wtStage"><video id="wtVideo" src="${esc(r.item.url)}" controls controlslist="nofullscreen" playsinline preload="metadata"></video><div class="wt-tb"><button type="button" data-wt="theater" title="تمام‌صفحه؛ چت کنارش می‌مونه (کلید F)">⛶ تمام‌صفحه با چت</button><button type="button" class="wt-tchat" data-wt="tchat" title="باز/بسته کردن چت">💬 چت</button></div></div>`
+      ? `<div class="wt-stage" id="wtStage"><video id="wtVideo" src="${esc(r.item.url)}" controls controlslist="nofullscreen" playsinline preload="metadata"></video><div class="wt-flbox" id="wtFl"></div><div class="wt-tb"><button type="button" data-wt="theater" title="تمام‌صفحه؛ چت کنارش می‌مونه (کلید F)">⛶ تمام‌صفحه با چت</button><button type="button" class="wt-tchat" data-wt="tchat" title="باز/بسته کردن چت">💬 چت</button></div></div>`
       : `<div class="wt-stage" id="wtStage"><div class="wt-clock" id="wtClock"></div></div>`;
     box.innerHTML = `<div class="wt-h">🍿 اتاق تماشا: «${esc(r.item.title)}» <span class="sp"></span><small style="color:var(--muted,#aaa)">ساخته‌شده توسط ${esc(r.by || '')}</small></div>
       <div class="wt-body">${stage}
