@@ -242,9 +242,14 @@
   const EBML_MASTER = new Set([0x18538067, 0x1654AE6B, 0x1549A966, 0x1F43B675, 0xA0, 0xAE]);
   async function mkvScan(url, o) {
     o = o || {}; const ctl = new AbortController(); if (o.ctl) o.ctl.abort = () => ctl.abort();
-    const res = await fetch(url, { signal: ctl.signal, headers: o.probe ? { Range: 'bytes=0-4194303' } : {} });
-    if (!res.ok && res.status !== 206) throw new Error('http ' + res.status);
-    const size = o.probe ? 0 : (Number(res.headers.get('content-length')) || 0), rd = res.body.getReader();
+    let size, rd;
+    if (typeof Blob !== 'undefined' && url instanceof Blob) {   // فایل محلی (قبل از آپلود): بدون دانلود مجدد و خیلی سریع
+      const part = o.probe ? url.slice(0, 4194304) : url; size = part.size; rd = part.stream().getReader();
+    } else {
+      const res = await fetch(url, { signal: ctl.signal, headers: o.probe ? { Range: 'bytes=0-4194303' } : {} });
+      if (!res.ok && res.status !== 206) throw new Error('http ' + res.status);
+      size = o.probe ? 0 : (Number(res.headers.get('content-length')) || 0); rd = res.body.getReader();
+    }
     let buf = new Uint8Array(0), off = 0, done = false, got = 0;
     const fill = async n => {
       while (buf.length - off < n && !done) {
@@ -309,34 +314,43 @@
   const LANGS = { fas: 'فارسی', per: 'فارسی', fa: 'فارسی', eng: 'English', en: 'English', ara: 'عربی', tur: 'ترکی', fre: 'فرانسه', fra: 'فرانسه', ger: 'آلمانی', deu: 'آلمانی', spa: 'اسپانیایی', und: '' };
   const trLabel = t => ((LANGS[(t.lang || '').toLowerCase()] ?? t.lang) || '') + (t.name ? ' ' + t.name : '') || 'زیرنویس';
   let embBusy = false;
+  const preferTrack = txt => txt.find(t => /^(fas|per|fa)$/i.test(t.lang || '')) || txt.find(t => /فارس|persian|farsi/i.test(t.name || '')) || txt.find(t => /^(eng|en)$/i.test(t.lang || '')) || txt[0];
+  // زیرنویس متنی داخل فایل mkv رو درمیاره؛ src می‌تونه لینک یا خود File باشه. auto=true یعنی بدون پرسیدن بهترین ترک (فارسی، بعد انگلیسی) انتخاب بشه.
+  async function extractSubs(src, o) {
+    o = o || {}; const say2 = o.say || (() => {});
+    say2('⏳ دارم ترک‌های زیرنویس فایل رو می‌خونم…');
+    let info; try { info = await mkvScan(src, { probe: true }); } catch (e) { return { err: 'cors' }; }
+    const txt = info.tracks.filter(t => /^S_TEXT/i.test(t.codec));
+    if (!info.tracks.length) return { err: 'none' };
+    if (!txt.length) return { err: 'image' };
+    let pick = txt[0];
+    if (txt.length > 1) {
+      if (o.auto) pick = preferTrack(txt);
+      else {
+        const menu = txt.map((t, i) => (i + 1) + ') ' + trLabel(t) + ' [' + t.codec.replace('S_TEXT/', '') + ']').join('\n');
+        const a = parseInt(prompt('این فایل چند زیرنویس داخلی داره؛ شمارهٔ مورد نظر رو بنویس:\n' + menu, '1') || '', 10); if (!a || a < 1 || a > txt.length) return { err: 'cancel' }; pick = txt[a - 1];
+      }
+    }
+    let lastPc = -1; say2('⏳ دارم زیرنویس «' + trLabel(pick) + '» رو از فایل درمیارم…');
+    const res = await mkvScan(src, { wanted: new Set([pick.num]), onProgress: (g, t) => { const pc = Math.floor(g / t * 100); if (pc !== lastPc) { lastPc = pc; say2('⏳ استخراج زیرنویس «' + trLabel(pick) + '»: ' + fa(pc) + '٪'); } } });
+    const cues = mkvCues(res.cues, pick); if (!cues.length) return { err: 'empty' };
+    return { cues, label: ('داخل فایل · ' + trLabel(pick)).slice(0, 34), count: txt.length };
+  }
+  async function shareExtracted(r) {
+    const id = 's_' + Date.now().toString(36);
+    try { const up = await uploadMediaFile(new Blob([toVtt(r.cues)], { type: 'text/vtt' }), 'vtt', 'sub.vtt'); addSub({ id, label: r.label, url: up.url, by: nm() }, r.cues); }
+    catch (e) { addSub({ id, label: r.label + ' (فقط برای من)', url: '', by: nm() }, r.cues); }
+  }
+  const SUB_ERR = { cors: '⚠️ فایل خونده نشد؛ لینک باید اجازهٔ دسترسی بده (CORS) — فایل‌های آپلودشده توی خود سایت مشکلی ندارن', none: 'ℹ️ این فایل زیرنویس داخلی نداره', image: '⚠️ زیرنویس‌های این فایل تصویری هستن (PGS/VobSub) و قابل تبدیل به متن نیستن', empty: '⚠️ توی این ترک زیرنویسی پیدا نشد' };
   async function embeddedSubs() {
     if (!room || !isVideo() || embBusy) return; const url = room.item.url;
     const say2 = m => { const e = $('wtSubSt'); if (e) e.textContent = m; };
     if (!/\.mkv(\?|#|$)/i.test(url) && !/\.webm(\?|#|$)/i.test(url)) { toast2('ℹ️ استخراج زیرنویس داخلی فعلاً فقط برای فایل‌های mkv ممکنه (mp4 معمولاً زیرنویس داخلی قابل خوندن توی مرورگر نداره)'); return; }
     embBusy = true;
-    try {
-      say2('⏳ دارم ترک‌های زیرنویس فایل رو می‌خونم…');
-      let info; try { info = await mkvScan(url, { probe: true }); } catch (e) { say2(''); toast2('⚠️ فایل خونده نشد؛ لینک باید اجازهٔ دسترسی بده (CORS) — فایل‌های آپلودشده توی خود سایت مشکلی ندارن'); return; }
-      const txt = info.tracks.filter(t => /^S_TEXT/i.test(t.codec));
-      if (!info.tracks.length) { say2(''); toast2('ℹ️ این فایل زیرنویس داخلی نداره'); return; }
-      if (!txt.length) { say2(''); toast2('⚠️ زیرنویس‌های این فایل تصویری هستن (PGS/VobSub) و قابل تبدیل به متن نیستن'); return; }
-      let pick = txt[0];
-      if (txt.length > 1) {
-        const menu = txt.map((t, i) => (i + 1) + ') ' + trLabel(t) + ' [' + t.codec.replace('S_TEXT/', '') + ']').join('\n');
-        const a = parseInt(prompt('این فایل چند زیرنویس داخلی داره؛ شمارهٔ مورد نظر رو بنویس:\n' + menu, '1') || '', 10); if (!a || a < 1 || a > txt.length) { say2(''); return; } pick = txt[a - 1];
-      }
-      const ctl = { abort() {} }; let lastPc = -1;
-      say2('⏳ دارم زیرنویس «' + trLabel(pick) + '» رو از فایل درمیارم… (کل فایل یک‌بار خونده می‌شه)');
-      const res = await mkvScan(url, { wanted: new Set([pick.num]), ctl, onProgress: (g, t) => { const pc = Math.floor(g / t * 100); if (pc !== lastPc) { lastPc = pc; say2('⏳ استخراج زیرنویس «' + trLabel(pick) + '»: ' + fa(pc) + '٪'); } } });
-      const cues = mkvCues(res.cues, pick); if (!cues.length) { say2(''); toast2('⚠️ توی این ترک زیرنویسی پیدا نشد'); return; }
-      say2('');
-      const label = ('داخل فایل · ' + trLabel(pick)).slice(0, 34), id = 's_' + Date.now().toString(36);
-      try { const up = await uploadMediaFile(new Blob([toVtt(cues)], { type: 'text/vtt' }), 'vtt', 'sub.vtt'); addSub({ id, label, url: up.url, by: nm() }, cues); }
-      catch (e) { addSub({ id, label: label + ' (فقط برای من)', url: '', by: nm() }, cues); }
-    } catch (e) { say2(''); toast2('⚠️ استخراج زیرنویس نشد'); console.warn(e); }
+    try { const r = await extractSubs(url, { say: say2 }); say2(''); if (r.err) { if (SUB_ERR[r.err]) toast2(SUB_ERR[r.err]); return; } await shareExtracted(r); }
+    catch (e) { say2(''); toast2('⚠️ استخراج زیرنویس نشد'); console.warn(e); }
     finally { embBusy = false; }
   }
-
   function renderSubUi() {
     const el = $('wtSub'); if (!el || !room) return; const subs = room.subs || [];
     el.innerHTML = `<b>💬 زیرنویس</b><select id="wtSubSel" aria-label="انتخاب زیرنویس"><option value="">${subs.length ? 'بدون زیرنویس' : 'هنوز زیرنویسی نیست'}</option>${subs.map(x => `<option value="${esc(x.id)}"${x.id === activeSub ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select>
@@ -396,8 +410,11 @@
     const cat = ($('wtCat') && $('wtCat').value) || 'movie', title = (file.name || 'فیلم').replace(/\.[^.]+$/, '').slice(0, 80); toast2('⏳ در حال آپلود فیلم… (پیشرفتش پایین صفحه‌ست)');
     try {
       const ext = ((file.name || '').split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'mp4';
+      // زیرنویس چسبیده (soft-sub) از خود فایلِ انتخاب‌شده خونده می‌شه؛ هم‌زمان با آپلود، بدون دانلود دوباره
+      const subP = /\.(mkv|webm)$/i.test(file.name || '') ? extractSubs(file, { auto: true }).catch(() => ({ err: 'x' })) : null;
       const up = await uploadMediaFile(!file.type && ext === 'mkv' ? new Blob([file], { type: 'video/x-matroska' }) : file, ext, file.name); if ($('wtSave') && $('wtSave').checked) saveToArchive(title, up.url, cat);
       create({ id: '', title, url: up.url, category: cat, direct: true });
+      if (subP) { const r = await subP; if (r && r.cues) { await new Promise(res => setTimeout(res, 400)); await shareExtracted(r); toast2('✅ زیرنویس داخل فیلم پیدا و فعال شد' + (r.count > 1 ? ' (' + r.label.replace('داخل فایل · ', '') + '؛ بقیه رو با دکمهٔ «داخل فیلم» می‌شه انتخاب کرد)' : '')); } }
     } catch (e) { toast2('⚠️ ' + (typeof uploadErrorHint === 'function' ? uploadErrorHint(e, 'songs') : 'آپلود نشد')); }
   }
 
