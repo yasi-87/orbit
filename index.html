@@ -5,15 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Our Memories</title>
 <link rel="shortcut icon" href="./icons8-star-48.png" type="image/x-icon">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&family=Gulzar&family=Lalezar&family=Amiri:ital@0;1&family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Pacifico&family=Shadows+Into+Light&family=Indie+Flower&family=Great+Vibes&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&family=Aref+Ruqaa&family=Markazi+Text&family=Cairo&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./fonts/fonts.css">
-<link href="https://cdn.jsdelivr.net/gh/font-store/font-yekanbakh@master/YekanBakh.css" rel="stylesheet" media="print" onload="this.media='all'">
+<script>
+/* 🪶 فونت‌های تزئینی بعد از کامل شدن لود صفحه گرفته می‌شن تا چرخش تب و لود اولیه رو کند نکنن (فونت‌های اصلی از خود سایت میان) */
+(function () {
+  var U = ['https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&family=Gulzar&family=Lalezar&family=Amiri:ital@0;1&family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Pacifico&family=Shadows+Into+Light&family=Indie+Flower&family=Great+Vibes&family=Kalam:wght@300;400;700&display=swap','https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&family=Aref+Ruqaa&family=Markazi+Text&family=Cairo&display=swap','https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css','https://cdn.jsdelivr.net/gh/font-store/font-yekanbakh@master/YekanBakh.css'];
+  function go() { U.forEach(function (u) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = u; document.head.appendChild(l); }); }
+  if (document.readyState === 'complete') setTimeout(go, 800); else window.addEventListener('load', function () { setTimeout(go, 800); });
+})();
+</script>
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#0a0a0f">
 <link rel="apple-touch-icon" href="./icon-192.png">
@@ -2585,8 +2587,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-06j';
+const SITE_VERSION = '2026-11-06k';
 const SITE_CHANGES = [
+  '🪶 سبک‌تر شدن سایت: فونت‌های تزئینی و آهنگ پس‌زمینه بعد از لود اصلی گرفته می‌شن؛ دیگه تب مدام نمی‌چرخه و سایت زودتر باز می‌شه',
   '⚡ سرعت باز شدن سایت: صفحهٔ رمز همون لحظه میاد (منتظر دانلود کتابخونه‌ها نمی‌مونه) و اگه سرور اصلی کتابخونه کند یا بسته بود از سرور جایگزین می‌گیره',
   '🎨 اتاق تماشا: اندازه، رنگ، پس‌زمینه، نوع قلم و جای زیرنویس رو می‌شه عوض کرد (دکمهٔ «🎨 ظاهر» کنار زیرنویس؛ فقط برای خودت و یادش می‌مونه)',
   '📱 اتاق تماشا روی موبایل: دکمهٔ شناور چت دیگه روی فیلم نمی‌افته و با لمس فیلم چت باز نمی‌شه (دکمهٔ 💬 چت بالای فیلمه)؛ لرزش و پرش تصویر موقع پخش همزمان کم شد',
@@ -4539,7 +4542,7 @@ const bgAudio = new Audio();
 bgAudio.src = 'Various Artists - Crows.mp3';
 bgAudio.loop = true;
 bgAudio.volume = effVol();
-bgAudio.preload = 'metadata';
+bgAudio.preload = 'none';
 
 bgAudio.addEventListener('ended', () => {
   bgAudio.currentTime = 0;
