@@ -1830,6 +1830,7 @@ body.guest #app{padding-left:0 !important}
 
   <!-- نوار ناوبری -->
   <div class="nav-bar">
+    <button class="nav-btn" data-screen="menu" onclick="showScreen('menu')">✨ منوی اصلی</button>
     <button class="nav-btn active" data-screen="chapters" onclick="showScreen('chapters')">📖 دفترچه</button>
     <button class="nav-btn" data-screen="playlist" onclick="showScreen('playlist')">🎵 پلی‌لیست</button>
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
@@ -2029,6 +2030,8 @@ body.guest #app{padding-left:0 !important}
   </div>
 
   <!-- ============ سرگرمی: گیم / فیلم / سریال ============ -->
+  <div class="container screen" id="screen-menu"></div>
+
   <div class="container screen" id="screen-fun">
     <div class="chapters-header"><h2 id="funTitleH">🍿 سینمای ما</h2></div>
     <div class="fun-filter" id="funTabs">
@@ -2252,6 +2255,7 @@ window.ChatDock = (function () {
 </script>
 <script src="./voice.js" defer></script>
 <script src="./folders.js" defer></script>
+<script src="./menu.js" defer></script>
 <script src="./watch.js" defer></script>
 <script src="./screen.js" defer></script>
 <script src="./canvas.js" defer></script>
@@ -2423,6 +2427,7 @@ function showScreen(name) {
   if (name === 'playlist') loadPlaylist();
   if (name === 'gallery') loadGallery();
   if (name === 'files') loadFiles();
+  if (window.Menu) { if (name === 'menu') Menu.start(); else Menu.stop(); }
   if (name === 'games' || name === 'cinema') { funApplyMode(name); loadFun(); }
   if (name === 'notes') loadNotes();
   if (name === 'daily') loadDaily();
@@ -2612,8 +2617,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-07f';
+const SITE_VERSION = '2026-11-07g';
 const SITE_CHANGES = [
+  '✨ بخش تازهٔ «منوی اصلی»: صحنهٔ گرافیکی با زنبور سه‌بعدی، شفق، شب‌تاب، لانهٔ زنبور نورانی، ستارهٔ دنباله‌دار و کاشی‌های سه‌بعدی.',
   '😇 ته صفحهٔ پروفایل امضای «Created by Love» اضافه شد.',
   '📁 ساخت پوشه آسون‌تر شد (اسم رو همون‌جا می‌نویسی)، با کشیدن و رها کردن یا «➕ افزودن از موجودها» چیزها می‌رن توی پوشه، توی سینما می‌شه چند لینک رو یک‌جا ریخت، و کارت‌های بزرگ فیلم/سریال به فیلتر کوچیک تبدیل شدن.',
   '📁 پوشه‌ها شبیه گیت‌هاب شدن (با اسم سازنده، تعداد و تاریخ)، دکمه‌های کارت گیم/سینما مرتب شدن، و آپلود فایل/گالری نوار پیشرفت (درصد، حجم، سرعت) داخل خود صفحه نشون می‌ده.',
