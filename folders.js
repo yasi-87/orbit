@@ -21,6 +21,7 @@
 .fld-newin{display:inline-flex;gap:6px;align-items:center;flex:1;min-width:200px}
 .fld-inp{flex:1;min-width:0;padding:8px 12px;border-radius:12px;border:1px solid rgba(212,165,255,.4);background:rgba(0,0,0,.3);color:inherit;font:inherit}
 .fld-ok,.fld-no{width:34px;height:34px;border-radius:50%;border:0;color:inherit;cursor:pointer;background:rgba(90,214,125,.3)}.fld-no{background:rgba(255,255,255,.1)}
+.fld-sep{opacity:.5}.fld-path a[data-act=go]{opacity:.85;color:var(--accent,#d4a5ff)}
 .fld-over{outline:2px dashed var(--accent,#d4a5ff);background:rgba(212,165,255,.22)!important}
 .fld-picklist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
 .fld-pk{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.05);cursor:pointer}.fld-pk img{width:40px;height:40px;object-fit:cover;border-radius:8px}.fld-pk span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -76,27 +77,40 @@
   function cur(sec) { const c = st.cur[sec] || 'all'; return (isFolder(c) && !st.folders.some(f => f.id === c)) ? 'all' : c; }
   const inFolder = sec => isFolder(cur(sec));
   const hasFolders = sec => st.folders.some(f => f.section === sec);
+  /* پوشه توی پوشه: والدِ هر پوشه به‌صورت یک «مورد» با کلید fd_<بخش>:<شناسه> نگه‌داری می‌شه (بدون نیاز به SQL تازه) */
+  const pkey = (sec, id) => 'fd_' + sec + ':' + id;
+  const parentOf = (sec, id) => { const p = st.items[pkey(sec, id)]; return (p && p !== id && st.folders.some(f => f.id === p && f.section === sec)) ? p : null; };
+  const childrenOf = (sec, pid) => st.folders.filter(f => f.section === sec && (parentOf(sec, f.id) || null) === (pid || null));
+  const descendants = (sec, id) => { const out = []; const walk = p => childrenOf(sec, p).forEach(c => { out.push(c.id); walk(c.id); }); walk(id); return out; };
+  const pathOf = (sec, id) => { const out = []; let c = id, n = 0; while (c && n++ < 20) { const f = st.folders.find(x => x.id === c); if (!f) break; out.unshift(f); c = parentOf(sec, c); } return out; };
   function draw(sec, bar) {
     if (st.missing) { bar.innerHTML = '<div class="fld-note">📂 برای پوشه‌ها باید SQL شمارهٔ ۲۷ رو یک بار توی Supabase اجرا کنی.</div>'; return; }
-    const fs = st.folders.filter(f => f.section === sec), c = cur(sec), ids = st.ids[sec] || [];
+    const c = cur(sec), ids = st.ids[sec] || [];
+    const f = isFolder(c) ? st.folders.find(x => x.id === c) : null;
+    const kids = childrenOf(sec, f ? f.id : null);
     const countOf = id => ids.filter(i => st.items[key(sec, i)] === id).length;
-    const f = isFolder(c) ? fs.find(x => x.id === c) : null;
     const rowBtns = id => `<span class="fld-acts"><button type="button" data-ract="ren" data-id="${esc(id)}" title="تغییر اسم">✏️</button><button type="button" data-ract="del" data-id="${esc(id)}" title="حذف پوشه">🗑️</button></span>`;
+    const newBtn = st.creating[sec] ? '<span class="fld-newin"><input type="text" class="fld-inp" maxlength="40" placeholder="اسم پوشه…" /><button type="button" class="fld-ok" data-act="ok" title="ساخت">✓</button><button type="button" class="fld-no" data-act="cancel" title="انصراف">✕</button></span>' : '<button type="button" class="fld-new" data-act="new">➕ پوشهٔ جدید</button>';
     let h;
     if (f) {
-      h = `<div class="fld-head"><button type="button" class="fld-up" data-act="up" title="برگشت">↑</button><span class="fld-path"><a data-act="up">/</a><span class="fld-ic">${ICON}</span><b>${esc(f.name)}</b></span>`
-        + `<span class="fld-meta">${f.author ? '👤 ' + esc(f.author) + ' · ' : ''}${fa(countOf(f.id))} مورد${f.created_at ? ' · ' + esc(dateOf(f.created_at)) : ''}</span><button type="button" class="fld-new" data-act="pick">➕ افزودن از موجودها</button>${rowBtns(f.id)}</div>`;
+      const pth = pathOf(sec, f.id), par = parentOf(sec, f.id);
+      h = `<div class="fld-head"><button type="button" class="fld-up" data-act="up" data-f="${esc(par || '')}" title="برگشت">↑</button><span class="fld-path"><a data-act="root">/</a>`
+        + pth.map((x, i) => i === pth.length - 1 ? `<span class="fld-ic">${ICON}</span><b>${esc(x.name)}</b>` : `<a data-act="go" data-id="${esc(x.id)}">${esc(x.name)}</a><span class="fld-sep">/</span>`).join('')
+        + `</span><span class="fld-meta">${f.author ? '👤 ' + esc(f.author) + ' · ' : ''}${fa(countOf(f.id))} مورد${kids.length ? ' · ' + fa(kids.length) + ' پوشه' : ''}${f.created_at ? ' · ' + esc(dateOf(f.created_at)) : ''}</span>${newBtn}<button type="button" class="fld-new" data-act="pick">➕ افزودن از موجودها</button>${rowBtns(f.id)}</div>`;
     } else {
-      h = `<div class="fld-head"><span class="fld-path">📂 <b>پوشه‌ها</b></span><span class="fld-meta">${fs.length ? fa(fs.length) + ' پوشه' : 'هنوز پوشه‌ای نداریم'}</span>${st.creating[sec] ? '<span class="fld-newin"><input type="text" class="fld-inp" maxlength="40" placeholder="اسم پوشه (مثلاً اسم سریال)…" /><button type="button" class="fld-ok" data-act="ok" title="ساخت">✓</button><button type="button" class="fld-no" data-act="cancel" title="انصراف">✕</button></span>' : '<button type="button" class="fld-new" data-act="new">➕ پوشهٔ جدید</button>'}</div>`;
-      if (fs.length) h += '<div class="fld-list">' + fs.map(x => `<div class="fld-row" data-f="${esc(x.id)}" tabindex="0"><span class="fld-ic">${ICON}</span><span class="fld-nm">${esc(x.name)}</span>`
-        + `<span class="fld-by">${x.author ? '👤 ' + esc(x.author) : ''}</span><span class="fld-ct">${fa(countOf(x.id))} مورد</span><span class="fld-dt">${esc(dateOf(x.created_at))}</span>${rowBtns(x.id)}</div>`).join('') + '</div>';
+      h = `<div class="fld-head"><span class="fld-path">📂 <b>پوشه‌ها</b></span><span class="fld-meta">${kids.length ? fa(kids.length) + ' پوشه' : 'هنوز پوشه‌ای نداریم'}</span>${newBtn}</div>`;
     }
+    if (kids.length) h += '<div class="fld-list">' + kids.map(x => {
+      const nk = childrenOf(sec, x.id).length;
+      return `<div class="fld-row" data-f="${esc(x.id)}" data-dsec="fd_${esc(sec)}" data-did="${esc(x.id)}" draggable="true" tabindex="0"><span class="fld-ic">${ICON}</span><span class="fld-nm">${esc(x.name)}</span>`
+        + `<span class="fld-by">${x.author ? '👤 ' + esc(x.author) : ''}</span><span class="fld-ct">${fa(countOf(x.id))} مورد${nk ? ' · ' + fa(nk) + ' پوشه' : ''}</span><span class="fld-dt">${esc(dateOf(x.created_at))}</span>${rowBtns(x.id)}</div>`;
+    }).join('') + '</div>';
     bar.innerHTML = h;
     if (st.creating[sec]) { const i = bar.querySelector('.fld-inp'); if (i) { i.focus(); i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submitNew(sec, i.value); } else if (e.key === 'Escape') { st.creating[sec] = false; draw(sec, bar); } }; } }
   }
   async function submitNew(sec, v) {
     if (!String(v || '').trim()) return;
-    const f = await create(sec, v); if (!f) return;
+    const c = cur(sec), f = await create(sec, v, isFolder(c) ? c : null); if (!f) return;
     st.creating[sec] = false; st.cur[sec] = f.id; st.reg[sec] && st.reg[sec].re();
   }
   async function renameF(sec, id) {
@@ -108,13 +122,19 @@
   }
   async function deleteF(sec, id) {
     const f = st.folders.find(x => x.id === id); if (!f) return;
-    if (!confirm('پوشهٔ «' + f.name + '» حذف بشه؟ (چیزی که توشه پاک نمی‌شه، فقط از پوشه درمیاد)')) return;
-    const r1 = await dbClient.from('folder_items').delete().eq('folder_id', f.id);
-    const r2 = await dbClient.from('folders').delete().eq('id', f.id);
-    if (r1.error || r2.error) return toast('⚠️ حذف نشد');
-    st.folders = st.folders.filter(x => x.id !== f.id);
-    Object.keys(st.items).forEach(k => { if (st.items[k] === f.id) delete st.items[k]; });
-    if (st.cur[sec] === f.id) st.cur[sec] = 'all';
+    if (!confirm('پوشهٔ «' + f.name + '» حذف بشه؟' + (descendants(sec, f.id).length ? ' (پوشه‌های داخلش هم حذف می‌شن)' : '') + ' (فایل و لینک‌های داخلش پاک نمی‌شن، فقط از پوشه درمیان)')) return;
+    const gone = [f.id].concat(descendants(sec, f.id)), par = parentOf(sec, f.id);
+    let bad = false;
+    for (const g of gone) {
+      const r1 = await dbClient.from('folder_items').delete().eq('folder_id', g);
+      const r3 = await dbClient.from('folder_items').delete().eq('key', pkey(sec, g));
+      const r2 = await dbClient.from('folders').delete().eq('id', g);
+      if (r1.error || r2.error || r3.error) bad = true;
+    }
+    if (bad) return toast('⚠️ حذف نشد');
+    st.folders = st.folders.filter(x => !gone.includes(x.id));
+    Object.keys(st.items).forEach(k => { if (gone.includes(st.items[k]) || gone.some(g => k === pkey(sec, g))) delete st.items[k]; });
+    if (gone.includes(st.cur[sec])) st.cur[sec] = par || 'all';
     st.sig = ''; st.reg[sec] && st.reg[sec].re(); toast('🗑️ پوشه حذف شد');
   }
   async function onBar(e) {
@@ -124,7 +144,9 @@
     if (rb) { e.stopPropagation(); return rb.dataset.ract === 'ren' ? renameF(sec, rb.dataset.id) : deleteF(sec, rb.dataset.id); }
     const a = e.target.closest('[data-act]');
     if (a) {
-      if (a.dataset.act === 'up') { st.cur[sec] = 'all'; return st.reg[sec] && st.reg[sec].re(); }
+      if (a.dataset.act === 'up') { st.cur[sec] = a.dataset.f || 'all'; return st.reg[sec] && st.reg[sec].re(); }
+      if (a.dataset.act === 'root') { st.cur[sec] = 'all'; return st.reg[sec] && st.reg[sec].re(); }
+      if (a.dataset.act === 'go') { st.cur[sec] = a.dataset.id; return st.reg[sec] && st.reg[sec].re(); }
       if (a.dataset.act === 'new') { st.creating[sec] = true; return draw(sec, bar); }
       if (a.dataset.act === 'cancel') { st.creating[sec] = false; return draw(sec, bar); }
       if (a.dataset.act === 'ok') { const i = bar.querySelector('.fld-inp'); return submitNew(sec, i && i.value); }
@@ -133,7 +155,7 @@
     }
     const r = e.target.closest('[data-f]'); if (r) { st.cur[sec] = r.dataset.f; if (st.reg[sec]) st.reg[sec].re(); }
   }
-  async function create(sec, name) {
+  async function create(sec, name, parent) {
     if (st.missing) { toast('⚠️ اول SQL شمارهٔ ۲۷ رو توی Supabase اجرا کن'); return null; }
     const n = name || prompt('اسم پوشه (مثلاً اسم سریال یا سفر):', '');
     if (n === null || !String(n).trim()) return null;
@@ -142,7 +164,9 @@
     let { error } = await dbClient.from('folders').insert(row);
     if (error && /author/i.test(error.message || '')) { const r2 = Object.assign({}, row); delete r2.author; ({ error } = await dbClient.from('folders').insert(r2)); }
     if (error) { toast('⚠️ پوشه ساخته نشد'); return null; }
-    st.folders.push(row); st.sig = ''; return row;
+    st.folders.push(row);
+    if (parent) { const r = await dbClient.from('folder_items').upsert({ key: pkey(sec, row.id), section: 'fd_' + sec, item_id: row.id, folder_id: parent }); if (!r.error) st.items[pkey(sec, row.id)] = parent; }
+    st.sig = ''; return row;
   }
 
   /* نوار پوشه‌ها رو قبل از anchor می‌ذاره؛ ids = شناسهٔ همهٔ موردهای این بخش (برای شمارش) */
@@ -188,7 +212,7 @@
     const ov = document.createElement('div'); ov.className = 'fld-ov';
     const fs = st.folders.filter(f => f.section === sec);
     ov.innerHTML = `<div class="fld-box"><h4>📂 انتقال ${fa(ids.length)} مورد به…</h4>`
-      + fs.map(f => `<button type="button" class="fld-chip" data-to="${esc(f.id)}"><span class="fld-ic">${ICON}</span>${esc(f.name)}</button>`).join('')
+      + fs.map(f => `<button type="button" class="fld-chip" data-to="${esc(f.id)}"><span class="fld-ic">${ICON}</span>${esc(pathOf(sec, f.id).map(x => x.name).join(' / '))}</button>`).join('')
       + '<div class="fld-newin"><input type="text" class="fld-inp" maxlength="40" placeholder="➕ اسم پوشهٔ جدید…" /><button type="button" class="fld-ok" data-to="__new" title="بساز و منتقل کن">✓</button></div><button type="button" class="fld-chip" data-to="__none">📄 بیرون از پوشه</button><button type="button" class="fld-chip" data-to="__x">انصراف</button></div>';
     ov.addEventListener('click', async e => {
       if (e.target === ov) return ov.remove();
@@ -224,6 +248,7 @@
   /* کشیدن و رها کردن روی پوشه (کامپیوتر) */
   let drag = null;
   const dropEl = e => e.target && e.target.closest && e.target.closest('.fld-row[data-f],.fld-head [data-act=up]');
+  const isFd = d => d && /^fd_/.test(d.sec);
   document.addEventListener('dragstart', e => { const t = e.target.closest && e.target.closest('[data-dsec]'); if (!t) return; drag = { sec: t.dataset.dsec, id: t.dataset.did }; try { e.dataTransfer.setData('text/plain', drag.id); e.dataTransfer.effectAllowed = 'move'; } catch (_) {} });
   document.addEventListener('dragend', () => { drag = null; document.querySelectorAll('.fld-over').forEach(x => x.classList.remove('fld-over')); });
   document.addEventListener('dragover', e => { const r = drag && dropEl(e); if (r) { e.preventDefault(); r.classList.add('fld-over'); } });
@@ -231,6 +256,16 @@
   document.addEventListener('drop', async e => {
     const r = drag && dropEl(e); if (!r) return; e.preventDefault(); r.classList.remove('fld-over');
     const bar = r.closest('.fld-bar'), sec = bar && bar.dataset.sec, d = drag; drag = null;
+    if (isFd(d)) {
+      if (!sec || d.sec !== 'fd_' + sec) return toast('این پوشه مال بخش دیگه‌ست');
+      const to = r.dataset.f || null;
+      if (to === d.id || (to && descendants(sec, d.id).includes(to))) return toast('نمی‌شه پوشه رو بندازی توی خودش');
+      let ok = true;
+      if (to) { const x = await dbClient.from('folder_items').upsert({ key: pkey(sec, d.id), section: 'fd_' + sec, item_id: d.id, folder_id: to }); ok = !x.error; if (ok) st.items[pkey(sec, d.id)] = to; }
+      else { const x = await dbClient.from('folder_items').delete().eq('key', pkey(sec, d.id)); ok = !x.error; if (ok) delete st.items[pkey(sec, d.id)]; }
+      if (ok) { st.sig = ''; toast('📁 جابه‌جا شد'); st.reg[sec] && st.reg[sec].re(); } else toast('⚠️ جابه‌جا نشد');
+      return;
+    }
     if (!sec || sec !== d.sec) return toast('این مورد مال بخش دیگه‌ست');
     const fid = r.dataset.f || null;
     if (await assign(sec, [d.id], fid)) { toast(fid ? '📁 توی پوشه رفت' : '📄 از پوشه دراومد'); st.reg[sec] && st.reg[sec].re(); }
