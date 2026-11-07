@@ -2228,6 +2228,7 @@ window.ChatDock = (function () {
 })();
 </script>
 <script src="./voice.js" defer></script>
+<script src="./folders.js" defer></script>
 <script src="./watch.js" defer></script>
 <script src="./screen.js" defer></script>
 <script src="./canvas.js" defer></script>
@@ -2588,8 +2589,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-07a';
+const SITE_VERSION = '2026-11-07b';
 const SITE_CHANGES = [
+  '📂 پوشه‌ها: توی سینما، گیم، گالری، فایل‌ها و بوم می‌شه پوشه ساخت (مثلاً یک سریال با همهٔ قسمت‌هاش) و موردهای قدیمی رو هم با دکمهٔ 📂 بُرد توش. (یک بار SQL شمارهٔ ۲۷ لازمه)',
   '🎮🍿 بخش «سرگرمی» دو تا شد: «گیم» برای گیم‌هامون و «سینما» برای فیلم و سریال (به‌همراه اتاق تماشا).',
   '🪶 اتاق تماشا: رزولوشن و افت فریم فیلم نشون داده می‌شه؛ اگه فیلم برای دستگاه سنگین باشه (علت لرزش)، راهنمای سبک‌کردنش (H.264 ۷۲۰p) همون‌جا میاد',
   '🎬 اتاق تماشا: لرزش تصویر موقع پخش (مخصوصاً موبایل) کمتر شد؛ ویدیو لایهٔ جدا گرفت و افکت‌های تار روی فیلم برداشته شد',
@@ -4083,17 +4085,20 @@ async function loadGallery() {
 function renderGallery() {
   const el = document.getElementById('galleryGrid'), bar = document.getElementById('galleryBar');
   if (galleryMissing) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای گالری باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
+  if (window.Folders) Folders.mount('gallery', bar, renderGallery, galleryList.map(g => g.id));
+  const shownG = window.Folders ? Folders.filter('gallery', galleryList) : galleryList;
+  if (galleryList.length && !shownG.length) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر عکس، بیارش اینجا.</p></div>'; return; }
   if (!galleryList.length) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🖼️</div><p>هنوز عکس یا ویدیویی نذاشتیم... اولین خاطره‌مون رو اضافه کن 💜</p></div>'; return; }
   const n = gallerySel.size;
   bar.innerHTML = gallerySelMode
-    ? `<button class="btn" type="button" onclick="toggleGalleryAll()">${n === galleryList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn fs-del" type="button" onclick="removeSelectedGallery()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setGallerySelMode(false)">انصراف</button>`
+    ? `<button class="btn" type="button" onclick="toggleGalleryAll()">${n === galleryList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn" type="button" onclick="moveSelected('gallery')" ${n ? '' : 'disabled'}>📂 انتقال</button><button class="btn fs-del" type="button" onclick="removeSelectedGallery()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setGallerySelMode(false)">انصراف</button>`
     : '<button class="btn" type="button" onclick="setGallerySelMode(true)">☑️ انتخاب چندتایی</button>';
-  el.innerHTML = galleryList.map(g => `
+  el.innerHTML = shownG.map(g => `
     <div class="g-item${gallerySel.has(g.id) ? ' selected' : ''}" data-id="${escapeHtml(g.id)}">
       ${g.kind === 'video'
         ? `<video data-src="${escapeHtml(g.url)}#t=0.1" preload="none" muted playsinline></video><span class="g-play">▶</span>`
         : `<img src="${escapeHtml(g.url)}" loading="lazy" decoding="async" alt="">`}
-      ${gallerySelMode ? `<span class="g-chk">${gallerySel.has(g.id) ? '✓' : ''}</span>` : `<button class="g-del" title="حذف" onclick="event.stopPropagation();removeGalleryItem('${g.id}')">✕</button>`}
+      ${gallerySelMode ? `<span class="g-chk">${gallerySel.has(g.id) ? '✓' : ''}</span>` : `<button class="g-del" title="حذف" onclick="event.stopPropagation();removeGalleryItem('${g.id}')">✕</button><button class="g-mv" title="انتقال به پوشه" onclick="event.stopPropagation();Folders.move('gallery',['${g.id}'])">📂</button>`}
       <span class="g-by">${escapeHtml(g.author || '')}</span>
     </div>`).join('');
   lazyGalleryVideos(el);
@@ -4106,6 +4111,7 @@ function lazyGalleryVideos(el) {
   vs.forEach(v => io.observe(v));
 }
 let gallerySelMode = false; const gallerySel = new Set();
+function moveSelected(sec) { const set = sec === 'files' ? fileSel : gallerySel; Folders.move(sec, [...set], () => { if (sec === 'files') setFilesSelMode(false); else setGallerySelMode(false); }); }
 function setGallerySelMode(on) { gallerySelMode = on; gallerySel.clear(); renderGallery(); }
 function toggleGalleryAll() { if (gallerySel.size === galleryList.length) gallerySel.clear(); else galleryList.forEach(g => gallerySel.add(g.id)); renderGallery(); }
 async function removeSelectedGallery() {
@@ -4178,7 +4184,7 @@ async function uploadGallery(ev) {
         url: up.url, file_path: up.path, author: myName() || 'ناشناس', created_at: Date.now() };
       const { error } = await dbClient.from('gallery').insert(row);
       if (error) { await dbClient.storage.from('songs').remove([up.path]); throw error; }
-      galleryList.unshift(row); ok++;
+      galleryList.unshift(row); ok++; if (window.Folders) await Folders.addToCurrent('gallery', row.id);
     } catch (e) { console.error(e); toast('⚠️ ' + uploadErrorHint(e, 'gallery')); }
   }
   if (ok) { renderGallery(); toast('🖼️ ' + ok + ' مورد اضافه شد ✨'); notify('gallery', ok + ' مورد', galleryList[0].id); }
@@ -4199,18 +4205,22 @@ async function loadFiles() {
 function renderFiles() {
   const el = document.getElementById('filesList');
   if (filesMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای بخش فایل‌ها باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
+  if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => f.id));
+  const shownF = window.Folders ? Folders.filter('files', filesList) : filesList;
+  if (filesList.length && !shownF.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر فایل، بیارش اینجا.</p></div>'; return; }
   if (!filesList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📁</div><p>هنوز فایلی نذاشتیم...</p></div>'; return; }
   const n = fileSel.size;
   const bar = filesSelMode
-    ? `<div class="files-selbar"><button class="btn" type="button" onclick="toggleFilesAll()">${n === filesList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn fs-del" type="button" onclick="removeSelectedFiles()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setFilesSelMode(false)">انصراف</button></div>`
+    ? `<div class="files-selbar"><button class="btn" type="button" onclick="toggleFilesAll()">${n === filesList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn" type="button" onclick="moveSelected('files')" ${n ? '' : 'disabled'}>📂 انتقال</button><button class="btn fs-del" type="button" onclick="removeSelectedFiles()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setFilesSelMode(false)">انصراف</button></div>`
     : `<div class="files-selbar"><button class="btn" type="button" onclick="setFilesSelMode(true)">☑️ انتخاب چندتایی</button></div>`;
-  el.innerHTML = bar + filesList.map(f => `
+  el.innerHTML = bar + shownF.map(f => `
     <div class="playlist-item file-item${fileSel.has(f.id) ? ' selected' : ''}">
       ${filesSelMode ? `<input type="checkbox" class="file-chk" ${fileSel.has(f.id) ? 'checked' : ''} onchange="toggleFileSel('${f.id}')" />` : ''}
       <div class="pl-icon" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><span class="pl-glyph">${fileIcon(f.name, f.mime)}</span></div>
       <div class="pl-info" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><div class="pl-title">${escapeHtml(f.name)}</div><div class="pl-sub">${fmtSize(f.size || 0)}${f.author ? ' · ' + escapeHtml(f.author) : ''}</div></div>
       ${filesSelMode ? '' : `<button class="pl-loop" onclick="openFile('${f.id}')" title="باز کردن توی سایت">👁️</button>
       <a class="pl-loop" href="${escapeHtml(f.url)}" target="_blank" rel="noopener" download="${escapeHtml(f.name)}" title="دانلود" style="text-decoration:none">⬇️</a>
+      <button class="pl-loop" onclick="Folders.move('files',['${f.id}'])" title="انتقال به پوشه">📂</button>
       <button class="pl-del" onclick="removeFileItem('${f.id}')" title="حذف">✕</button>`}
     </div>`).join('');
 }
@@ -4240,7 +4250,7 @@ async function uploadFiles(ev) {
         size: file.size, mime: file.type || '', author: myName() || 'ناشناس', created_at: Date.now() };
       const { error } = await dbClient.from('files').insert(row);
       if (error) { await dbClient.storage.from('songs').remove([up.path]); throw error; }
-      filesList.unshift(row); ok++;
+      filesList.unshift(row); ok++; if (window.Folders) await Folders.addToCurrent('files', row.id);
     } catch (e) { console.error(e); toast('⚠️ ' + uploadErrorHint(e, 'files')); }
   }
   if (ok) { renderFiles(); toast('📁 ' + ok + ' فایل اضافه شد ✨'); notify('files', files.length === 1 ? files[0].name : ok + ' فایل', filesList[0].id); }
@@ -4416,14 +4426,21 @@ function renderFun() {
   setFunTabs();
   const el = document.getElementById('funGrid');
   if (funMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای این بخش باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  const items = funList.filter(x => x.category === funCat);
+  const sec = funCat === 'game' ? 'games' : 'cinema';
+  const inSec = funList.filter(x => (x.category === 'game') === (sec === 'games'));
+  if (window.Folders) Folders.mount(sec, el, renderFun, inSec.map(x => x.id));
+  const inFolder = window.Folders && Folders.isFolder(Folders.cur(sec));
+  let items = inFolder ? inSec : inSec.filter(x => x.category === funCat);
+  if (window.Folders) items = Folders.filter(sec, items);
+  if (inSec.length && !items.length && inFolder) { el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر مورد، بیارش اینجا.</p></div>'; return; }
   if (!items.length) { el.innerHTML = `<div class="empty-state"><div class="emoji">${FUN_CATS[funCat].ico}</div><p>هنوز لینکی برای «${FUN_CATS[funCat].name}» نذاشتیم... بالا اضافه کن 💜</p></div>`; return; }
   el.innerHTML = items.map((x, i) => `
     <a class="fun-card" style="--i:${i}" href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">
-      <span class="fc-ico">${FUN_CATS[funCat].ico}</span>
+      <span class="fc-ico">${FUN_CATS[x.category] ? FUN_CATS[x.category].ico : '🎬'}</span>
       <span class="fc-info"><b>${escapeHtml(x.title)}</b><small dir="ltr">${escapeHtml(hostOf(x.url))}</small></span>
       <span class="fc-go">↗</span>
-      ${(funCat === 'movie' || funCat === 'series') && window.Watch ? `${Watch.isSeen(x.url) ? '<span class="fc-seen">✅ دیده‌شده</span>' : ''}<button type="button" class="fc-btn fc-watch" title="ساخت اتاق تماشا با این" onclick="event.preventDefault();event.stopPropagation();Watch.create(funList.find(l => l.id === '${x.id}'))">🍿</button>` : ''}
+      ${(x.category === 'movie' || x.category === 'series') && window.Watch ? `${Watch.isSeen(x.url) ? '<span class="fc-seen">✅ دیده‌شده</span>' : ''}<button type="button" class="fc-btn fc-watch" title="ساخت اتاق تماشا با این" onclick="event.preventDefault();event.stopPropagation();Watch.create(funList.find(l => l.id === '${x.id}'))">🍿</button>` : ''}
+      <button type="button" class="fc-btn" title="انتقال به پوشه" onclick="event.preventDefault();event.stopPropagation();Folders.move(funCat === 'game' ? 'games' : 'cinema',['${x.id}'])">📂</button>
       <button type="button" class="fc-btn" title="ویرایش اسم" onclick="event.preventDefault();event.stopPropagation();renameFunLink('${x.id}')">✏️</button>
       <button type="button" class="fc-btn fc-del" title="حذف" onclick="event.preventDefault();event.stopPropagation();removeFunLink('${x.id}')">✕</button>
     </a>`).join('');
@@ -4439,7 +4456,7 @@ async function addFunLink(ev) {
   const row = { id: 'ln_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), category: funCat, title: title.slice(0, 80), url, author: myName() || 'ناشناس', created_at: Date.now() };
   const { error } = await dbClient.from('links').insert(row);
   if (error) { funMissing = /links|relation|schema cache/i.test(error.message || ''); renderFun(); toast('⚠️ ذخیره نشد' + (funMissing ? ' (فایل SQL اجرا نشده)' : '')); return; }
-  funList.push(row); t.value = ''; u.value = ''; renderFun(); toast('✅ اضافه شد'); try { window.CatPal && CatPal.act('link'); } catch (e) {}
+  funList.push(row); if (window.Folders) await Folders.addToCurrent(funCat === 'game' ? 'games' : 'cinema', row.id); t.value = ''; u.value = ''; renderFun(); toast('✅ اضافه شد'); try { window.CatPal && CatPal.act('link'); } catch (e) {}
 }
 async function renameFunLink(id) {
   const x = funList.find(l => l.id === id); if (!x) return;

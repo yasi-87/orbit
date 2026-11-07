@@ -687,7 +687,7 @@
         } catch (e) { console.warn(e); }
       }
       if (!secret && canShare() && (shareOn() || (replace && sharedSet.has(row.id)))) { try { await putAisaCopy(Object.assign({}, row), row.strokes, blob); } catch (e) { console.warn(e); } }
-      artMissing = false; if (replace && ex.path && ex.path !== up.path) { try { dbClient.storage.from('songs').remove([ex.path]); } catch (e) {} } gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined })); if (replace || opts.finish) { editId = null; renderMode(); }
+      artMissing = false; if (!replace && window.Folders) await Folders.addToCurrent(spc() === 'aisa' ? 'canvas_ai' : 'canvas', row.id); if (replace && ex.path && ex.path !== up.path) { try { dbClient.storage.from('songs').remove([ex.path]); } catch (e) {} } gallery = gallery.filter(g => g.id !== row.id); gallery.unshift(Object.assign({}, row, { strokes: undefined })); if (replace || opts.finish) { editId = null; renderMode(); }
       fx(opts.finish ? 40 : 18); toast2(secret ? '🔒 نقاشی مخفی ذخیره شد و سر وقتش نمایش داده می‌شه' : (opts.finish ? '🏁 نقاشی تموم شد و توی گالری ذخیره شد 💞' : '💾 توی گالری ذخیره شد ✨'));
       if (!secret) send({ t: 'saved' });
       if (secret) { secret = false; secretStrokes = []; rebuild(); renderMode(); renderTools(); renderAct(); }
@@ -713,14 +713,18 @@
   function renderGallery() {
     const el = $('cvGal'); if (!el) return;
     if (artMissing) { el.innerHTML = '<div class="cv-empty">🛠️ برای گالری باید SQL شمارهٔ ۲۴ رو یک بار توی Supabase اجرا کنی.</div>'; return; }
+    const fsec = spc() === 'aisa' ? 'canvas_ai' : 'canvas';
+    if (window.Folders && el.parentNode) Folders.mount(fsec, el, renderGallery, gallery.map(g => g.id));
+    const shownA = window.Folders ? Folders.filter(fsec, gallery) : gallery;
+    if (gallery.length && !shownA.length) { el.innerHTML = '<div class="cv-empty">📂 این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر نقاشی، بیارش اینجا.</div>'; return; }
     if (!gallery.length) { el.innerHTML = '<div class="cv-empty">هنوز نقاشی‌ای ذخیره نکردیم… اولین شاهکارمون رو بکشیم 🎨</div>'; return; }
     const favs = gallery.filter(g => g.fav).length;
-    el.innerHTML = `<div class="cv-gal-top">${fa(gallery.length)} نقاشی · ❤️ ${fa(favs)} مورد علاقه <label><input type="checkbox" id="cvFavOnly" ${galFav ? 'checked' : ''}/> فقط علاقه‌مندی‌ها</label></div><div class="cv-grid">` + gallery.filter(g => !galFav || g.fav).map(g => {
+    el.innerHTML = `<div class="cv-gal-top">${fa(gallery.length)} نقاشی · ❤️ ${fa(favs)} مورد علاقه <label><input type="checkbox" id="cvFavOnly" ${galFav ? 'checked' : ''}/> فقط علاقه‌مندی‌ها</label></div><div class="cv-grid">` + shownA.filter(g => !galFav || g.fav).map(g => {
       const lk = locked(g); const left = lk ? Math.ceil((Number(g.reveal_at) - Date.now()) / 3600000) : 0;
       let cm = 0; try { cm = JSON.parse(g.comments || '[]').length; } catch (e) {}
       return `<div class="cv-card" data-id="${esc(g.id)}">${lk ? `<div class="cv-lock">🔒<small>غافلگیری! حدود ${fa(left)} ساعت دیگه</small></div>` : `<img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" data-open="${esc(g.id)}">`}
         <div class="cv-ct"><b>${esc(lk ? 'نقاشی مخفی' : g.title)}</b><small>${esc(g.author || '')} · ${esc(dateOf(g.created_at))}</small></div>
-        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button><button type="button" data-pdf="${esc(g.id)}" title="ذخیره PDF">📄</button>`}${canShare() && !lk ? `<button type="button" data-aish="${esc(g.id)}" class="${sharedSet.has(g.id) ? 'on' : ''}" title="${sharedSet.has(g.id) ? 'الان برای آیسا نمایش داده می‌شه (برای پنهان کردن بزن)' : 'نمایش برای آیسا'}">${sharedSet.has(g.id) ? '👧✅' : '👧'}</button>` : ''}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
+        <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button><button type="button" data-mv="${esc(g.id)}" title="انتقال به پوشه">📂</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button><button type="button" data-pdf="${esc(g.id)}" title="ذخیره PDF">📄</button>`}${canShare() && !lk ? `<button type="button" data-aish="${esc(g.id)}" class="${sharedSet.has(g.id) ? 'on' : ''}" title="${sharedSet.has(g.id) ? 'الان برای آیسا نمایش داده می‌شه (برای پنهان کردن بزن)' : 'نمایش برای آیسا'}">${sharedSet.has(g.id) ? '👧✅' : '👧'}</button>` : ''}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
     }).join('') + '</div>';
     const fo = $('cvFavOnly'); if (fo) fo.onchange = () => { galFav = fo.checked; renderGallery(); };
   }
@@ -1268,6 +1272,7 @@
       if (k === 'y' || (k === 'z' && e.shiftKey)) redoOp(); else undo();
     });
     const g = $('canvasBox'); if (g) g.addEventListener('click', e => {
+      const mv = e.target.closest('[data-mv]'); if (mv) return Folders.move(spc() === 'aisa' ? 'canvas_ai' : 'canvas', [mv.dataset.mv]);
       const f = e.target.closest('[data-fav]'); if (f) return toggleFav(f.dataset.fav);
       const o = e.target.closest('[data-open]'); if (o) return openArt(o.dataset.open);
       const ed = e.target.closest('[data-edit]'); if (ed) return editArt(ed.dataset.edit);
