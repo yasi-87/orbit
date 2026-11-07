@@ -1461,6 +1461,7 @@ body.reading-mode .reading-content {
 .fun-tab.on::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%); transform: translateX(-120%); animation: funShine 3.5s ease-in-out infinite; pointer-events: none; }
 @keyframes funFloat { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-7px) rotate(4deg); } }
 @keyframes funShine { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
+.pf-credit { margin: 34px 0 10px; text-align: center; direction: ltr; color: var(--muted); font-size: .8rem; line-height: 1.9; opacity: .85; letter-spacing: .3px; }
 .fun-filter { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
 .ff-chip { border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: inherit; border-radius: 999px; padding: 7px 16px; font: inherit; font-size: .88rem; cursor: pointer; transition: .2s; }
 .ff-chip i { font-style: normal; opacity: .6; font-size: .75rem; margin-inline-start: 4px; }
@@ -2178,6 +2179,7 @@ body.guest #app{padding-left:0 !important}
 
     <div class="chapters-header" id="catFamH" style="margin-top:26px"><h2>🐾 گربه‌های ما</h2></div>
     <div id="catFamily"></div>
+    <div class="pf-credit">Created by Love 😇<br>All copyrights belongs to Orbit Studios. ©️</div>
   </div>
 </div>
 
@@ -2610,8 +2612,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-07e';
+const SITE_VERSION = '2026-11-07f';
 const SITE_CHANGES = [
+  '😇 ته صفحهٔ پروفایل امضای «Created by Love» اضافه شد.',
   '📁 ساخت پوشه آسون‌تر شد (اسم رو همون‌جا می‌نویسی)، با کشیدن و رها کردن یا «➕ افزودن از موجودها» چیزها می‌رن توی پوشه، توی سینما می‌شه چند لینک رو یک‌جا ریخت، و کارت‌های بزرگ فیلم/سریال به فیلتر کوچیک تبدیل شدن.',
   '📁 پوشه‌ها شبیه گیت‌هاب شدن (با اسم سازنده، تعداد و تاریخ)، دکمه‌های کارت گیم/سینما مرتب شدن، و آپلود فایل/گالری نوار پیشرفت (درصد، حجم، سرعت) داخل خود صفحه نشون می‌ده.',
   '🍿 اتاق تماشا ساده و قشنگ‌تر شد: سه کارت برای شروع (آرشیو، آپلود، لینک)، زیرنویس و اطلاعات پخش جمع‌شده زیر ویدیو، و دیده‌شده‌ها توی بخش بازشو.',
