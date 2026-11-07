@@ -1481,6 +1481,11 @@ body.reading-mode .reading-content {
 .fun-card { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 18px; text-decoration: none; color: var(--text); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); transition: transform .25s, border-color .25s, box-shadow .25s; animation: funIn .5s both; animation-delay: calc(var(--i) * 60ms); }
 .fun-card:hover { transform: translateY(-4px) scale(1.01); border-color: var(--accent); box-shadow: 0 12px 28px rgba(0,0,0,0.4), 0 0 0 1px rgba(212,165,255,0.2); }
 @keyframes funIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+.fun-card.game { padding: 14px 14px 12px; background: linear-gradient(135deg, rgba(120,90,255,0.16), rgba(255,120,190,0.1)); border-color: rgba(160,130,255,0.25); }
+.fun-card.game .fc-ico { width: 78px; height: 78px; border-radius: 18px; font-size: 2.2rem; background-size: cover; background-position: center; box-shadow: 0 8px 20px rgba(0,0,0,0.4); flex-shrink: 0; transition: transform .3s; }
+.fun-card.game .fc-ico.has-cover { box-shadow: 0 8px 22px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.12); }
+.fun-card.game:hover .fc-ico { animation: none; transform: scale(1.06) rotate(-2deg); }
+.fun-card.game .fc-info b { font-size: 1.05rem; }
 .fc-ico { width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(135deg, rgba(212,165,255,0.3), rgba(255,160,200,0.25)); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
 .fun-card:hover .fc-ico { animation: funFloat 1.2s ease-in-out infinite; }
 .fc-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -2483,7 +2488,7 @@ function enterApp() {
     try { Presence.start(); } catch (e) {}
     return;
   }
-  showScreen('chapters');
+  showScreen('menu');
   playAmbient();
   initNotifications();
   showWelcomeMessage();
@@ -2640,8 +2645,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-07j';
+const SITE_VERSION = '2026-11-07k';
 const SITE_CHANGES = [
+  '🎮 کارت گیم‌ها جذاب‌تر شد و عکس هر گیم خودکار از روی اسمش میاد. 🏠 ورود به سایت حالا مستقیم میره روی «منوی اصلی».',
   '🎵 پلیر بالای صفحه مرتب شد: اسم آهنگ همیشه دیده می‌شه، دکمه‌ها و صدا جمع‌وجور و هم‌اندازه‌ان.',
   '📁 حالا داخل پوشه‌ها هم می‌شه پوشه ساخت (تو در تو)، با مسیر قابل‌کلیک بالای صفحه و کشیدن پوشه توی پوشهٔ دیگه.',
   '🔗 لینک‌های توی چت قابل‌کلیک شدن و توی تب تازه باز می‌شن.',
@@ -4500,8 +4506,8 @@ function renderFun() {
   if (!items.length && inFolder) { el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر مورد، بیارش اینجا.</p></div>'; return; }
   if (!items.length) { el.innerHTML = `<div class="empty-state"><div class="emoji">${(FUN_CATS[funCat] || { ico: '🍿' }).ico}</div><p>هنوز لینکی برای «${(FUN_CATS[funCat] || { name: 'سینما' }).name}» نذاشتیم... بالا اضافه کن 💜</p></div>`; return; }
   el.innerHTML = items.map((x, i) => `
-    <a class="fun-card" style="--i:${i}" data-dsec="${sec}" data-did="${escapeHtml(x.id)}" draggable="true" href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">
-      <span class="fc-ico">${FUN_CATS[x.category] ? FUN_CATS[x.category].ico : '🎬'}</span>
+    <a class="fun-card${x.category === 'game' ? ' game' : ''}" style="--i:${i}" data-dsec="${sec}" data-did="${escapeHtml(x.id)}" draggable="true" href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">
+      <span class="fc-ico"${x.category === 'game' ? ` data-cover="${escapeHtml(x.title)}"` : ''}>${FUN_CATS[x.category] ? FUN_CATS[x.category].ico : '🎬'}</span>
       <span class="fc-info"><b>${escapeHtml(x.title)}</b><small dir="ltr">${escapeHtml(hostOf(x.url))}</small></span>
       <span class="fc-go">↗</span>
       <span class="fc-acts">
@@ -4511,6 +4517,7 @@ function renderFun() {
       <button type="button" class="fc-btn fc-del" title="حذف" onclick="event.preventDefault();event.stopPropagation();removeFunLink('${x.id}')">🗑️</button>
       </span>
     </a>`).join('');
+  loadGameCovers(el);
 }
 async function addFunLink(ev) {
   ev.preventDefault();
@@ -4524,6 +4531,29 @@ async function addFunLink(ev) {
   const { error } = await dbClient.from('links').insert(row);
   if (error) { funMissing = /links|relation|schema cache/i.test(error.message || ''); renderFun(); toast('⚠️ ذخیره نشد' + (funMissing ? ' (فایل SQL اجرا نشده)' : '')); return; }
   funList.push(row); if (window.Folders) await Folders.addToCurrent(funMode === 'games' ? 'games' : 'cinema', row.id); t.value = ''; u.value = ''; renderFun(); toast('✅ اضافه شد'); try { window.CatPal && CatPal.act('link'); } catch (e) {}
+}
+/* عکس خودکار گیم‌ها: از روی اسمشون از ویکی‌پدیا می‌گیره و توی گوشی ذخیره می‌کنه */
+const coverMem = {};
+async function gameCover(title) {
+  const k = 'diary_cover_' + title.toLowerCase().trim();
+  if (k in coverMem) return coverMem[k];
+  try { const c = localStorage.getItem(k); if (c) return (coverMem[k] = c === '-' ? '' : c); } catch (e) {}
+  let url = '';
+  try {
+    for (const q of [title + ' video game', title]) {
+      const r = await fetch('https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=' + encodeURIComponent(q) + '&gsrlimit=3&prop=pageimages&piprop=thumbnail&pithumbsize=320&format=json&origin=*');
+      const j = await r.json(), pages = Object.values((j.query && j.query.pages) || {}).sort((a, b) => (a.index || 9) - (b.index || 9));
+      const p = pages.find(x => x.thumbnail && x.thumbnail.source); if (p) { url = p.thumbnail.source; break; }
+    }
+  } catch (e) { return ''; }
+  coverMem[k] = url; try { localStorage.setItem(k, url || '-'); } catch (e) {}
+  return url;
+}
+function loadGameCovers(root) {
+  root.querySelectorAll('[data-cover]').forEach(async el => {
+    const u = await gameCover(el.dataset.cover);
+    if (u && el.isConnected) { el.style.backgroundImage = 'url("' + u.replace(/"/g, '%22') + '")'; el.classList.add('has-cover'); el.textContent = ''; }
+  });
 }
 async function addFunBulk() {
   const ta = document.getElementById('funBulkTxt'); if (!ta) return;
