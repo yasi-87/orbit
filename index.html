@@ -1474,9 +1474,11 @@ body.reading-mode .reading-content {
 .fc-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .fc-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .fc-info small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; text-align: right; }
 .fc-go { font-size: 1.2rem; color: var(--accent); transition: transform .25s; } .fun-card:hover .fc-go { transform: translate(-3px, -3px); }
-.fc-btn { position: absolute; top: 6px; left: 40px; width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.08); font-size: 0.75rem; opacity: 0; transition: .2s; }
-.fun-card:hover .fc-btn, .fc-btn:focus-visible { opacity: 1; } .fc-del { left: 8px; } .fc-del:hover { background: #ff4d6d; }
-@media (hover: none) { .fc-btn { opacity: .8; } }
+.fun-card { flex-wrap: wrap; }
+.fc-acts { flex-basis: 100%; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.07); }
+.fc-btn { position: static; height: 30px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); color: inherit; font-size: 0.76rem; cursor: pointer; transition: .2s; white-space: nowrap; }
+.fc-btn:hover { background: rgba(212,165,255,0.25); border-color: var(--accent); }
+.fc-del { margin-inline-start: auto; width: 30px; padding: 0; flex-shrink: 0; } .fc-del:hover { background: #ff4d6d; border-color: #ff4d6d; }
 @media (max-width: 520px) { .fun-tab { padding: 14px 4px 10px; } .fun-tab .ft-ico { font-size: 2rem; } .fun-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .fun-tab .ft-ico, .fun-tab.on::after, .fun-card { animation: none !important; } }
 .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.16); color: #fff; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); transition: .2s; }
@@ -1510,6 +1512,7 @@ body.reading-mode .reading-content {
 .up-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 8px 0 6px; }
 .up-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
 .up-info { font-size: 0.72rem; color: var(--muted); }
+.up-inline { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; } .up-inline:empty { display: none; } .up-inline .up-row { box-shadow: none; }
 .up-row.ok { border-color: #5ad67d; } .up-row.bad { border-color: #ff4d6d; }
 
 .cal-tabs{display:flex;gap:8px;margin:0 0 12px}
@@ -1998,6 +2001,7 @@ body.guest #app{padding-left:0 !important}
       <input type="file" accept="image/*,video/*" multiple hidden onchange="uploadGallery(event)" />
     </label>
     <div class="files-selbar" id="galleryBar"></div>
+    <div id="galleryUp" class="up-inline"></div>
     <div class="gallery-grid" id="galleryGrid"></div>
   </div>
 
@@ -2009,6 +2013,7 @@ body.guest #app{padding-left:0 !important}
       <div class="pu-text"><strong>آپلود فایل (هر نوعی)</strong><span>PDF، ورد، زیپ، عکس، هر چیزی؛ حداکثر ۵۰۰ مگابایت (به شرطی که Supabase اجازه بده)</span></div>
       <input type="file" multiple hidden onchange="uploadFiles(event)" />
     </label>
+    <div id="filesUp" class="up-inline"></div>
     <div id="filesList"></div>
   </div>
 
@@ -2589,8 +2594,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-07c';
+const SITE_VERSION = '2026-11-07d';
 const SITE_CHANGES = [
+  '📁 پوشه‌ها شبیه گیت‌هاب شدن (با اسم سازنده، تعداد و تاریخ)، دکمه‌های کارت گیم/سینما مرتب شدن، و آپلود فایل/گالری نوار پیشرفت (درصد، حجم، سرعت) داخل خود صفحه نشون می‌ده.',
   '🍿 اتاق تماشا ساده و قشنگ‌تر شد: سه کارت برای شروع (آرشیو، آپلود، لینک)، زیرنویس و اطلاعات پخش جمع‌شده زیر ویدیو، و دیده‌شده‌ها توی بخش بازشو.',
   '📂 پوشه‌ها: توی سینما، گیم، گالری، فایل‌ها و بوم می‌شه پوشه ساخت (مثلاً یک سریال با همهٔ قسمت‌هاش) و موردهای قدیمی رو هم با دکمهٔ 📂 بُرد توش. (یک بار SQL شمارهٔ ۲۷ لازمه)',
   '🎮🍿 بخش «سرگرمی» دو تا شد: «گیم» برای گیم‌هامون و «سینما» برای فیلم و سریال (به‌همراه اتاق تماشا).',
@@ -3558,8 +3564,8 @@ function xhrUpload(path, blob, onProgress, ctl) {
 }
 
 /* پنل پیشرفت آپلود (پایین صفحه) */
-function trackUpload(name, total) {
-  let panel = document.getElementById('uploadPanel');
+function trackUpload(name, total, mount) {
+  let panel = mount || document.getElementById('uploadPanel');
   if (!panel) { panel = document.createElement('div'); panel.id = 'uploadPanel'; panel.className = 'up-panel'; document.body.appendChild(panel); }
   const row = document.createElement('div'); row.className = 'up-row';
   row.innerHTML = '<div class="up-top"><span class="up-name" dir="auto"></span><button type="button" class="up-x" title="لغو آپلود">✕</button></div><div class="up-bar"><i></i></div><div class="up-info">در حال شروع...</div>';
@@ -3569,7 +3575,7 @@ function trackUpload(name, total) {
   row.querySelector('.up-x').onclick = () => ctl.abort();
   const t0 = performance.now(); let finished = false;
   const mb = n => (n / 1048576).toFixed(n >= 10485760 ? 0 : 1);
-  const end = (cls, text, ms) => { finished = true; row.classList.add(cls); info.textContent = text; setTimeout(() => { row.remove(); if (!panel.children.length) panel.remove(); }, ms); };
+  const end = (cls, text, ms) => { finished = true; row.classList.add(cls); info.textContent = text; setTimeout(() => { row.remove(); if (!mount && !panel.children.length) panel.remove(); }, ms); };
   return {
     ctl,
     onProgress(l, t) {
@@ -3589,7 +3595,7 @@ async function storagePut(path, blob, label, opts) {
     await xhrUpload(path, blob, opts.onProgress, opts.ctl);
     return dbClient.storage.from('songs').getPublicUrl(path).data.publicUrl;
   }
-  const tr = blob.size > 200 * 1024 ? trackUpload(label || path.split('/').pop(), blob.size) : null;
+  const tr = (blob.size > 200 * 1024 || (opts && opts.mount)) ? trackUpload(label || path.split('/').pop(), blob.size, opts && opts.mount) : null;
   try {
     await xhrUpload(path, blob, tr && tr.onProgress, tr && tr.ctl);
     if (tr) tr.done();
@@ -4088,7 +4094,7 @@ function renderGallery() {
   if (galleryMissing) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای گالری باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
   if (window.Folders) Folders.mount('gallery', bar, renderGallery, galleryList.map(g => g.id));
   const shownG = window.Folders ? Folders.filter('gallery', galleryList) : galleryList;
-  if (galleryList.length && !shownG.length) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر عکس، بیارش اینجا.</p></div>'; return; }
+  if (galleryList.length && !shownG.length) { bar.innerHTML = ''; el.innerHTML = (window.Folders && Folders.inFolder('gallery')) ? '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر عکس، بیارش اینجا.</p></div>' : ''; return; }
   if (!galleryList.length) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🖼️</div><p>هنوز عکس یا ویدیویی نذاشتیم... اولین خاطره‌مون رو اضافه کن 💜</p></div>'; return; }
   const n = gallerySel.size;
   bar.innerHTML = gallerySelMode
@@ -4180,7 +4186,7 @@ async function uploadGallery(ev) {
     try {
       let blob = file, ext = extOf(file);
       if (!isVid && file.type !== 'image/gif') { blob = dataUrlToBlob(await resizeImageFile(file, 2560, 0.92)); ext = 'jpg'; }
-      const up = await uploadMediaFile(blob, ext, file.name);
+      const up = await uploadMediaFile(blob, ext, (files.length > 1 ? '(' + (i + 1) + '/' + files.length + ') ' : '') + file.name, { mount: document.getElementById('galleryUp') });
       const row = { id: 'gl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), kind: isVid ? 'video' : 'image',
         url: up.url, file_path: up.path, author: myName() || 'ناشناس', created_at: Date.now() };
       const { error } = await dbClient.from('gallery').insert(row);
@@ -4208,7 +4214,7 @@ function renderFiles() {
   if (filesMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای بخش فایل‌ها باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
   if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => f.id));
   const shownF = window.Folders ? Folders.filter('files', filesList) : filesList;
-  if (filesList.length && !shownF.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر فایل، بیارش اینجا.</p></div>'; return; }
+  if (filesList.length && !shownF.length) { el.innerHTML = (window.Folders && Folders.inFolder('files')) ? '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر فایل، بیارش اینجا.</p></div>' : ''; return; }
   if (!filesList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📁</div><p>هنوز فایلی نذاشتیم...</p></div>'; return; }
   const n = fileSel.size;
   const bar = filesSelMode
@@ -4246,7 +4252,7 @@ async function uploadFiles(ev) {
     if (file.size > MAX_FILE_MB * 1024 * 1024) { toast('⚠️ ' + file.name + ' بزرگه (حداکثر ' + MAX_FILE_MB + ' مگابایت)'); continue; }
     toast(`⏳ آپلود ${i + 1} از ${files.length}...`);
     try {
-      const up = await uploadMediaFile(file, extOf(file));
+      const up = await uploadMediaFile(file, extOf(file), (files.length > 1 ? '(' + (i + 1) + '/' + files.length + ') ' : '') + file.name, { mount: document.getElementById('filesUp') });
       const row = { id: 'fl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: file.name, url: up.url, file_path: up.path,
         size: file.size, mime: file.type || '', author: myName() || 'ناشناس', created_at: Date.now() };
       const { error } = await dbClient.from('files').insert(row);
@@ -4433,17 +4439,20 @@ function renderFun() {
   const inFolder = window.Folders && Folders.isFolder(Folders.cur(sec));
   let items = inFolder ? inSec : inSec.filter(x => x.category === funCat);
   if (window.Folders) items = Folders.filter(sec, items);
-  if (inSec.length && !items.length && inFolder) { el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر مورد، بیارش اینجا.</p></div>'; return; }
+  if (!items.length && !inFolder && window.Folders && Folders.hasFolders(sec)) { el.innerHTML = ''; return; }
+  if (!items.length && inFolder) { el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر مورد، بیارش اینجا.</p></div>'; return; }
   if (!items.length) { el.innerHTML = `<div class="empty-state"><div class="emoji">${FUN_CATS[funCat].ico}</div><p>هنوز لینکی برای «${FUN_CATS[funCat].name}» نذاشتیم... بالا اضافه کن 💜</p></div>`; return; }
   el.innerHTML = items.map((x, i) => `
     <a class="fun-card" style="--i:${i}" href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">
       <span class="fc-ico">${FUN_CATS[x.category] ? FUN_CATS[x.category].ico : '🎬'}</span>
       <span class="fc-info"><b>${escapeHtml(x.title)}</b><small dir="ltr">${escapeHtml(hostOf(x.url))}</small></span>
       <span class="fc-go">↗</span>
-      ${(x.category === 'movie' || x.category === 'series') && window.Watch ? `${Watch.isSeen(x.url) ? '<span class="fc-seen">✅ دیده‌شده</span>' : ''}<button type="button" class="fc-btn fc-watch" title="ساخت اتاق تماشا با این" onclick="event.preventDefault();event.stopPropagation();Watch.create(funList.find(l => l.id === '${x.id}'))">🍿</button>` : ''}
-      <button type="button" class="fc-btn" title="انتقال به پوشه" onclick="event.preventDefault();event.stopPropagation();Folders.move(funCat === 'game' ? 'games' : 'cinema',['${x.id}'])">📂</button>
+      <span class="fc-acts">
+      ${(x.category === 'movie' || x.category === 'series') && window.Watch ? `${Watch.isSeen(x.url) ? '<span class="fc-seen">✅ دیده‌شده</span>' : ''}<button type="button" class="fc-btn fc-watch" title="ساخت اتاق تماشا با این" onclick="event.preventDefault();event.stopPropagation();Watch.create(funList.find(l => l.id === '${x.id}'))">🍿 تماشا</button>` : ''}
+      <button type="button" class="fc-btn" title="انتقال به پوشه" onclick="event.preventDefault();event.stopPropagation();Folders.move(funCat === 'game' ? 'games' : 'cinema',['${x.id}'])">📂 پوشه</button>
       <button type="button" class="fc-btn" title="ویرایش اسم" onclick="event.preventDefault();event.stopPropagation();renameFunLink('${x.id}')">✏️</button>
-      <button type="button" class="fc-btn fc-del" title="حذف" onclick="event.preventDefault();event.stopPropagation();removeFunLink('${x.id}')">✕</button>
+      <button type="button" class="fc-btn fc-del" title="حذف" onclick="event.preventDefault();event.stopPropagation();removeFunLink('${x.id}')">🗑️</button>
+      </span>
     </a>`).join('');
 }
 async function addFunLink(ev) {

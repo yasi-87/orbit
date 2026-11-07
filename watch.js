@@ -493,8 +493,8 @@
 .wt-sv b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wt-sv small{color:var(--muted,#aaa);white-space:nowrap}
 .wt-sec{font-size:.82rem;color:var(--muted,#aaa);margin-top:4px}
-.fc-seen{position:absolute;bottom:8px;left:44px;font-size:.7rem;background:rgba(80,200,140,.18);color:#8fe6b8;border-radius:999px;padding:1px 8px}
-.fc-watch{top:auto;bottom:6px;left:8px}
+.fc-seen{font-size:.72rem;background:rgba(80,200,140,.18);color:#8fe6b8;border-radius:999px;padding:1px 8px}
+.fc-watch{background:rgba(255,160,200,.18)}
 #watchWrap .vc-area-watch{margin:12px 0 !important}
 .wt-new{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:14px;background:rgba(255,255,255,.04);border:1px dashed rgba(212,165,255,.3)}
 .wt-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.82rem}.wt-row input[type=text],.wt-row select{flex:1;min-width:140px;padding:8px 10px;border-radius:10px;border:1px solid rgba(212,165,255,.3);background:rgba(10,10,15,.5);color:inherit;font:inherit}
