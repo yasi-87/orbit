@@ -345,3 +345,26 @@ alter table public.canvas_guesses enable row level security;
 drop policy if exists "canvas_guesses_public_all" on public.canvas_guesses;
 create policy "canvas_guesses_public_all" on public.canvas_guesses
   for all to anon, authenticated using (true) with check (true);
+
+
+-- 27) پوشه‌ها (سینما، گیم، گالری، فایل‌ها، بوم)
+create table if not exists public.folders (
+  id         text primary key,
+  section    text not null,
+  name       text not null,
+  created_at bigint
+);
+create table if not exists public.folder_items (
+  key       text primary key,
+  section   text,
+  item_id   text,
+  folder_id text
+);
+alter table public.folders enable row level security;
+alter table public.folder_items enable row level security;
+drop policy if exists "folders_public_all" on public.folders;
+create policy "folders_public_all" on public.folders
+  for all to anon, authenticated using (true) with check (true);
+drop policy if exists "folder_items_public_all" on public.folder_items;
+create policy "folder_items_public_all" on public.folder_items
+  for all to anon, authenticated using (true) with check (true);
