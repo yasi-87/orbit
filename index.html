@@ -1227,6 +1227,9 @@ body.reading-mode .reading-content {
 .cal-day:hover { border-color: rgba(212,165,255,0.5); background: rgba(212,165,255,0.1); }
 .cal-day.blank { background: transparent; border-color: transparent; pointer-events: none; }
 .cal-day .cd-num { font-size: 0.95rem; font-weight: 600; }
+.cal-day .cd-g { position: absolute; bottom: 3px; right: 5px; font-size: 0.56rem; line-height: 1; color: var(--muted); opacity: .75; font-weight: 400; }
+.cal-day.selected .cd-g { color: #1a0a20; opacity: .8; }
+.cal-greg { display: block; font-size: 0.68rem; font-weight: 400; color: var(--muted); margin-top: 2px; letter-spacing: .3px; }
 .cal-day.fri .cd-num { color: #ff8fab; }
 .cal-day .cd-marks { font-size: 0.62rem; line-height: 1; min-height: 10px; white-space: nowrap; }
 .cal-day.today { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
@@ -2645,8 +2648,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-07k';
+const SITE_VERSION = '2026-11-07l';
 const SITE_CHANGES = [
+  '📅 توی تقویم تاریخ میلادی هم اومد: ریز زیر هر روز و بازهٔ ماه میلادی زیر اسم ماه؛ شمسی همچنان اصلیه.',
   '🎮 کارت گیم‌ها جذاب‌تر شد و عکس هر گیم خودکار از روی اسمش میاد. 🏠 ورود به سایت حالا مستقیم میره روی «منوی اصلی».',
   '🎵 پلیر بالای صفحه مرتب شد: اسم آهنگ همیشه دیده می‌شه، دکمه‌ها و صدا جمع‌وجور و هم‌اندازه‌ان.',
   '📁 حالا داخل پوشه‌ها هم می‌شه پوشه ساخت (تو در تو)، با مسیر قابل‌کلیک بالای صفحه و کشیدن پوشه توی پوشهٔ دیگه.',
@@ -5245,9 +5249,14 @@ async function loadCalendar() {
 /* رخدادهای یه روز (با احتساب تکرارها) */
 const eventsOnDate = iso => eventsCache.filter(e => Recur.occursOn(e, iso));
 
+const GREG_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function gregRange(jy, jm) {
+  const a = isoFromJalali(jy, jm, 1).split('-').map(Number), b = isoFromJalali(jy, jm, jalaliMonthLength(jy, jm)).split('-').map(Number);
+  return a[1] === b[1] ? GREG_MON[a[1] - 1] + ' ' + a[0] : GREG_MON[a[1] - 1] + ' – ' + GREG_MON[b[1] - 1] + ' ' + b[0];
+}
 function renderCalendar() {
   const today = todayIso();
-  document.getElementById('calTitle').textContent = JAL_MONTHS[calMonth - 1] + ' ' + toFa(calYear);
+  document.getElementById('calTitle').innerHTML = escapeHtml(JAL_MONTHS[calMonth - 1] + ' ' + toFa(calYear)) + '<small class="cal-greg" dir="ltr">' + gregRange(calYear, calMonth) + '</small>';
 
   const blanks = weekdayIndex(isoFromJalali(calYear, calMonth, 1));
   const len = jalaliMonthLength(calYear, calMonth);
@@ -5262,7 +5271,7 @@ function renderCalendar() {
       ? evs.slice(0, 2).map(e => escapeHtml(e.emoji || '💜')).join('') + (evs.length > 2 ? '+' : '')
       : '';
     html += `<button class="cal-day${iso === today ? ' today' : ''}${iso === calSelected ? ' selected' : ''}${wd === 6 ? ' fri' : ''}${evs.length ? ' has-events' : ''}" onclick="calSelect('${iso}')">` +
-      `<span class="cd-num">${toFa(d)}</span><span class="cd-marks">${marks}</span></button>`;
+      `<span class="cd-num">${toFa(d)}</span><span class="cd-marks">${marks}</span><span class="cd-g" dir="ltr">${+iso.slice(8) === 1 ? GREG_MON[+iso.slice(5, 7) - 1] + ' ' : ''}${+iso.slice(8)}</span></button>`;
   }
   document.getElementById('calGrid').innerHTML = html;
   renderDayPanel();
