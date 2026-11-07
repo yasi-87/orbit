@@ -1461,6 +1461,16 @@ body.reading-mode .reading-content {
 .fun-tab.on::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%); transform: translateX(-120%); animation: funShine 3.5s ease-in-out infinite; pointer-events: none; }
 @keyframes funFloat { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-7px) rotate(4deg); } }
 @keyframes funShine { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
+.fun-filter { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+.ff-chip { border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: inherit; border-radius: 999px; padding: 7px 16px; font: inherit; font-size: .88rem; cursor: pointer; transition: .2s; }
+.ff-chip i { font-style: normal; opacity: .6; font-size: .75rem; margin-inline-start: 4px; }
+.ff-chip:hover { border-color: var(--accent); }
+.ff-chip.on { background: linear-gradient(135deg, rgba(212,165,255,0.38), rgba(255,160,200,0.3)); border-color: var(--accent); }
+.fun-form select { padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: var(--text); }
+.fun-bulk { margin: 10px 0 0; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); padding: 0 12px; }
+.fun-bulk > summary { cursor: pointer; padding: 10px 0; font-size: .86rem; color: var(--muted); list-style: none; } .fun-bulk[open] > summary { color: var(--accent); }
+.fun-bulk textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: var(--text); font: inherit; resize: vertical; }
+.fun-bulk .fb-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0 12px; } .fb-to { flex: 1; font-size: .8rem; color: var(--muted); }
 .fun-form { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px; border-radius: 16px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); }
 .fun-form input { flex: 1 1 160px; min-width: 0; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: var(--text); }
 .fun-form input:focus { border-color: var(--accent); outline: none; }
@@ -2020,16 +2030,22 @@ body.guest #app{padding-left:0 !important}
   <!-- ============ سرگرمی: گیم / فیلم / سریال ============ -->
   <div class="container screen" id="screen-fun">
     <div class="chapters-header"><h2 id="funTitleH">🍿 سینمای ما</h2></div>
-    <div class="fun-tabs" id="funTabs">
-      <button type="button" class="fun-tab" data-c="movie" onclick="setFunCat('movie')"><span class="ft-ico">🎬</span><b>فیلم</b><small></small></button>
-      <button type="button" class="fun-tab" data-c="series" onclick="setFunCat('series')"><span class="ft-ico">📺</span><b>سریال</b><small></small></button>
+    <div class="fun-filter" id="funTabs">
+      <button type="button" class="ff-chip" data-c="all" onclick="setFunCat('all')">همه</button>
+      <button type="button" class="ff-chip" data-c="movie" onclick="setFunCat('movie')">🎬 فیلم <i></i></button>
+      <button type="button" class="ff-chip" data-c="series" onclick="setFunCat('series')">📺 سریال <i></i></button>
     </div>
     <div id="watchWrap" style="display:none"><div class="vc-chat vc-area-watch" id="watchBox"></div></div>
     <form class="fun-form" onsubmit="addFunLink(event)">
       <input type="text" id="funTitle" maxlength="80" placeholder="اسم (مثلاً سایت فیلم‌های ما)" />
       <input type="text" id="funUrl" inputmode="url" dir="ltr" placeholder="https://..." />
+      <select id="funKind" title="نوعش چیه؟"><option value="movie">🎬 فیلم</option><option value="series">📺 سریال</option></select>
       <button class="btn" type="submit">➕ اضافه کن</button>
     </form>
+    <details class="fun-bulk" id="funBulk"><summary>📋 اضافهٔ چند لینک یک‌جا</summary>
+      <textarea id="funBulkTxt" dir="ltr" rows="5" placeholder="هر خط یک لینک؛ اگه خواستی اسم هم بذاری:&#10;قسمت ۱ | https://...&#10;https://..."></textarea>
+      <div class="fb-row"><span id="funBulkTo" class="fb-to"></span><button type="button" class="btn" onclick="addFunBulk()">➕ همه رو اضافه کن</button></div>
+    </details>
     <div class="fun-hint">لینک‌ها توی یک تب جدا باز می‌شن، پس خود این سایت سبک می‌مونه ✨</div>
     <div class="fun-grid" id="funGrid"></div>
   </div>
@@ -2594,8 +2610,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-07d';
+const SITE_VERSION = '2026-11-07e';
 const SITE_CHANGES = [
+  '📁 ساخت پوشه آسون‌تر شد (اسم رو همون‌جا می‌نویسی)، با کشیدن و رها کردن یا «➕ افزودن از موجودها» چیزها می‌رن توی پوشه، توی سینما می‌شه چند لینک رو یک‌جا ریخت، و کارت‌های بزرگ فیلم/سریال به فیلتر کوچیک تبدیل شدن.',
   '📁 پوشه‌ها شبیه گیت‌هاب شدن (با اسم سازنده، تعداد و تاریخ)، دکمه‌های کارت گیم/سینما مرتب شدن، و آپلود فایل/گالری نوار پیشرفت (درصد، حجم، سرعت) داخل خود صفحه نشون می‌ده.',
   '🍿 اتاق تماشا ساده و قشنگ‌تر شد: سه کارت برای شروع (آرشیو، آپلود، لینک)، زیرنویس و اطلاعات پخش جمع‌شده زیر ویدیو، و دیده‌شده‌ها توی بخش بازشو.',
   '📂 پوشه‌ها: توی سینما، گیم، گالری، فایل‌ها و بوم می‌شه پوشه ساخت (مثلاً یک سریال با همهٔ قسمت‌هاش) و موردهای قدیمی رو هم با دکمهٔ 📂 بُرد توش. (یک بار SQL شمارهٔ ۲۷ لازمه)',
@@ -4092,7 +4109,7 @@ async function loadGallery() {
 function renderGallery() {
   const el = document.getElementById('galleryGrid'), bar = document.getElementById('galleryBar');
   if (galleryMissing) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای گالری باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  if (window.Folders) Folders.mount('gallery', bar, renderGallery, galleryList.map(g => g.id));
+  if (window.Folders) Folders.mount('gallery', bar, renderGallery, galleryList.map((g, i) => ({ id: g.id, label: (g.kind === 'video' ? '🎬 ویدیو' : '🖼️ عکس') + ' · ' + (g.author || ''), thumb: g.kind === 'video' ? '' : g.url })));
   const shownG = window.Folders ? Folders.filter('gallery', galleryList) : galleryList;
   if (galleryList.length && !shownG.length) { bar.innerHTML = ''; el.innerHTML = (window.Folders && Folders.inFolder('gallery')) ? '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر عکس، بیارش اینجا.</p></div>' : ''; return; }
   if (!galleryList.length) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🖼️</div><p>هنوز عکس یا ویدیویی نذاشتیم... اولین خاطره‌مون رو اضافه کن 💜</p></div>'; return; }
@@ -4101,7 +4118,7 @@ function renderGallery() {
     ? `<button class="btn" type="button" onclick="toggleGalleryAll()">${n === galleryList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn" type="button" onclick="moveSelected('gallery')" ${n ? '' : 'disabled'}>📂 انتقال</button><button class="btn fs-del" type="button" onclick="removeSelectedGallery()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setGallerySelMode(false)">انصراف</button>`
     : '<button class="btn" type="button" onclick="setGallerySelMode(true)">☑️ انتخاب چندتایی</button>';
   el.innerHTML = shownG.map(g => `
-    <div class="g-item${gallerySel.has(g.id) ? ' selected' : ''}" data-id="${escapeHtml(g.id)}">
+    <div class="g-item${gallerySel.has(g.id) ? ' selected' : ''}" data-id="${escapeHtml(g.id)}" data-dsec="gallery" data-did="${escapeHtml(g.id)}" draggable="true">
       ${g.kind === 'video'
         ? `<video data-src="${escapeHtml(g.url)}#t=0.1" preload="none" muted playsinline></video><span class="g-play">▶</span>`
         : `<img src="${escapeHtml(g.url)}" loading="lazy" decoding="async" alt="">`}
@@ -4212,7 +4229,7 @@ async function loadFiles() {
 function renderFiles() {
   const el = document.getElementById('filesList');
   if (filesMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای بخش فایل‌ها باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => f.id));
+  if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => ({ id: f.id, label: f.name })));
   const shownF = window.Folders ? Folders.filter('files', filesList) : filesList;
   if (filesList.length && !shownF.length) { el.innerHTML = (window.Folders && Folders.inFolder('files')) ? '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر فایل، بیارش اینجا.</p></div>' : ''; return; }
   if (!filesList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📁</div><p>هنوز فایلی نذاشتیم...</p></div>'; return; }
@@ -4221,7 +4238,7 @@ function renderFiles() {
     ? `<div class="files-selbar"><button class="btn" type="button" onclick="toggleFilesAll()">${n === filesList.length ? '⬜ هیچکدوم' : '☑️ انتخاب همه'}</button><span class="fs-count">${n} انتخاب شده</span><button class="btn" type="button" onclick="moveSelected('files')" ${n ? '' : 'disabled'}>📂 انتقال</button><button class="btn fs-del" type="button" onclick="removeSelectedFiles()" ${n ? '' : 'disabled'}>🗑️ حذف</button><button class="btn" type="button" onclick="setFilesSelMode(false)">انصراف</button></div>`
     : `<div class="files-selbar"><button class="btn" type="button" onclick="setFilesSelMode(true)">☑️ انتخاب چندتایی</button></div>`;
   el.innerHTML = bar + shownF.map(f => `
-    <div class="playlist-item file-item${fileSel.has(f.id) ? ' selected' : ''}">
+    <div class="playlist-item file-item${fileSel.has(f.id) ? ' selected' : ''}" data-dsec="files" data-did="${escapeHtml(f.id)}" draggable="true">
       ${filesSelMode ? `<input type="checkbox" class="file-chk" ${fileSel.has(f.id) ? 'checked' : ''} onchange="toggleFileSel('${f.id}')" />` : ''}
       <div class="pl-icon" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><span class="pl-glyph">${fileIcon(f.name, f.mime)}</span></div>
       <div class="pl-info" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><div class="pl-title">${escapeHtml(f.name)}</div><div class="pl-sub">${fmtSize(f.size || 0)}${f.author ? ' · ' + escapeHtml(f.author) : ''}</div></div>
@@ -4400,11 +4417,13 @@ async function renderFileInto(body, f, alive) {
 const FUN_CATS = { game: { ico: '🎮', name: 'گیم' }, movie: { ico: '🎬', name: 'فیلم' }, series: { ico: '📺', name: 'سریال' } };
 let funList = [], funLoaded = false, funMissing = false;
 let funCat = 'movie';
-let cinemaCat = (() => { try { const c = localStorage.getItem('diary_fun_cat'); return (c === 'movie' || c === 'series') ? c : 'movie'; } catch (e) { return 'movie'; } })();
+let funMode = 'cinema';
+let cinemaCat = (() => { try { const c = localStorage.getItem('diary_fun_cat'); return (c === 'movie' || c === 'series' || c === 'all') ? c : 'all'; } catch (e) { return 'all'; } })();
 funCat = cinemaCat;
 function funApplyMode(mode) {
-  const g = mode === 'games';
+  const g = mode === 'games'; funMode = mode;
   funCat = g ? 'game' : cinemaCat;
+  const fk = document.getElementById('funKind'); if (fk) fk.style.display = g ? 'none' : '';
   const t = document.getElementById('funTabs'); if (t) t.style.display = g ? 'none' : '';
   const h = document.getElementById('funTitleH'); if (h) h.textContent = g ? '🎮 گیم‌های ما' : '🍿 سینمای ما';
   const i = document.getElementById('funTitle'); if (i) i.placeholder = g ? 'اسم گیم (مثلاً سایت یا لینک دانلودش)' : 'اسم (مثلاً سایت فیلم‌های ما)';
@@ -4417,15 +4436,18 @@ async function loadFun() {
   funMissing = false; funList = data || []; funLoaded = true; renderFun();
 }
 function setFunTabs() {
-  const ww = document.getElementById('watchWrap'); if (ww) ww.style.display = (funCat === 'movie' || funCat === 'series') ? '' : 'none';
-  document.querySelectorAll('#funTabs .fun-tab').forEach(b => {
+  const ww = document.getElementById('watchWrap'); if (ww) ww.style.display = funMode === 'cinema' ? '' : 'none';
+  const cin = funList.filter(x => x.category === 'movie' || x.category === 'series');
+  document.querySelectorAll('#funTabs [data-c]').forEach(b => {
     b.classList.toggle('on', b.dataset.c === funCat);
-    const n = funList.filter(x => x.category === b.dataset.c).length;
-    b.querySelector('small').textContent = n ? n + ' مورد' : '';
+    const n = b.dataset.c === 'all' ? 0 : cin.filter(x => x.category === b.dataset.c).length, i = b.querySelector('i'); if (i) i.textContent = n || '';
   });
+  const fk = document.getElementById('funKind'); if (fk && funMode === 'cinema' && (funCat === 'movie' || funCat === 'series')) fk.value = funCat;
+  const bt = document.getElementById('funBulkTo');
+  if (bt) { const sec = funMode === 'games' ? 'games' : 'cinema'; const c = window.Folders ? Folders.cur(sec) : 'all'; const f = (window.Folders && Folders.isFolder(c)) ? Folders._state().folders.find(x => x.id === c) : null; bt.textContent = f ? '📁 داخل پوشهٔ «' + f.name + '» ذخیره می‌شه' : 'بیرون از پوشه ذخیره می‌شه (اول وارد یک پوشه شو تا داخلش بره)'; }
 }
 function setFunCat(c) {
-  funCat = c; if (c === 'movie' || c === 'series') { cinemaCat = c; try { localStorage.setItem('diary_fun_cat', c); } catch (e) {} }
+  funCat = c; if (c === 'movie' || c === 'series' || c === 'all') { cinemaCat = c; try { localStorage.setItem('diary_fun_cat', c); } catch (e) {} }
   renderFun();
 }
 const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } };
@@ -4433,23 +4455,23 @@ function renderFun() {
   setFunTabs();
   const el = document.getElementById('funGrid');
   if (funMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای این بخش باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  const sec = funCat === 'game' ? 'games' : 'cinema';
+  const sec = funMode === 'games' ? 'games' : 'cinema';
   const inSec = funList.filter(x => (x.category === 'game') === (sec === 'games'));
-  if (window.Folders) Folders.mount(sec, el, renderFun, inSec.map(x => x.id));
+  if (window.Folders) Folders.mount(sec, el, renderFun, inSec.map(x => ({ id: x.id, label: x.title })));
   const inFolder = window.Folders && Folders.isFolder(Folders.cur(sec));
-  let items = inFolder ? inSec : inSec.filter(x => x.category === funCat);
+  let items = (inFolder || funCat === 'all') ? inSec : inSec.filter(x => x.category === funCat);
   if (window.Folders) items = Folders.filter(sec, items);
   if (!items.length && !inFolder && window.Folders && Folders.hasFolders(sec)) { el.innerHTML = ''; return; }
   if (!items.length && inFolder) { el.innerHTML = '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر مورد، بیارش اینجا.</p></div>'; return; }
-  if (!items.length) { el.innerHTML = `<div class="empty-state"><div class="emoji">${FUN_CATS[funCat].ico}</div><p>هنوز لینکی برای «${FUN_CATS[funCat].name}» نذاشتیم... بالا اضافه کن 💜</p></div>`; return; }
+  if (!items.length) { el.innerHTML = `<div class="empty-state"><div class="emoji">${(FUN_CATS[funCat] || { ico: '🍿' }).ico}</div><p>هنوز لینکی برای «${(FUN_CATS[funCat] || { name: 'سینما' }).name}» نذاشتیم... بالا اضافه کن 💜</p></div>`; return; }
   el.innerHTML = items.map((x, i) => `
-    <a class="fun-card" style="--i:${i}" href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">
+    <a class="fun-card" style="--i:${i}" data-dsec="${sec}" data-did="${escapeHtml(x.id)}" draggable="true" href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">
       <span class="fc-ico">${FUN_CATS[x.category] ? FUN_CATS[x.category].ico : '🎬'}</span>
       <span class="fc-info"><b>${escapeHtml(x.title)}</b><small dir="ltr">${escapeHtml(hostOf(x.url))}</small></span>
       <span class="fc-go">↗</span>
       <span class="fc-acts">
       ${(x.category === 'movie' || x.category === 'series') && window.Watch ? `${Watch.isSeen(x.url) ? '<span class="fc-seen">✅ دیده‌شده</span>' : ''}<button type="button" class="fc-btn fc-watch" title="ساخت اتاق تماشا با این" onclick="event.preventDefault();event.stopPropagation();Watch.create(funList.find(l => l.id === '${x.id}'))">🍿 تماشا</button>` : ''}
-      <button type="button" class="fc-btn" title="انتقال به پوشه" onclick="event.preventDefault();event.stopPropagation();Folders.move(funCat === 'game' ? 'games' : 'cinema',['${x.id}'])">📂 پوشه</button>
+      <button type="button" class="fc-btn" title="انتقال به پوشه" onclick="event.preventDefault();event.stopPropagation();Folders.move(funMode === 'games' ? 'games' : 'cinema',['${x.id}'])">📂 پوشه</button>
       <button type="button" class="fc-btn" title="ویرایش اسم" onclick="event.preventDefault();event.stopPropagation();renameFunLink('${x.id}')">✏️</button>
       <button type="button" class="fc-btn fc-del" title="حذف" onclick="event.preventDefault();event.stopPropagation();removeFunLink('${x.id}')">🗑️</button>
       </span>
@@ -4463,10 +4485,31 @@ async function addFunLink(ev) {
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   try { const p = new URL(url); if (!/\./.test(p.hostname) && p.hostname !== 'localhost') throw 0; } catch (e) { toast('⚠️ این لینک درست نیست'); return; }
   if (!title) title = hostOf(url);
-  const row = { id: 'ln_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), category: funCat, title: title.slice(0, 80), url, author: myName() || 'ناشناس', created_at: Date.now() };
+  const row = { id: 'ln_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), category: funMode === 'games' ? 'game' : ((document.getElementById('funKind') || {}).value || 'movie'), title: title.slice(0, 80), url, author: myName() || 'ناشناس', created_at: Date.now() };
   const { error } = await dbClient.from('links').insert(row);
   if (error) { funMissing = /links|relation|schema cache/i.test(error.message || ''); renderFun(); toast('⚠️ ذخیره نشد' + (funMissing ? ' (فایل SQL اجرا نشده)' : '')); return; }
-  funList.push(row); if (window.Folders) await Folders.addToCurrent(funCat === 'game' ? 'games' : 'cinema', row.id); t.value = ''; u.value = ''; renderFun(); toast('✅ اضافه شد'); try { window.CatPal && CatPal.act('link'); } catch (e) {}
+  funList.push(row); if (window.Folders) await Folders.addToCurrent(funMode === 'games' ? 'games' : 'cinema', row.id); t.value = ''; u.value = ''; renderFun(); toast('✅ اضافه شد'); try { window.CatPal && CatPal.act('link'); } catch (e) {}
+}
+async function addFunBulk() {
+  const ta = document.getElementById('funBulkTxt'); if (!ta) return;
+  const sec = funMode === 'games' ? 'games' : 'cinema';
+  const c = window.Folders ? Folders.cur(sec) : 'all'; const fo = (window.Folders && Folders.isFolder(c)) ? Folders._state().folders.find(x => x.id === c) : null;
+  const rows = []; let n = 0;
+  for (let line of ta.value.split(/\n+/)) {
+    line = line.trim(); if (!line) continue;
+    let title = '', url = line; const m = line.match(/^(.*?)[|،,]\s*(https?:\/\/\S+)$/i) || line.match(/^(.*?)\s+(https?:\/\/\S+)$/i);
+    if (m) { title = m[1].trim(); url = m[2]; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    try { const p = new URL(url); if (!/\./.test(p.hostname)) throw 0; } catch (e) { continue; }
+    n++; if (!title) title = (fo ? fo.name + ' · ' : '') + (fo ? 'قسمت ' + n : hostOf(url));
+    rows.push({ id: 'ln_' + Date.now() + '_' + n + '_' + Math.random().toString(36).slice(2, 5), category: funMode === 'games' ? 'game' : ((document.getElementById('funKind') || {}).value || 'movie'), title: title.slice(0, 80), url, author: myName() || 'ناشناس', created_at: Date.now() + n });
+  }
+  if (!rows.length) { toast('⚠️ لینک درستی پیدا نشد؛ هر خط یک لینک'); return; }
+  const { error } = await dbClient.from('links').insert(rows);
+  if (error) { toast('⚠️ ذخیره نشد'); return; }
+  funList.push(...rows);
+  if (fo && window.Folders) await Folders.assign(sec, rows.map(r => r.id), fo.id);
+  ta.value = ''; renderFun(); toast('✅ ' + rows.length.toLocaleString('fa-IR') + ' لینک اضافه شد' + (fo ? ' توی «' + fo.name + '»' : ''));
 }
 async function renameFunLink(id) {
   const x = funList.find(l => l.id === id); if (!x) return;
