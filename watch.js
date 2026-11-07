@@ -81,7 +81,7 @@
     const go = () => { openRoom(r, true); toast2('🍿 اتاق تماشا ساخته شد؛ اون یکی هم توی سایت باشه، اتاق براش باز می‌شه'); };
     go();
     try { if (typeof setFunCat === 'function') setFunCat(item.category === 'series' ? 'series' : 'movie'); } catch (e) {}
-    if (typeof currentScreen !== 'undefined' && currentScreen !== 'fun' && typeof showScreen === 'function') showScreen('fun');
+    if (typeof currentScreen !== 'undefined' && currentScreen !== 'cinema' && typeof showScreen === 'function') showScreen('cinema');
   }
   /* ⛶ تمام‌صفحه با چت: ویدیو کل پنجره رو می‌گیره ولی چت کنارش می‌مونه (تمام‌صفحهٔ واقعی مرورگر چت رو قایم می‌کرد) */
   function theater(force) {
