@@ -368,3 +368,6 @@ create policy "folders_public_all" on public.folders
 drop policy if exists "folder_items_public_all" on public.folder_items;
 create policy "folder_items_public_all" on public.folder_items
   for all to anon, authenticated using (true) with check (true);
+
+-- 28) اسم سازندهٔ پوشه (اختیاری؛ بدونش هم پوشه‌ها کار می‌کنن ولی اسم سازنده نشون داده نمی‌شه)
+alter table public.folders add column if not exists author text;

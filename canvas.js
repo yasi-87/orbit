@@ -716,7 +716,7 @@
     const fsec = spc() === 'aisa' ? 'canvas_ai' : 'canvas';
     if (window.Folders && el.parentNode) Folders.mount(fsec, el, renderGallery, gallery.map(g => g.id));
     const shownA = window.Folders ? Folders.filter(fsec, gallery) : gallery;
-    if (gallery.length && !shownA.length) { el.innerHTML = '<div class="cv-empty">📂 این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر نقاشی، بیارش اینجا.</div>'; return; }
+    if (gallery.length && !shownA.length) { el.innerHTML = (window.Folders && Folders.inFolder(fsec)) ? '<div class="cv-empty">📂 این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر نقاشی، بیارش اینجا.</div>' : ''; return; }
     if (!gallery.length) { el.innerHTML = '<div class="cv-empty">هنوز نقاشی‌ای ذخیره نکردیم… اولین شاهکارمون رو بکشیم 🎨</div>'; return; }
     const favs = gallery.filter(g => g.fav).length;
     el.innerHTML = `<div class="cv-gal-top">${fa(gallery.length)} نقاشی · ❤️ ${fa(favs)} مورد علاقه <label><input type="checkbox" id="cvFavOnly" ${galFav ? 'checked' : ''}/> فقط علاقه‌مندی‌ها</label></div><div class="cv-grid">` + shownA.filter(g => !galFav || g.fav).map(g => {
