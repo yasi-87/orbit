@@ -2,7 +2,7 @@
    دو جدول: folders (خود پوشه‌ها) و folder_items (هر مورد توی کدوم پوشه‌ست).
    جدول‌های اصلی (gallery / files / links / canvas_art) هیچ تغییری نمی‌کنن؛ پس مورد‌های قدیمی هم می‌تونن بیان توی پوشه. */
 (function () {
-  const st = { folders: [], items: {}, loaded: false, missing: false, at: 0, sig: '', busy: false, cur: {}, reg: {}, ids: {} };
+  const st = { folders: [], items: {}, loaded: false, missing: false, at: 0, sig: '', busy: false, cur: {}, reg: {}, ids: {}, lab: {}, creating: {} };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = m => { try { (window.toast || window.toast2)(m); } catch (e) {} };
   const key = (s, id) => s + ':' + id;
@@ -18,6 +18,12 @@
 .fld-chip.on{background:linear-gradient(135deg,rgba(212,165,255,.38),rgba(255,160,200,.3));border-color:var(--accent,#d4a5ff)}
 .fld-chip.act{border-style:dashed}
 .fld-note{font-size:.8rem;opacity:.75}
+.fld-newin{display:inline-flex;gap:6px;align-items:center;flex:1;min-width:200px}
+.fld-inp{flex:1;min-width:0;padding:8px 12px;border-radius:12px;border:1px solid rgba(212,165,255,.4);background:rgba(0,0,0,.3);color:inherit;font:inherit}
+.fld-ok,.fld-no{width:34px;height:34px;border-radius:50%;border:0;color:inherit;cursor:pointer;background:rgba(90,214,125,.3)}.fld-no{background:rgba(255,255,255,.1)}
+.fld-over{outline:2px dashed var(--accent,#d4a5ff);background:rgba(212,165,255,.22)!important}
+.fld-picklist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
+.fld-pk{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.05);cursor:pointer}.fld-pk img{width:40px;height:40px;object-fit:cover;border-radius:8px}.fld-pk span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fld-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;padding:8px 4px}
 .fld-path{display:inline-flex;align-items:center;gap:8px;font-size:1rem}.fld-path a{cursor:pointer;opacity:.6;padding:0 4px}
 .fld-meta{flex:1;color:var(--muted,#aaa);font-size:.78rem}
@@ -79,13 +85,19 @@
     let h;
     if (f) {
       h = `<div class="fld-head"><button type="button" class="fld-up" data-act="up" title="برگشت">↑</button><span class="fld-path"><a data-act="up">/</a><span class="fld-ic">${ICON}</span><b>${esc(f.name)}</b></span>`
-        + `<span class="fld-meta">${f.author ? '👤 ' + esc(f.author) + ' · ' : ''}${fa(countOf(f.id))} مورد${f.created_at ? ' · ' + esc(dateOf(f.created_at)) : ''}</span>${rowBtns(f.id)}</div>`;
+        + `<span class="fld-meta">${f.author ? '👤 ' + esc(f.author) + ' · ' : ''}${fa(countOf(f.id))} مورد${f.created_at ? ' · ' + esc(dateOf(f.created_at)) : ''}</span><button type="button" class="fld-new" data-act="pick">➕ افزودن از موجودها</button>${rowBtns(f.id)}</div>`;
     } else {
-      h = `<div class="fld-head"><span class="fld-path">📂 <b>پوشه‌ها</b></span><span class="fld-meta">${fs.length ? fa(fs.length) + ' پوشه' : 'هنوز پوشه‌ای نداریم'}</span><button type="button" class="fld-new" data-act="new">➕ پوشهٔ جدید</button></div>`;
+      h = `<div class="fld-head"><span class="fld-path">📂 <b>پوشه‌ها</b></span><span class="fld-meta">${fs.length ? fa(fs.length) + ' پوشه' : 'هنوز پوشه‌ای نداریم'}</span>${st.creating[sec] ? '<span class="fld-newin"><input type="text" class="fld-inp" maxlength="40" placeholder="اسم پوشه (مثلاً اسم سریال)…" /><button type="button" class="fld-ok" data-act="ok" title="ساخت">✓</button><button type="button" class="fld-no" data-act="cancel" title="انصراف">✕</button></span>' : '<button type="button" class="fld-new" data-act="new">➕ پوشهٔ جدید</button>'}</div>`;
       if (fs.length) h += '<div class="fld-list">' + fs.map(x => `<div class="fld-row" data-f="${esc(x.id)}" tabindex="0"><span class="fld-ic">${ICON}</span><span class="fld-nm">${esc(x.name)}</span>`
         + `<span class="fld-by">${x.author ? '👤 ' + esc(x.author) : ''}</span><span class="fld-ct">${fa(countOf(x.id))} مورد</span><span class="fld-dt">${esc(dateOf(x.created_at))}</span>${rowBtns(x.id)}</div>`).join('') + '</div>';
     }
     bar.innerHTML = h;
+    if (st.creating[sec]) { const i = bar.querySelector('.fld-inp'); if (i) { i.focus(); i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submitNew(sec, i.value); } else if (e.key === 'Escape') { st.creating[sec] = false; draw(sec, bar); } }; } }
+  }
+  async function submitNew(sec, v) {
+    if (!String(v || '').trim()) return;
+    const f = await create(sec, v); if (!f) return;
+    st.creating[sec] = false; st.cur[sec] = f.id; st.reg[sec] && st.reg[sec].re();
   }
   async function renameF(sec, id) {
     const f = st.folders.find(x => x.id === id); if (!f) return;
@@ -107,12 +119,16 @@
   }
   async function onBar(e) {
     const bar = e.currentTarget, sec = bar.dataset.sec;
+    if (e.target.closest('.fld-inp')) return;
     const rb = e.target.closest('[data-ract]');
     if (rb) { e.stopPropagation(); return rb.dataset.ract === 'ren' ? renameF(sec, rb.dataset.id) : deleteF(sec, rb.dataset.id); }
     const a = e.target.closest('[data-act]');
     if (a) {
       if (a.dataset.act === 'up') { st.cur[sec] = 'all'; return st.reg[sec] && st.reg[sec].re(); }
-      if (a.dataset.act === 'new') { const f = await create(sec); if (f) { st.cur[sec] = f.id; st.reg[sec] && st.reg[sec].re(); } }
+      if (a.dataset.act === 'new') { st.creating[sec] = true; return draw(sec, bar); }
+      if (a.dataset.act === 'cancel') { st.creating[sec] = false; return draw(sec, bar); }
+      if (a.dataset.act === 'ok') { const i = bar.querySelector('.fld-inp'); return submitNew(sec, i && i.value); }
+      if (a.dataset.act === 'pick') return pick(sec);
       return;
     }
     const r = e.target.closest('[data-f]'); if (r) { st.cur[sec] = r.dataset.f; if (st.reg[sec]) st.reg[sec].re(); }
@@ -132,7 +148,7 @@
   /* نوار پوشه‌ها رو قبل از anchor می‌ذاره؛ ids = شناسهٔ همهٔ موردهای این بخش (برای شمارش) */
   function mount(sec, anchor, re, ids) {
     if (!anchor || !anchor.parentNode) return;
-    st.ids[sec] = ids || [];
+    const arr = ids || []; st.lab[sec] = arr.map(x => (x && typeof x === 'object') ? x : { id: x, label: String(x) }); st.ids[sec] = st.lab[sec].map(x => x.id);
     let bar = anchor.previousElementSibling;
     if (!bar || !bar.classList || !bar.classList.contains('fld-bar')) {
       bar = document.createElement('div'); bar.className = 'fld-bar';
@@ -173,19 +189,52 @@
     const fs = st.folders.filter(f => f.section === sec);
     ov.innerHTML = `<div class="fld-box"><h4>📂 انتقال ${fa(ids.length)} مورد به…</h4>`
       + fs.map(f => `<button type="button" class="fld-chip" data-to="${esc(f.id)}"><span class="fld-ic">${ICON}</span>${esc(f.name)}</button>`).join('')
-      + '<button type="button" class="fld-chip act" data-to="__new">➕ پوشهٔ جدید…</button><button type="button" class="fld-chip" data-to="__none">📄 بیرون از پوشه</button><button type="button" class="fld-chip" data-to="__x">انصراف</button></div>';
+      + '<div class="fld-newin"><input type="text" class="fld-inp" maxlength="40" placeholder="➕ اسم پوشهٔ جدید…" /><button type="button" class="fld-ok" data-to="__new" title="بساز و منتقل کن">✓</button></div><button type="button" class="fld-chip" data-to="__none">📄 بیرون از پوشه</button><button type="button" class="fld-chip" data-to="__x">انصراف</button></div>';
     ov.addEventListener('click', async e => {
       if (e.target === ov) return ov.remove();
       const b = e.target.closest('[data-to]'); if (!b) return;
       let to = b.dataset.to;
       if (to === '__x') return ov.remove();
-      if (to === '__new') { const f = await create(sec); if (!f) return; to = f.id; }
+      if (to === '__new') { const i = ov.querySelector('.fld-inp'); if (!i || !i.value.trim()) { if (i) i.focus(); return; } const f = await create(sec, i.value); if (!f) return; to = f.id; }
       ov.remove();
       const ok = await assign(sec, ids, to === '__none' ? null : to);
       if (ok) { toast(to === '__none' ? '📄 از پوشه دراومد' : '📁 منتقل شد'); if (st.reg[sec]) st.reg[sec].re(); if (done) done(); }
     });
     document.body.appendChild(ov);
   }
+
+  /* افزودن موردهای موجود (که توی هیچ پوشه‌ای نیستن) به پوشهٔ بازِ همین بخش */
+  function pick(sec) {
+    const c = cur(sec); if (!isFolder(c)) return;
+    const free = (st.lab[sec] || []).filter(x => { const f = st.items[key(sec, x.id)]; return !f || !st.folders.some(z => z.id === f); });
+    const ov = document.createElement('div'); ov.className = 'fld-ov';
+    ov.innerHTML = '<div class="fld-box"><h4>➕ چی بیاد توی این پوشه؟</h4>' + (free.length
+      ? '<div class="fld-picklist">' + free.map(x => `<label class="fld-pk"><input type="checkbox" value="${esc(x.id)}" />${x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy">` : ''}<span>${esc(x.label)}</span></label>`).join('') + '</div><button type="button" class="fld-new" data-go="1">✓ اضافه کن</button>'
+      : '<div class="fld-note">چیزی بیرون از پوشه نمونده؛ یا همه‌شون توی پوشه‌ان یا هنوز چیزی اضافه نکردین.</div>')
+      + '<button type="button" class="fld-chip" data-x="1">بستن</button></div>';
+    ov.addEventListener('click', async e => {
+      if (e.target === ov || e.target.closest('[data-x]')) return ov.remove();
+      if (!e.target.closest('[data-go]')) return;
+      const ids = [...ov.querySelectorAll('input:checked')].map(i => i.value); if (!ids.length) return toast('یکی رو انتخاب کن');
+      ov.remove();
+      if (await assign(sec, ids, c)) { toast('📁 ' + fa(ids.length) + ' مورد اضافه شد'); st.reg[sec] && st.reg[sec].re(); }
+    });
+    document.body.appendChild(ov);
+  }
+  /* کشیدن و رها کردن روی پوشه (کامپیوتر) */
+  let drag = null;
+  const dropEl = e => e.target && e.target.closest && e.target.closest('.fld-row[data-f],.fld-head [data-act=up]');
+  document.addEventListener('dragstart', e => { const t = e.target.closest && e.target.closest('[data-dsec]'); if (!t) return; drag = { sec: t.dataset.dsec, id: t.dataset.did }; try { e.dataTransfer.setData('text/plain', drag.id); e.dataTransfer.effectAllowed = 'move'; } catch (_) {} });
+  document.addEventListener('dragend', () => { drag = null; document.querySelectorAll('.fld-over').forEach(x => x.classList.remove('fld-over')); });
+  document.addEventListener('dragover', e => { const r = drag && dropEl(e); if (r) { e.preventDefault(); r.classList.add('fld-over'); } });
+  document.addEventListener('dragleave', e => { const r = dropEl(e); if (r) r.classList.remove('fld-over'); });
+  document.addEventListener('drop', async e => {
+    const r = drag && dropEl(e); if (!r) return; e.preventDefault(); r.classList.remove('fld-over');
+    const bar = r.closest('.fld-bar'), sec = bar && bar.dataset.sec, d = drag; drag = null;
+    if (!sec || sec !== d.sec) return toast('این مورد مال بخش دیگه‌ست');
+    const fid = r.dataset.f || null;
+    if (await assign(sec, [d.id], fid)) { toast(fid ? '📁 توی پوشه رفت' : '📄 از پوشه دراومد'); st.reg[sec] && st.reg[sec].re(); }
+  });
 
   window.Folders = { load, mount, filter, assign, move, create, addToCurrent, cur, isFolder, inFolder, hasFolders, _state: () => st };
 })();

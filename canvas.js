@@ -714,7 +714,7 @@
     const el = $('cvGal'); if (!el) return;
     if (artMissing) { el.innerHTML = '<div class="cv-empty">🛠️ برای گالری باید SQL شمارهٔ ۲۴ رو یک بار توی Supabase اجرا کنی.</div>'; return; }
     const fsec = spc() === 'aisa' ? 'canvas_ai' : 'canvas';
-    if (window.Folders && el.parentNode) Folders.mount(fsec, el, renderGallery, gallery.map(g => g.id));
+    if (window.Folders && el.parentNode) Folders.mount(fsec, el, renderGallery, gallery.map(g => ({ id: g.id, label: g.title || 'نقاشی', thumb: g.url })));
     const shownA = window.Folders ? Folders.filter(fsec, gallery) : gallery;
     if (gallery.length && !shownA.length) { el.innerHTML = (window.Folders && Folders.inFolder(fsec)) ? '<div class="cv-empty">📂 این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر نقاشی، بیارش اینجا.</div>' : ''; return; }
     if (!gallery.length) { el.innerHTML = '<div class="cv-empty">هنوز نقاشی‌ای ذخیره نکردیم… اولین شاهکارمون رو بکشیم 🎨</div>'; return; }
@@ -722,7 +722,7 @@
     el.innerHTML = `<div class="cv-gal-top">${fa(gallery.length)} نقاشی · ❤️ ${fa(favs)} مورد علاقه <label><input type="checkbox" id="cvFavOnly" ${galFav ? 'checked' : ''}/> فقط علاقه‌مندی‌ها</label></div><div class="cv-grid">` + shownA.filter(g => !galFav || g.fav).map(g => {
       const lk = locked(g); const left = lk ? Math.ceil((Number(g.reveal_at) - Date.now()) / 3600000) : 0;
       let cm = 0; try { cm = JSON.parse(g.comments || '[]').length; } catch (e) {}
-      return `<div class="cv-card" data-id="${esc(g.id)}">${lk ? `<div class="cv-lock">🔒<small>غافلگیری! حدود ${fa(left)} ساعت دیگه</small></div>` : `<img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" data-open="${esc(g.id)}">`}
+      return `<div class="cv-card" data-id="${esc(g.id)}" data-dsec="${fsec}" data-did="${esc(g.id)}" draggable="true">${lk ? `<div class="cv-lock">🔒<small>غافلگیری! حدود ${fa(left)} ساعت دیگه</small></div>` : `<img src="${esc(g.url)}" alt="${esc(g.title)}" loading="lazy" data-open="${esc(g.id)}">`}
         <div class="cv-ct"><b>${esc(lk ? 'نقاشی مخفی' : g.title)}</b><small>${esc(g.author || '')} · ${esc(dateOf(g.created_at))}</small></div>
         <div class="cv-ca"><button type="button" data-fav="${esc(g.id)}" title="علاقه‌مندی">${g.fav ? '❤️' : '🤍'}</button><button type="button" data-mv="${esc(g.id)}" title="انتقال به پوشه">📂</button>${lk ? '' : `<button type="button" data-open="${esc(g.id)}" title="دیدن و کامنت">💬${cm ? ' ' + fa(cm) : ''}</button><button type="button" data-edit="${esc(g.id)}" title="ویرایش دوباره">✏️</button><button type="button" data-dl="${esc(g.id)}" title="دانلود">⬇️</button><button type="button" data-pdf="${esc(g.id)}" title="ذخیره PDF">📄</button>`}${canShare() && !lk ? `<button type="button" data-aish="${esc(g.id)}" class="${sharedSet.has(g.id) ? 'on' : ''}" title="${sharedSet.has(g.id) ? 'الان برای آیسا نمایش داده می‌شه (برای پنهان کردن بزن)' : 'نمایش برای آیسا'}">${sharedSet.has(g.id) ? '👧✅' : '👧'}</button>` : ''}<button type="button" data-del="${esc(g.id)}" title="حذف">🗑️</button></div></div>`;
     }).join('') + '</div>';
