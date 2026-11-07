@@ -513,6 +513,30 @@ body.wt-theater-on{overflow:hidden}
 @media (min-width:900px){body.chat-open .wt-stage.wt-theater{left:330px}}
 @media (max-width:899px){body.chat-open .wt-stage.wt-theater{bottom:calc(min(72vh,540px) + 16px)}}
 
+.wt-h{background:linear-gradient(135deg,rgba(212,165,255,.18),rgba(255,160,200,.12));border-bottom:0;border-radius:18px 18px 0 0;padding:12px 16px}
+.wt-ttl{display:flex;align-items:center;gap:10px;min-width:0}.wt-ttl>div{display:flex;flex-direction:column;min-width:0}.wt-ttl b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wt-ttl small{color:var(--muted,#aaa);font-weight:400;font-size:.74rem}
+.wt-pop{font-size:1.7rem;animation:wtPop 3s ease-in-out infinite}@keyframes wtPop{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg) scale(1.1)}}
+.wt-x{width:32px;height:32px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:inherit;cursor:pointer}.wt-x:hover{background:rgba(255,120,140,.35)}
+.wt-stage{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.wt-mid{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.wt-mid .wt-people{flex:1;min-width:160px}
+.wt-react button{width:38px;height:38px;border-radius:50%}
+.wt-more,.wt-opt,.wt-help{border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:0 12px}
+.wt-more>summary,.wt-opt>summary,.wt-help>summary{cursor:pointer;padding:10px 0;font-size:.86rem;list-style:none;color:var(--muted,#bbb)}
+.wt-more>summary::-webkit-details-marker,.wt-opt>summary::-webkit-details-marker,.wt-help>summary::-webkit-details-marker{display:none}
+.wt-more[open]>summary,.wt-opt[open]>summary,.wt-help[open]>summary{color:var(--accent,#d4a5ff)}
+.wt-more[open]{padding-bottom:12px}.wt-more .wt-info{margin-top:8px}
+.wt-act{justify-content:center}
+.wt-hero{padding:18px 14px;display:flex;flex-direction:column;gap:14px;text-align:center}
+.wt-hero-t{font-size:1.4rem;font-weight:700}.wt-hero-s{color:var(--muted,#aaa);font-size:.86rem;line-height:1.8}
+.wt-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.wt-card{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 8px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:inherit;font:inherit;cursor:pointer;transition:.2s}
+.wt-card:hover,.wt-card.on{transform:translateY(-3px);border-color:var(--accent,#d4a5ff);background:linear-gradient(135deg,rgba(212,165,255,.25),rgba(255,160,200,.18))}
+.wt-card span{font-size:2rem}.wt-card small{color:var(--muted,#aaa);font-size:.72rem}
+.wt-linkbox{display:none;flex-direction:column;gap:8px;text-align:right;padding:12px;border-radius:16px;background:rgba(255,255,255,.04);border:1px dashed rgba(212,165,255,.3)}
+.wt-hero.lk .wt-linkbox{display:flex}
+.wt-help{text-align:right}
+@media (max-width:520px){.wt-cards{grid-template-columns:1fr}.wt-card{flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 16px}.wt-card small{display:none}.wt-hero-t{font-size:1.2rem}}
 @media (min-width:900px){.vc-area-watch{grid-column:1 / -1}}`;
 
   function ensureCss() { if ($('wtCss')) return; const st = document.createElement('style'); st.id = 'wtCss'; st.textContent = CSS; document.head.appendChild(st); }
@@ -528,39 +552,45 @@ body.wt-theater-on{overflow:hidden}
     const stage = isVideo()
       ? `<div class="wt-stage" id="wtStage"><video id="wtVideo" src="${esc(r.item.url)}" controls controlslist="nofullscreen" playsinline preload="metadata"></video><div class="wt-flbox" id="wtFl"></div><div class="wt-tb"><button type="button" data-wt="theater" title="تمام‌صفحه؛ چت کنارش می‌مونه (کلید F)">⛶ تمام‌صفحه با چت</button><button type="button" class="wt-tchat" data-wt="tchat" title="باز/بسته کردن چت">💬 چت</button></div></div>`
       : `<div class="wt-stage" id="wtStage"><div class="wt-clock" id="wtClock"></div></div>`;
-    box.innerHTML = `<div class="wt-h">🍿 اتاق تماشا: «${esc(r.item.title)}» <span class="sp"></span><small style="color:var(--muted,#aaa)">ساخته‌شده توسط ${esc(r.by || '')}</small></div>
+    box.innerHTML = `<div class="wt-h"><div class="wt-ttl"><span class="wt-pop">🍿</span><div><b>${esc(r.item.title)}</b><small>اتاق ${esc(r.by || '')}</small></div></div><span class="sp"></span><button type="button" class="wt-x" data-wt="close" title="بستن اتاق">✕</button></div>
       <div class="wt-body">${stage}
-        ${isVideo() ? '<div class="wt-sub" id="wtSub"></div>' : '<div class="wt-sec">💬 زیرنویس فقط برای فیلم‌های لینک مستقیم/آپلودی فعاله.</div>'}
-        ${isVideo() ? '<div class="wt-info" id="wtInfo"></div>' : ''}
-        <div class="wt-react" id="wtReact">${REACTS.map(e => `<button type="button" data-re="${e}" aria-label="واکنش ${e}">${e}</button>`).join('')}</div>
-        <div class="wt-people" id="wtPeople"></div>
-        <div class="wt-sec">💬 برای چت کردن موقع تماشا، از چت کنار اتاق صحبت استفاده کنید.</div>
-        <div class="wt-act"><button type="button" class="btn" data-wt="finish">🏁 تموم شد؛ ثبت توی دیده‌شده‌ها</button><button type="button" class="btn ghost" data-wt="close">✕ بستن اتاق</button></div>
+        <div class="wt-mid"><div class="wt-react" id="wtReact">${REACTS.map(e => `<button type="button" data-re="${e}" aria-label="واکنش ${e}">${e}</button>`).join('')}</div><div class="wt-people" id="wtPeople"></div></div>
+        ${isVideo() ? '<details class="wt-more"><summary>💬 زیرنویس و اطلاعات پخش</summary><div class="wt-sub" id="wtSub"></div><div class="wt-info" id="wtInfo"></div></details>' : ''}
+        <div class="wt-act"><button type="button" class="btn" data-wt="finish">🏁 تموم شد؛ ثبت توی دیده‌شده‌ها</button></div>
       </div>${renderSeen()}`;
     bind(); bindVideo(); renderClock(); renderPeople(); renderSubUi();
   }
   function renderIdle() {
     const list = moviesFromArchive();
-    return `<div class="wt-h">🍿 اتاق تماشا <span class="sp"></span><button type="button" class="btn" data-wt="pick">🎬 انتخاب فیلم از آرشیو سرگرمی</button></div>
-      <div class="wt-body">
-        <div class="wt-new"><div class="wt-sec">🔗 فیلم با لینک مستقیم یا 📤 آپلود از سیستم (بدون نیاز به آرشیو)</div>
-          <div class="wt-row"><input type="text" id="wtLink" dir="ltr" inputmode="url" placeholder="لینک مستقیم فیلم (…mp4 / webm / mkv)" /><input type="text" id="wtLinkT" maxlength="80" placeholder="اسم فیلم (اختیاری)" /></div>
-          <div class="wt-row"><select id="wtCat"><option value="movie">🎬 فیلم</option><option value="series">📺 سریال</option></select><label><input type="checkbox" id="wtDirect" /> لینک مستقیم ویدیوئه (بدون پسوند mp4)</label><label><input type="checkbox" id="wtSave" checked /> توی آرشیو هم بمونه</label></div>
-          <div class="wt-row"><button type="button" class="btn" data-wt="link">▶️ شروع تماشا با لینک</button><button type="button" class="btn ghost" data-wt="up">📤 آپلود فیلم از سیستم</button><input type="file" id="wtUp" accept="video/*,.mp4,.webm,.mov,.m4v,.mkv" hidden /></div>
-          <div class="wt-sec">لینک سایت‌هایی مثل یوتیوب یا آپارات مستقیم نیستن؛ برای اونا از آرشیو استفاده کن تا «ساعت مشترک» همگامشون کنه. avi و wmv توی مرورگر پخش نمی‌شن؛ mkv فقط با کدک H.264/AAC.</div></div>
-        ${picker ? (list.length ? `<div class="wt-pick">${list.map(x => `<button type="button" class="wt-it" data-wid="${esc(x.id)}"><span>${x.category === 'series' ? '📺' : '🎬'}</span><b>${esc(x.title)}</b>${isSeen(x.url) ? '<small>✅ دیده‌شده</small>' : ''}<small dir="ltr">${esc(hostOf(x.url))}</small></button>`).join('')}</div>`
-          : '<div class="wt-empty">هنوز فیلم یا سریالی توی آرشیو سرگرمی نذاشتیم؛ از بخش 🎬 سرگرمی اضافه کنید 💜</div>')
-          : '<div class="wt-empty">یه فیلم یا سریال از آرشیو سرگرمی انتخاب کنید تا اتاق تماشا برای هر دومون باز بشه؛ پخش و توقف همزمانه و می‌تونیم واکنش بدیم 💞</div>'}
-      </div>${renderSeen()}`;
+    return `<div class="wt-hero">
+      <div class="wt-hero-t">🍿 اتاق تماشا</div>
+      <div class="wt-hero-s">با هم و همزمان فیلم ببینیم؛ پخش، توقف و جلو و عقب برای هر دومون یکیه 💞</div>
+      <div class="wt-cards">
+        <button type="button" class="wt-card${picker ? ' on' : ''}" data-wt="pick"><span>🎬</span><b>از آرشیو سینما</b><small>فیلم و سریال‌هایی که گذاشتیم</small></button>
+        <button type="button" class="wt-card" data-wt="up"><span>📤</span><b>آپلود از سیستم</b><small>mp4 · webm · mkv</small></button>
+        <button type="button" class="wt-card" onclick="this.closest('.wt-hero').classList.toggle('lk')"><span>🔗</span><b>لینک مستقیم</b><small>لینک خود فایل ویدیو</small></button>
+      </div>
+      <input type="file" id="wtUp" accept="video/*,.mp4,.webm,.mov,.m4v,.mkv" hidden />
+      <div class="wt-linkbox">
+        <div class="wt-row"><input type="text" id="wtLink" dir="ltr" inputmode="url" placeholder="لینک مستقیم فیلم (…mp4 / webm / mkv)" /><input type="text" id="wtLinkT" maxlength="80" placeholder="اسم (اختیاری)" /></div>
+        <details class="wt-opt"><summary>گزینه‌های بیشتر</summary>
+          <div class="wt-row"><select id="wtCat"><option value="movie">🎬 فیلم</option><option value="series">📺 سریال</option></select><label><input type="checkbox" id="wtDirect" /> لینک مستقیمه (بدون پسوند mp4)</label><label><input type="checkbox" id="wtSave" checked /> توی آرشیو هم بمونه</label></div>
+        </details>
+        <button type="button" class="btn" data-wt="link">▶️ شروع تماشا</button>
+      </div>
+      ${picker ? (list.length ? `<div class="wt-pick">${list.map(x => `<button type="button" class="wt-it" data-wid="${esc(x.id)}"><span>${x.category === 'series' ? '📺' : '🎬'}</span><b>${esc(x.title)}</b>${isSeen(x.url) ? '<small>✅</small>' : ''}<small dir="ltr">${esc(hostOf(x.url))}</small></button>`).join('')}</div>`
+        : '<div class="wt-empty">هنوز چیزی توی آرشیو سینما نذاشتیم؛ از بخش 🍿 سینما اضافه کنید 💜</div>') : ''}
+      <details class="wt-help"><summary>راهنما</summary><div class="wt-sec">یوتیوب و آپارات لینک مستقیم نیستن؛ برای اونا از آرشیو استفاده کن تا «ساعت مشترک» همگامشون کنه. avi و wmv توی مرورگر پخش نمی‌شن؛ mkv فقط با کدک H.264/AAC.</div></details>
+    </div>${renderSeen()}`;
   }
   function renderSeen() {
     if (seenMissing) return '<div class="wt-body"><div class="wt-empty">🛠️ برای ثبت دیده‌شده‌ها باید SQL شمارهٔ ۲۲ رو یک بار توی Supabase اجرا کنی.</div></div>';
     if (!seen.length) return '';
     const tot = seen.reduce((a, x) => a + (x.duration_sec || 0), 0);
-    return `<div class="wt-body" style="border-top:1px solid rgba(212,165,255,.15)"><div class="wt-sec">✅ دیده‌شده‌ها (${fa(seen.length)}) · مجموع تماشا: ${fa(Math.floor(tot / 3600))} ساعت و ${fa(Math.floor(tot % 3600 / 60))} دقیقه</div><div class="wt-seen">${seen.map(x => {
+    return `<div class="wt-body" style="padding-top:0"><details class="wt-more"><summary>✅ دیده‌شده‌ها (${fa(seen.length)}) · ${fa(Math.floor(tot / 3600))} ساعت و ${fa(Math.floor(tot % 3600 / 60))} دقیقه</summary><div class="wt-seen">${seen.map(x => {
       let when = ''; try { const w = Recur.epochToWall(x.watched_at); when = Recur.fmtJalaliShort(w.iso); } catch (e) {}
       return `<div class="wt-sv"><span>${x.category === 'series' ? '📺' : '🎬'}</span><b>${esc(x.title)}</b><small>${esc(when)}</small></div>`;
-    }).join('')}</div></div>`;
+    }).join('')}</div></details></div>`;
   }
   function renderClock(light) {
     const el = $('wtClock'); if (!el || !room) return;
