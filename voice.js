@@ -16,6 +16,13 @@
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
   const say = m => { if (typeof toast === 'function') toast(m); };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  /* لینک‌های توی پیام قابل‌کلیک می‌شن (توی تب تازه باز می‌شن) */
+  const linkify = s => esc(s).replace(/((?:https?:\/\/|www\.)[^\s<]+)/gi, (m) => {
+    let u = m, tail = ''; const t = u.match(/(?:[.,!?؟،:;)\]}»]|&quot;|&#39;)+$/); if (t) { tail = t[0]; u = u.slice(0, -tail.length); }
+    if (!u || /^(?:https?:\/\/|www\.)$/i.test(u)) return m;
+    const href = /^www\./i.test(u) ? 'https://' + u : u;
+    return '<a class="vc-lnk" href="' + href + '" target="_blank" rel="noopener noreferrer nofollow" dir="ltr">' + u + '</a>' + tail;
+  });
   const okAv = s => (typeof s === 'string' && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s) && s.length < 60000) ? s : '';
   let myThumb = '', thumbSrc = '';
   /* عکس پروفایل کوچیک‌شده (۹۶ پیکسل) تا توی حضور (presence) جا بشه */
@@ -384,7 +391,7 @@
       const d = dayLabel(m.ts); if (d && d !== last) { last = d; html += `<div class="vc-day">${esc(d)}</div>`; }
       const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span dir="${txDir(m.reply.text)}">${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
       const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" data-zoom="${esc(m.img)}">` : '';
-      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${esc(m.text)}</span>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
+      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${linkify(m.text)}</span>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
     });
     try { renderEmoFav(); } catch (e) {}
     list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
