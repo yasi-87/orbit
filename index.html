@@ -1820,7 +1820,8 @@ body.guest #app{padding-left:0 !important}
     <button class="nav-btn" data-screen="playlist" onclick="showScreen('playlist')">🎵 پلی‌لیست</button>
     <button class="nav-btn" data-screen="gallery" onclick="showScreen('gallery')">🖼️ گالری</button>
     <button class="nav-btn" data-screen="files" onclick="showScreen('files')">📁 فایل‌ها</button>
-    <button class="nav-btn" data-screen="fun" onclick="showScreen('fun')">🎬 سرگرمی</button>
+    <button class="nav-btn" data-screen="games" onclick="showScreen('games')">🎮 گیم</button>
+    <button class="nav-btn" data-screen="cinema" onclick="showScreen('cinema')">🍿 سینما</button>
     <button class="nav-btn" data-screen="canvas" onclick="showScreen('canvas')">🎨 بوم</button>
     <button class="nav-btn" data-screen="voice" onclick="showScreen('voice')">🎙️ اتاق صحبت</button>
     <button class="nav-btn" data-screen="garden" onclick="showScreen('garden')">🌳 باغ</button>
@@ -2013,9 +2014,8 @@ body.guest #app{padding-left:0 !important}
 
   <!-- ============ سرگرمی: گیم / فیلم / سریال ============ -->
   <div class="container screen" id="screen-fun">
-    <div class="chapters-header"><h2>🎬 سرگرمی ما</h2></div>
+    <div class="chapters-header"><h2 id="funTitleH">🍿 سینمای ما</h2></div>
     <div class="fun-tabs" id="funTabs">
-      <button type="button" class="fun-tab" data-c="game" onclick="setFunCat('game')"><span class="ft-ico">🎮</span><b>گیم</b><small></small></button>
       <button type="button" class="fun-tab" data-c="movie" onclick="setFunCat('movie')"><span class="ft-ico">🎬</span><b>فیلم</b><small></small></button>
       <button type="button" class="fun-tab" data-c="series" onclick="setFunCat('series')"><span class="ft-ico">📺</span><b>سریال</b><small></small></button>
     </div>
@@ -2374,10 +2374,11 @@ function uploadAvatar(ev) {
 let currentScreen = 'chapters';
 
 function showScreen(name) {
+  if (name === 'fun') name = 'cinema';
   if (guestMode && name !== 'canvas' && name !== 'profile') name = 'canvas';
   currentScreen = name;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const target = document.getElementById('screen-' + name);
+  const target = document.getElementById('screen-' + ((name === 'games' || name === 'cinema') ? 'fun' : name));
   if (target) target.classList.add('active');
 
   document.querySelectorAll('.nav-btn').forEach(b => {
@@ -2398,13 +2399,13 @@ function showScreen(name) {
   if (name === 'playlist') loadPlaylist();
   if (name === 'gallery') loadGallery();
   if (name === 'files') loadFiles();
-  if (name === 'fun') loadFun();
+  if (name === 'games' || name === 'cinema') { funApplyMode(name); loadFun(); }
   if (name === 'notes') loadNotes();
   if (name === 'daily') loadDaily();
   if (name === 'profile') bioRefresh();
   if (name === 'canvas' && window.Canvas2) Canvas2.load();
   if (name === 'voice' && window.Voice) Voice.load();
-  if (name === 'fun' && window.Watch) Watch.load();
+  if (name === 'cinema' && window.Watch) Watch.load();
   if (name === 'voice' && window.Screen2) Screen2.load();
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
@@ -2587,8 +2588,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-06m';
+const SITE_VERSION = '2026-11-07a';
 const SITE_CHANGES = [
+  '🎮🍿 بخش «سرگرمی» دو تا شد: «گیم» برای گیم‌هامون و «سینما» برای فیلم و سریال (به‌همراه اتاق تماشا).',
   '🪶 اتاق تماشا: رزولوشن و افت فریم فیلم نشون داده می‌شه؛ اگه فیلم برای دستگاه سنگین باشه (علت لرزش)، راهنمای سبک‌کردنش (H.264 ۷۲۰p) همون‌جا میاد',
   '🎬 اتاق تماشا: لرزش تصویر موقع پخش (مخصوصاً موبایل) کمتر شد؛ ویدیو لایهٔ جدا گرفت و افکت‌های تار روی فیلم برداشته شد',
   '🪶 سبک‌تر شدن سایت: فونت‌های تزئینی و آهنگ پس‌زمینه بعد از لود اصلی گرفته می‌شن؛ دیگه تب مدام نمی‌چرخه و سایت زودتر باز می‌شه',
@@ -4380,7 +4382,16 @@ async function renderFileInto(body, f, alive) {
    ============================================================ */
 const FUN_CATS = { game: { ico: '🎮', name: 'گیم' }, movie: { ico: '🎬', name: 'فیلم' }, series: { ico: '📺', name: 'سریال' } };
 let funList = [], funLoaded = false, funMissing = false;
-let funCat = (() => { try { const c = localStorage.getItem('diary_fun_cat'); return FUN_CATS[c] ? c : 'movie'; } catch (e) { return 'movie'; } })();
+let funCat = 'movie';
+let cinemaCat = (() => { try { const c = localStorage.getItem('diary_fun_cat'); return (c === 'movie' || c === 'series') ? c : 'movie'; } catch (e) { return 'movie'; } })();
+funCat = cinemaCat;
+function funApplyMode(mode) {
+  const g = mode === 'games';
+  funCat = g ? 'game' : cinemaCat;
+  const t = document.getElementById('funTabs'); if (t) t.style.display = g ? 'none' : '';
+  const h = document.getElementById('funTitleH'); if (h) h.textContent = g ? '🎮 گیم‌های ما' : '🍿 سینمای ما';
+  const i = document.getElementById('funTitle'); if (i) i.placeholder = g ? 'اسم گیم (مثلاً سایت یا لینک دانلودش)' : 'اسم (مثلاً سایت فیلم‌های ما)';
+}
 
 async function loadFun() {
   if (funLoaded) renderFun(); else { setFunTabs(); }
@@ -4397,7 +4408,7 @@ function setFunTabs() {
   });
 }
 function setFunCat(c) {
-  funCat = c; try { localStorage.setItem('diary_fun_cat', c); } catch (e) {}
+  funCat = c; if (c === 'movie' || c === 'series') { cinemaCat = c; try { localStorage.setItem('diary_fun_cat', c); } catch (e) {} }
   renderFun();
 }
 const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } };
