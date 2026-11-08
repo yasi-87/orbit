@@ -39,7 +39,7 @@
     raf = requestAnimationFrame(frame);
     beeFrame(now);
     if (document.hidden || !on) return;
-    ctx.clearRect(0, 0, W, H); const t = now / 1000;
+    if (!ctx) return; ctx.clearRect(0, 0, W, H); const t = now / 1000;
     for (const p of parts) {
       p.y += p.v; p.x += Math.sin(t * p.w + p.ph) * .6; p.r += p.rs; if (p.y > H + 30) Object.assign(p, mk(false));
       ctx.globalAlpha = p.a; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.drawImage(spr[p.k], -p.s / 2, -p.s / 2, p.s, p.s); ctx.restore();
@@ -49,7 +49,7 @@
   }
   /* 🐝 زنبور کوچولو توی همهٔ صفحه‌ها (توی منوی اصلی زنبور خودش رو داره) */
   const bee = { el: null, x: 120, y: 160, tx: 120, ty: 160, last: 0, vx: 0 };
-  function chatOpen() { const d = document.getElementById('chatDock'); return !!d && d.offsetParent !== null || (!!d && getComputedStyle(d).display !== 'none'); }
+  function chatOpen() { return document.body.classList.contains('chat-open'); }
   function beeFrame(now) {
     const b = bee.el; if (!b) return; const menu = document.getElementById('screen-menu'), hide = !on || document.hidden || (menu && menu.classList.contains('active') && !chatOpen());
     b.classList.toggle('hide', !!hide); if (hide) return; const t = now / 1000;
@@ -71,14 +71,14 @@
   }
   function build() {
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-    if (!reduce) {
-      cv = document.createElement('canvas'); cv.className = 'mg-cv'; document.body.appendChild(cv); ctx = cv.getContext('2d'); sprites(); size();
-      addEventListener('resize', size); addEventListener('pointermove', onMove, { passive: true }); addEventListener('pointerdown', e => { bee.tx = e.clientX; bee.ty = e.clientY; bee.last = performance.now(); }, { passive: true });
+    {
+      if (!reduce) { cv = document.createElement('canvas'); cv.className = 'mg-cv'; document.body.appendChild(cv); ctx = cv.getContext('2d'); sprites(); size(); addEventListener('resize', size); }
+      addEventListener('pointermove', onMove, { passive: true }); if (false) addEventListener('resize', size); addEventListener('pointerdown', e => { bee.tx = e.clientX; bee.ty = e.clientY; bee.last = performance.now(); }, { passive: true });
       bee.el = document.createElement('div'); bee.el.className = 'mg-bee hide'; bee.el.textContent = '🐝'; document.body.appendChild(bee.el); raf = requestAnimationFrame(frame);
     }
     /* دکمهٔ روشن/خاموش بالای سایت */
     const bar = document.getElementById('updatesBtn');
-    if (bar && !reduce) { const b = document.createElement('button'); b.className = 'icon-btn' + (on ? '' : ' off'); b.id = 'mgBtn'; b.title = 'افکت‌های فصلی (روشن/خاموش)'; b.textContent = SEASON.ic; b.onclick = () => { on = !on; set(!on); b.classList.toggle('off', !on); if (!on) { ctx.clearRect(0, 0, W, H); trail.length = 0; } }; bar.parentNode.insertBefore(b, bar); }
+    if (bar) { const b = document.createElement('button'); b.className = 'icon-btn' + (on ? '' : ' off'); b.id = 'mgBtn'; b.title = 'افکت‌های فصلی (روشن/خاموش)'; b.textContent = SEASON.ic; b.onclick = () => { on = !on; set(!on); b.classList.toggle('off', !on); if (!on) { if (ctx) ctx.clearRect(0, 0, W, H); trail.length = 0; } }; bar.parentNode.insertBefore(b, bar); }
     /* دابل‌کلیک = قلب */
     let lt = 0, lx = 0, ly = 0;
     addEventListener('dblclick', e => { if (e.target.closest('input,textarea,button,a,select,video,audio,[contenteditable]')) return; try { getSelection().removeAllRanges(); } catch (x) {} heart(e.clientX, e.clientY); });
