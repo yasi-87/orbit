@@ -714,7 +714,7 @@
     const el = $('cvGal'); if (!el) return;
     if (artMissing) { el.innerHTML = '<div class="cv-empty">🛠️ برای گالری باید SQL شمارهٔ ۲۴ رو یک بار توی Supabase اجرا کنی.</div>'; return; }
     const fsec = spc() === 'aisa' ? 'canvas_ai' : 'canvas';
-    if (window.Folders && el.parentNode) Folders.mount(fsec, el, renderGallery, gallery.map(g => ({ id: g.id, label: g.title || 'نقاشی', thumb: g.url })));
+    if (window.Folders && el.parentNode) Folders.mount(fsec, el, renderGallery, gallery.map(g => ({ id: g.id, label: g.title || 'نقاشی', thumb: g.url })), { del: async ids => { let ok = true; for (const id of ids) { const g = gallery.find(x => x.id === id); if (!g) continue; try { const { error } = await dbClient.from('canvas_art').delete().eq('id', id); if (error) throw error; if (g.path) dbClient.storage.from('songs').remove([g.path]); if (sharedSet.has(id)) { try { const r2 = await dbClient.from('canvas_art').select('path').eq('id', 'ai_sh_' + id).maybeSingle(); await dbClient.from('canvas_art').delete().eq('id', 'ai_sh_' + id); if (r2 && r2.data && r2.data.path) dbClient.storage.from('songs').remove([r2.data.path]); sharedSet.delete(id); } catch (e) {} } gallery = gallery.filter(x => x.id !== id); } catch (e) { ok = false; } } return ok; } });
     const shownA = window.Folders ? Folders.filter(fsec, gallery) : gallery;
     if (gallery.length && !shownA.length) { el.innerHTML = (window.Folders && Folders.inFolder(fsec)) ? '<div class="cv-empty">📂 این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر نقاشی، بیارش اینجا.</div>' : ''; return; }
     if (!gallery.length) { el.innerHTML = '<div class="cv-empty">هنوز نقاشی‌ای ذخیره نکردیم… اولین شاهکارمون رو بکشیم 🎨</div>'; return; }

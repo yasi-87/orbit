@@ -2648,8 +2648,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-08b';
+const SITE_VERSION = '2026-11-08c';
 const SITE_CHANGES = [
+  '☑️ انتخاب دسته‌جمعی توی پوشه‌ها: چند آیتم یا چند پوشه رو با هم انتخاب کن و یکجا منتقل، از پوشه خارج یا حذف کن.',
   '🧸 پفیلا حالا به یک هوش مصنوعی رایگان وصله و تقریباً به هر سوالی جواب می‌ده (بدون هیچ تنظیمی).',
   '🧸 پفیلا باهوش‌تر شد: تاریخ و ساعت، رویدادها و شمارش معکوس تقویم، تبدیل واحد، ترجمه، راهنمای همهٔ بخش‌های سایت و جواب‌های بلندتر.',
   '🐝 زنبور خندون و ناز شد (لبخند، گونهٔ صورتی، شاخک) و منوی اصلی خیلی سبک‌تر شد؛ دست زدن بهش دهنش رو باز می‌کنه و دو بار پشت‌سرهم بزنی پرواز می‌کنه.',
@@ -4157,7 +4158,7 @@ async function loadGallery() {
 function renderGallery() {
   const el = document.getElementById('galleryGrid'), bar = document.getElementById('galleryBar');
   if (galleryMissing) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای گالری باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  if (window.Folders) Folders.mount('gallery', bar, renderGallery, galleryList.map((g, i) => ({ id: g.id, label: (g.kind === 'video' ? '🎬 ویدیو' : '🖼️ عکس') + ' · ' + (g.author || ''), thumb: g.kind === 'video' ? '' : g.url })));
+  if (window.Folders) Folders.mount('gallery', bar, renderGallery, galleryList.map((g, i) => ({ id: g.id, label: (g.kind === 'video' ? '🎬 ویدیو' : '🖼️ عکس') + ' · ' + (g.author || ''), thumb: g.kind === 'video' ? '' : g.url })), { del: async ids => { const { error } = await dbClient.from('gallery').delete().in('id', ids); if (error) return false; const paths = galleryList.filter(g => ids.includes(g.id) && g.file_path).map(g => g.file_path); if (paths.length) dbClient.storage.from('songs').remove(paths); galleryList = galleryList.filter(g => !ids.includes(g.id)); return true; } });
   const shownG = window.Folders ? Folders.filter('gallery', galleryList) : galleryList;
   if (galleryList.length && !shownG.length) { bar.innerHTML = ''; el.innerHTML = (window.Folders && Folders.inFolder('gallery')) ? '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر عکس، بیارش اینجا.</p></div>' : ''; return; }
   if (!galleryList.length) { bar.innerHTML = ''; el.innerHTML = '<div class="empty-state"><div class="emoji">🖼️</div><p>هنوز عکس یا ویدیویی نذاشتیم... اولین خاطره‌مون رو اضافه کن 💜</p></div>'; return; }
@@ -4277,7 +4278,7 @@ async function loadFiles() {
 function renderFiles() {
   const el = document.getElementById('filesList');
   if (filesMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای بخش فایل‌ها باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => ({ id: f.id, label: f.name })));
+  if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => ({ id: f.id, label: f.name })), { del: async ids => { const { error } = await dbClient.from('files').delete().in('id', ids); if (error) return false; const paths = filesList.filter(f => ids.includes(f.id) && f.file_path).map(f => f.file_path); if (paths.length) dbClient.storage.from('songs').remove(paths); filesList = filesList.filter(f => !ids.includes(f.id)); return true; } });
   const shownF = window.Folders ? Folders.filter('files', filesList) : filesList;
   if (filesList.length && !shownF.length) { el.innerHTML = (window.Folders && Folders.inFolder('files')) ? '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر فایل، بیارش اینجا.</p></div>' : ''; return; }
   if (!filesList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📁</div><p>هنوز فایلی نذاشتیم...</p></div>'; return; }
@@ -4505,7 +4506,7 @@ function renderFun() {
   if (funMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای این بخش باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
   const sec = funMode === 'games' ? 'games' : 'cinema';
   const inSec = funList.filter(x => (x.category === 'game') === (sec === 'games'));
-  if (window.Folders) Folders.mount(sec, el, renderFun, inSec.map(x => ({ id: x.id, label: x.title })));
+  if (window.Folders) Folders.mount(sec, el, renderFun, inSec.map(x => ({ id: x.id, label: x.title })), { del: async ids => { const { error } = await dbClient.from('links').delete().in('id', ids); if (error) return false; funList = funList.filter(l => !ids.includes(l.id)); return true; } });
   const inFolder = window.Folders && Folders.isFolder(Folders.cur(sec));
   let items = (inFolder || funCat === 'all') ? inSec : inSec.filter(x => x.category === funCat);
   if (window.Folders) items = Folders.filter(sec, items);

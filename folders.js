@@ -2,7 +2,7 @@
    دو جدول: folders (خود پوشه‌ها) و folder_items (هر مورد توی کدوم پوشه‌ست).
    جدول‌های اصلی (gallery / files / links / canvas_art) هیچ تغییری نمی‌کنن؛ پس مورد‌های قدیمی هم می‌تونن بیان توی پوشه. */
 (function () {
-  const st = { folders: [], items: {}, loaded: false, missing: false, at: 0, sig: '', busy: false, cur: {}, reg: {}, ids: {}, lab: {}, creating: {} };
+  const st = { folders: [], items: {}, loaded: false, missing: false, at: 0, sig: '', busy: false, cur: {}, reg: {}, ids: {}, lab: {}, creating: {}, sel: {}, opts: {} };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = m => { try { (window.toast || window.toast2)(m); } catch (e) {} };
   const key = (s, id) => s + ':' + id;
@@ -41,6 +41,13 @@
 .fld-box{background:#1d1326;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:16px;max-width:360px;width:100%;max-height:80vh;overflow:auto;display:flex;flex-direction:column;gap:8px}
 .fld-box h4{margin:0 0 4px}
 .fld-box button{text-align:right}
+.fld-selbtn.on{background:rgba(90,214,125,.3);border-color:rgba(90,214,125,.7)}
+.fld-selbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;padding:8px 12px;margin:6px 0;border-radius:14px;background:rgba(90,214,125,.12);border:1px solid rgba(90,214,125,.4);position:sticky;top:6px;z-index:5;backdrop-filter:blur(8px)}
+.fld-selbar b{flex:1;min-width:90px}.fld-selbar .fld-chip{padding:6px 10px}.fld-selbar .fld-chip.dng{background:rgba(255,77,109,.25);border-color:rgba(255,77,109,.6)}
+.fld-cb{width:22px;height:22px;border-radius:7px;border:2px solid rgba(255,255,255,.5);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem}
+.fld-row.fld-sel .fld-cb,.fld-sel .fld-cb{background:#5ad67d;border-color:#5ad67d;color:#0b2}
+.fld-sel{outline:3px solid #5ad67d!important;outline-offset:-3px;box-shadow:0 0 0 3px rgba(90,214,125,.35)!important}
+.fld-selon [data-dsec]{cursor:pointer}
 .g-item .g-mv{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:0;opacity:0;transition:.2s;cursor:pointer}
 .g-item:hover .g-mv,.g-item:focus-within .g-mv{opacity:1}
 @media (hover:none){.g-item .g-mv,.g-item .g-del{opacity:1}}
@@ -83,12 +90,22 @@
   const childrenOf = (sec, pid) => st.folders.filter(f => f.section === sec && (parentOf(sec, f.id) || null) === (pid || null));
   const descendants = (sec, id) => { const out = []; const walk = p => childrenOf(sec, p).forEach(c => { out.push(c.id); walk(c.id); }); walk(id); return out; };
   const pathOf = (sec, id) => { const out = []; let c = id, n = 0; while (c && n++ < 20) { const f = st.folders.find(x => x.id === c); if (!f) break; out.unshift(f); c = parentOf(sec, c); } return out; };
+  const S = sec => { const c = cur(sec); let x = st.sel[sec]; if (!x) x = st.sel[sec] = { on: false, items: new Set(), fds: new Set(), at: c }; if (x.at !== c) { x.at = c; x.items.clear(); x.fds.clear(); } return x; };
+  function mark(sec) {
+    const x = S(sec), r = st.reg[sec], bar = r && r.bar; if (!bar) return;
+    const host = bar.parentNode; if (!host) return;
+    host.classList.toggle('fld-selon', !!x.on);
+    host.querySelectorAll('[data-dsec="' + sec + '"]').forEach(el => el.classList.toggle('fld-sel', x.on && x.items.has(String(el.dataset.did))));
+    bar.querySelectorAll('.fld-row[data-did]').forEach(el => { el.classList.toggle('fld-sel', x.on && x.fds.has(el.dataset.did)); const cb = el.querySelector('.fld-cb'); if (cb) cb.textContent = el.classList.contains('fld-sel') ? '✓' : ''; });
+    const b = bar.querySelector('.fld-selbar b'); if (b) b.textContent = fa(x.items.size + x.fds.size) + ' مورد انتخاب شد';
+  }
   function draw(sec, bar) {
     if (st.missing) { bar.innerHTML = '<div class="fld-note">📂 برای پوشه‌ها باید SQL شمارهٔ ۲۷ رو یک بار توی Supabase اجرا کنی.</div>'; return; }
     const c = cur(sec), ids = st.ids[sec] || [];
     const f = isFolder(c) ? st.folders.find(x => x.id === c) : null;
     const kids = childrenOf(sec, f ? f.id : null);
     const countOf = id => ids.filter(i => st.items[key(sec, i)] === id).length;
+    const sx = S(sec); const selBtn = `<button type="button" class="fld-new fld-selbtn${sx.on ? ' on' : ''}" data-act="sel">☑️ ${sx.on ? 'پایان انتخاب' : 'انتخاب'}</button>`;
     const rowBtns = id => `<span class="fld-acts"><button type="button" data-ract="ren" data-id="${esc(id)}" title="تغییر اسم">✏️</button><button type="button" data-ract="del" data-id="${esc(id)}" title="حذف پوشه">🗑️</button></span>`;
     const newBtn = st.creating[sec] ? '<span class="fld-newin"><input type="text" class="fld-inp" maxlength="40" placeholder="اسم پوشه…" /><button type="button" class="fld-ok" data-act="ok" title="ساخت">✓</button><button type="button" class="fld-no" data-act="cancel" title="انصراف">✕</button></span>' : '<button type="button" class="fld-new" data-act="new">➕ پوشهٔ جدید</button>';
     let h;
@@ -96,16 +113,21 @@
       const pth = pathOf(sec, f.id), par = parentOf(sec, f.id);
       h = `<div class="fld-head"><button type="button" class="fld-up" data-act="up" data-f="${esc(par || '')}" title="برگشت">↑</button><span class="fld-path"><a data-act="root">/</a>`
         + pth.map((x, i) => i === pth.length - 1 ? `<span class="fld-ic">${ICON}</span><b>${esc(x.name)}</b>` : `<a data-act="go" data-id="${esc(x.id)}">${esc(x.name)}</a><span class="fld-sep">/</span>`).join('')
-        + `</span><span class="fld-meta">${f.author ? '👤 ' + esc(f.author) + ' · ' : ''}${fa(countOf(f.id))} مورد${kids.length ? ' · ' + fa(kids.length) + ' پوشه' : ''}${f.created_at ? ' · ' + esc(dateOf(f.created_at)) : ''}</span>${newBtn}<button type="button" class="fld-new" data-act="pick">➕ افزودن از موجودها</button>${rowBtns(f.id)}</div>`;
+        + `</span><span class="fld-meta">${f.author ? '👤 ' + esc(f.author) + ' · ' : ''}${fa(countOf(f.id))} مورد${kids.length ? ' · ' + fa(kids.length) + ' پوشه' : ''}${f.created_at ? ' · ' + esc(dateOf(f.created_at)) : ''}</span>${newBtn}<button type="button" class="fld-new" data-act="pick">➕ افزودن از موجودها</button>${selBtn}${rowBtns(f.id)}</div>`;
     } else {
-      h = `<div class="fld-head"><span class="fld-path">📂 <b>پوشه‌ها</b></span><span class="fld-meta">${kids.length ? fa(kids.length) + ' پوشه' : 'هنوز پوشه‌ای نداریم'}</span>${newBtn}</div>`;
+      h = `<div class="fld-head"><span class="fld-path">📂 <b>پوشه‌ها</b></span><span class="fld-meta">${kids.length ? fa(kids.length) + ' پوشه' : 'هنوز پوشه‌ای نداریم'}</span>${newBtn}${selBtn}</div>`;
+    }
+    if (sx.on) {
+      h += '<div class="fld-selbar"><b></b><button type="button" class="fld-chip" data-act="selall">✔️ انتخاب همه</button><button type="button" class="fld-chip" data-act="selmove">📂 انتقال به پوشه</button>'
+        + (f ? '<button type="button" class="fld-chip" data-act="selout">📄 خارج‌کردن از پوشه</button><button type="button" class="fld-chip" data-act="pick">➕ افزودن از موجودها</button>' : '')
+        + '<button type="button" class="fld-chip dng" data-act="seldel">🗑️ حذف</button></div>';
     }
     if (kids.length) h += '<div class="fld-list">' + kids.map(x => {
       const nk = childrenOf(sec, x.id).length;
-      return `<div class="fld-row" data-f="${esc(x.id)}" data-dsec="fd_${esc(sec)}" data-did="${esc(x.id)}" draggable="true" tabindex="0"><span class="fld-ic">${ICON}</span><span class="fld-nm">${esc(x.name)}</span>`
+      return `<div class="fld-row" data-f="${esc(x.id)}" data-dsec="fd_${esc(sec)}" data-did="${esc(x.id)}" draggable="true" tabindex="0">${sx.on ? '<span class="fld-cb"></span>' : ''}<span class="fld-ic">${ICON}</span><span class="fld-nm">${esc(x.name)}</span>`
         + `<span class="fld-by">${x.author ? '👤 ' + esc(x.author) : ''}</span><span class="fld-ct">${fa(countOf(x.id))} مورد${nk ? ' · ' + fa(nk) + ' پوشه' : ''}</span><span class="fld-dt">${esc(dateOf(x.created_at))}</span>${rowBtns(x.id)}</div>`;
     }).join('') + '</div>';
-    bar.innerHTML = h;
+    bar.innerHTML = h; mark(sec);
     if (st.creating[sec]) { const i = bar.querySelector('.fld-inp'); if (i) { i.focus(); i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submitNew(sec, i.value); } else if (e.key === 'Escape') { st.creating[sec] = false; draw(sec, bar); } }; } }
   }
   async function submitNew(sec, v) {
@@ -120,9 +142,9 @@
     if (error) return toast('⚠️ ذخیره نشد');
     f.name = n.trim().slice(0, 40); st.sig = ''; st.reg[sec] && st.reg[sec].re();
   }
-  async function deleteF(sec, id) {
-    const f = st.folders.find(x => x.id === id); if (!f) return;
-    if (!confirm('پوشهٔ «' + f.name + '» حذف بشه؟' + (descendants(sec, f.id).length ? ' (پوشه‌های داخلش هم حذف می‌شن)' : '') + ' (فایل و لینک‌های داخلش پاک نمی‌شن، فقط از پوشه درمیان)')) return;
+  async function deleteF(sec, id, quiet) {
+    const f = st.folders.find(x => x.id === id); if (!f) return true;
+    if (!quiet && !confirm('پوشهٔ «' + f.name + '» حذف بشه؟' + (descendants(sec, f.id).length ? ' (پوشه‌های داخلش هم حذف می‌شن)' : '') + ' (فایل و لینک‌های داخلش پاک نمی‌شن، فقط از پوشه درمیان)')) return false;
     const gone = [f.id].concat(descendants(sec, f.id)), par = parentOf(sec, f.id);
     let bad = false;
     for (const g of gone) {
@@ -131,11 +153,43 @@
       const r2 = await dbClient.from('folders').delete().eq('id', g);
       if (r1.error || r2.error || r3.error) bad = true;
     }
-    if (bad) return toast('⚠️ حذف نشد');
+    if (bad) { toast('⚠️ حذف نشد'); return false; }
     st.folders = st.folders.filter(x => !gone.includes(x.id));
     Object.keys(st.items).forEach(k => { if (gone.includes(st.items[k]) || gone.some(g => k === pkey(sec, g))) delete st.items[k]; });
     if (gone.includes(st.cur[sec])) st.cur[sec] = par || 'all';
-    st.sig = ''; st.reg[sec] && st.reg[sec].re(); toast('🗑️ پوشه حذف شد');
+    st.sig = ''; if (!quiet) { st.reg[sec] && st.reg[sec].re(); toast('🗑️ پوشه حذف شد'); }
+    return true;
+  }
+  const selEnd = sec => { const x = S(sec); x.on = false; x.items.clear(); x.fds.clear(); };
+  async function selAct(sec, act) {
+    const x = S(sec), items = [...x.items], fds = [...x.fds], re = () => st.reg[sec] && st.reg[sec].re();
+    if (act === 'selall') {
+      const all = (st.ids[sec] || []).filter(i => { const f = st.items[key(sec, i)]; const c = cur(sec); return isFolder(c) ? f === c : (!f || !st.folders.some(z => z.id === f)); });
+      const c = cur(sec); childrenOf(sec, isFolder(c) ? c : null).forEach(f => x.fds.add(f.id));
+      all.forEach(i => x.items.add(String(i))); return mark(sec);
+    }
+    if (!items.length && !fds.length) return toast('اول چند مورد رو انتخاب کن');
+    if (act === 'selmove') {
+      if (!items.length) return toast('برای انتقال، فایل/آیتم انتخاب کن (پوشه‌ها رو بکش توی پوشهٔ دیگه)');
+      return move(sec, items, () => { selEnd(sec); re(); });
+    }
+    if (act === 'selout') {
+      if (!items.length) return toast('آیتمی انتخاب نشده');
+      if (await assign(sec, items, null)) { toast('📄 ' + fa(items.length) + ' مورد از پوشه دراومد'); selEnd(sec); re(); }
+      return;
+    }
+    if (act === 'seldel') {
+      const o = st.opts[sec] || {};
+      if (items.length && !o.del) return toast('حذف دسته‌جمعی برای این بخش در دسترس نیست');
+      if (!confirm('🗑️ ' + fa(items.length + fds.length) + ' مورد حذف بشن؟' + (items.length ? ' (' + fa(items.length) + ' آیتم برای همیشه پاک می‌شن)' : '') + (fds.length ? ' (' + fa(fds.length) + ' پوشه؛ محتوای پوشه‌ها پاک نمی‌شه)' : ''))) return;
+      let ok = true;
+      for (const d of fds) { if (st.folders.some(f => f.id === d)) ok = (await deleteF(sec, d, true)) && ok; }
+      if (items.length) {
+        try { const r = await o.del(items); if (r === false) ok = false; else { await dbClient.from('folder_items').delete().in('key', items.map(i => key(sec, i))); items.forEach(i => { delete st.items[key(sec, i)]; }); } } catch (e) { ok = false; }
+      }
+      st.sig = ''; selEnd(sec); re();
+      toast(ok ? '🗑️ حذف شد' : '⚠️ بعضی‌ها حذف نشدن');
+    }
   }
   async function onBar(e) {
     const bar = e.currentTarget, sec = bar.dataset.sec;
@@ -144,6 +198,8 @@
     if (rb) { e.stopPropagation(); return rb.dataset.ract === 'ren' ? renameF(sec, rb.dataset.id) : deleteF(sec, rb.dataset.id); }
     const a = e.target.closest('[data-act]');
     if (a) {
+      if (a.dataset.act === 'sel') { const x = S(sec); x.on = !x.on; if (!x.on) { x.items.clear(); x.fds.clear(); } st.reg[sec] && st.reg[sec].re(); return draw(sec, bar); }
+      if (/^sel(all|move|out|del)$/.test(a.dataset.act)) return selAct(sec, a.dataset.act);
       if (a.dataset.act === 'up') { st.cur[sec] = a.dataset.f || 'all'; return st.reg[sec] && st.reg[sec].re(); }
       if (a.dataset.act === 'root') { st.cur[sec] = 'all'; return st.reg[sec] && st.reg[sec].re(); }
       if (a.dataset.act === 'go') { st.cur[sec] = a.dataset.id; return st.reg[sec] && st.reg[sec].re(); }
@@ -153,7 +209,9 @@
       if (a.dataset.act === 'pick') return pick(sec);
       return;
     }
-    const r = e.target.closest('[data-f]'); if (r) { st.cur[sec] = r.dataset.f; if (st.reg[sec]) st.reg[sec].re(); }
+    const r = e.target.closest('[data-f]');
+    if (r && S(sec).on) { const x = S(sec), id = r.dataset.f; x.fds.has(id) ? x.fds.delete(id) : x.fds.add(id); return mark(sec); }
+    if (r) { st.cur[sec] = r.dataset.f; if (st.reg[sec]) st.reg[sec].re(); }
   }
   async function create(sec, name, parent) {
     if (st.missing) { toast('⚠️ اول SQL شمارهٔ ۲۷ رو توی Supabase اجرا کن'); return null; }
@@ -170,7 +228,8 @@
   }
 
   /* نوار پوشه‌ها رو قبل از anchor می‌ذاره؛ ids = شناسهٔ همهٔ موردهای این بخش (برای شمارش) */
-  function mount(sec, anchor, re, ids) {
+  function mount(sec, anchor, re, ids, opts) {
+    if (opts) st.opts[sec] = opts;
     if (!anchor || !anchor.parentNode) return;
     const arr = ids || []; st.lab[sec] = arr.map(x => (x && typeof x === 'object') ? x : { id: x, label: String(x) }); st.ids[sec] = st.lab[sec].map(x => x.id);
     let bar = anchor.previousElementSibling;
@@ -181,7 +240,7 @@
     }
     bar.dataset.sec = sec;
     st.reg[sec] = { re, bar };
-    draw(sec, bar);
+    draw(sec, bar); setTimeout(() => mark(sec), 0);
     load();
   }
   function filter(sec, list, idf) {
@@ -245,6 +304,14 @@
     });
     document.body.appendChild(ov);
   }
+  /* انتخاب آیتم‌ها با کلیک وقتی حالت انتخاب روشنه */
+  document.addEventListener('click', e => {
+    const t = e.target.closest && e.target.closest('[data-dsec]'); if (!t || /^fd_/.test(t.dataset.dsec)) return;
+    const sec = t.dataset.dsec, r = st.reg[sec]; if (!r) return;
+    const x = S(sec); if (!x.on) return;
+    e.preventDefault(); e.stopPropagation();
+    const id = String(t.dataset.did); x.items.has(id) ? x.items.delete(id) : x.items.add(id); mark(sec);
+  }, true);
   /* کشیدن و رها کردن روی پوشه (کامپیوتر) */
   let drag = null;
   const dropEl = e => e.target && e.target.closest && e.target.closest('.fld-row[data-f],.fld-head [data-act=up]');
