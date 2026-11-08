@@ -22,6 +22,10 @@
 @keyframes mgMini{to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.3);opacity:0}}
 .screen.active{animation:mgIn .45s cubic-bezier(.2,.8,.3,1)}
 @keyframes mgIn{from{opacity:0;transform:translateY(14px) scale(.992)}to{opacity:1;transform:none}}
+.mg-bee{position:fixed;left:0;top:0;z-index:45;font-size:24px;line-height:1;pointer-events:none;will-change:transform;filter:drop-shadow(0 4px 8px rgba(255,200,60,.55));transition:opacity .4s}
+.mg-bee::after{content:'';position:absolute;left:50%;top:115%;width:30px;height:3px;margin-left:-15px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(2px)}
+.mg-bee.hide{opacity:0}.mg-bee.buzz{animation:mgBuzz .5s}
+@keyframes mgBuzz{0%,100%{rotate:0deg}25%{rotate:-25deg}75%{rotate:25deg}}
 #mgBtn{font-size:1.05rem}#mgBtn.off{opacity:.45;filter:grayscale(1)}
 @media (prefers-reduced-motion:reduce){.screen.active{animation:none}.mg-heart,.mg-mini{animation-duration:.01s}}
 `;
@@ -33,6 +37,7 @@
   function mk(any) { return { x: Math.random() * W, y: any ? Math.random() * H : -30, s: 10 + Math.random() * 14, v: (.35 + Math.random() * .8) * SEASON.sp, ph: Math.random() * 6.3, w: .4 + Math.random() * .8, r: Math.random() * 6.3, rs: (Math.random() - .5) * .03, k: Math.random() * spr.length | 0, a: .35 + Math.random() * .4 }; }
   function frame(now) {
     raf = requestAnimationFrame(frame);
+    beeFrame(now);
     if (document.hidden || !on) return;
     ctx.clearRect(0, 0, W, H); const t = now / 1000;
     for (const p of parts) {
@@ -42,7 +47,19 @@
     for (let i = trail.length - 1; i >= 0; i--) { const q = trail[i]; q.l -= 1; if (q.l <= 0) { trail.splice(i, 1); continue; } ctx.globalAlpha = q.l / 26; ctx.fillStyle = q.c; ctx.beginPath(); ctx.arc(q.x, q.y, q.r * q.l / 26, 0, 6.3); ctx.fill(); }
     ctx.globalAlpha = 1;
   }
+  /* 🐝 زنبور کوچولو توی همهٔ صفحه‌ها (توی منوی اصلی زنبور خودش رو داره) */
+  const bee = { el: null, x: 120, y: 160, tx: 120, ty: 160, last: 0, vx: 0 };
+  function beeFrame(now) {
+    const b = bee.el; if (!b) return; const menu = document.getElementById('screen-menu'), hide = !on || document.hidden || (menu && menu.classList.contains('active'));
+    b.classList.toggle('hide', !!hide); if (hide) return; const t = now / 1000;
+    if (now - bee.last > 2500) { bee.tx = innerWidth * (.5 + Math.cos(t * .5) * .38); bee.ty = innerHeight * (.5 + Math.sin(t * .7) * .3); }
+    const ox = Math.cos(t * 2.4) * 22, oy = Math.sin(t * 3.1) * 12 - 26;
+    const px = bee.x, nx = bee.x + (bee.tx + (now - bee.last > 2500 ? 0 : ox) - bee.x) * .06, ny = bee.y + (bee.ty + (now - bee.last > 2500 ? 0 : oy) - bee.y) * .06;
+    bee.vx = nx - px; bee.x = nx; bee.y = ny;
+    b.style.transform = `translate(${nx.toFixed(1)}px,${ny.toFixed(1)}px) scaleX(${bee.vx < -.15 ? -1 : 1}) rotate(${Math.max(-16, Math.min(16, bee.vx * 4)).toFixed(0)}deg)`;
+  }
   function onMove(e) {
+    bee.tx = e.clientX; bee.ty = e.clientY; bee.last = performance.now();
     if (!on || e.pointerType === 'touch') return; const n = performance.now(); if (n - lastMv < 28) return; lastMv = n;
     const cols = ['#ffd45a', '#ff9ed2', '#c9a2ff', '#7fd9ff']; trail.push({ x: e.clientX + (Math.random() - .5) * 6, y: e.clientY + (Math.random() - .5) * 6, r: 2 + Math.random() * 2.5, l: 26, c: cols[Math.random() * 4 | 0] });
     if (trail.length > 60) trail.shift();
@@ -55,7 +72,8 @@
     const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
     if (!reduce) {
       cv = document.createElement('canvas'); cv.className = 'mg-cv'; document.body.appendChild(cv); ctx = cv.getContext('2d'); sprites(); size();
-      addEventListener('resize', size); addEventListener('pointermove', onMove, { passive: true }); raf = requestAnimationFrame(frame);
+      addEventListener('resize', size); addEventListener('pointermove', onMove, { passive: true }); addEventListener('pointerdown', e => { bee.tx = e.clientX; bee.ty = e.clientY; bee.last = performance.now(); }, { passive: true });
+      bee.el = document.createElement('div'); bee.el.className = 'mg-bee hide'; bee.el.textContent = '🐝'; document.body.appendChild(bee.el); raf = requestAnimationFrame(frame);
     }
     /* دکمهٔ روشن/خاموش بالای سایت */
     const bar = document.getElementById('updatesBtn');
