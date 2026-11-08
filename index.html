@@ -1617,6 +1617,11 @@ body.reading-mode .reading-content {
 .vc-pres span{display:inline-flex;align-items:center;gap:5px}.vc-pres span.on{color:#3ddc84}
 .vc-pres .pr-dot{position:static;width:9px;height:9px;border:0;display:inline-block}
 .vc-older{align-self:center;background:rgba(212,165,255,.14);border:1px solid rgba(212,165,255,.3);color:inherit;border-radius:14px;padding:6px 14px;font-size:.78rem;cursor:pointer;flex:none}
+.file-item .pl-icon{width:58px;height:58px;border-radius:16px;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.16),rgba(255,255,255,.04) 70%);border:1px solid rgba(255,255,255,.14);box-shadow:0 4px 14px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.12);overflow:hidden}
+.file-item .pl-icon:hover{transform:translateY(-2px) scale(1.04);box-shadow:0 8px 20px rgba(0,0,0,.4),0 0 0 2px rgba(212,165,255,.4)}
+.file-item .pl-icon .pl-glyph{display:flex;align-items:center;justify-content:center;line-height:0}
+.file-item .pl-icon .fbimg{width:100%!important;height:100%!important;border:0;border-radius:0;box-shadow:none}
+.file-item .pl-icon .fbadge{filter:drop-shadow(0 3px 4px rgba(0,0,0,.4))}
 .fbimg{display:inline-block;border-radius:4px;overflow:hidden;border:1px solid #aab4c3;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}.fbimg img{width:100%;height:100%;object-fit:cover;display:block}.fbadge{filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .vc-more{display:block;margin:4px 0 2px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:inherit;border-radius:999px;padding:4px 12px;font:inherit;font-size:.78rem;cursor:pointer}.vc-more:hover{background:rgba(212,165,255,.25)}
 .vc-msg .vc-tx{display:block;unicode-bidi:isolate;text-align:start;overflow-wrap:anywhere}
@@ -2650,7 +2655,7 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-08f';
+const SITE_VERSION = '2026-11-08g';
 const SITE_CHANGES = [
   '📎 آیکون فایل‌ها مثل ویندوز شد: RAR کتاب‌های رنگی، ورد W آبی، اکسل X سبز، PDF قرمز و ... ؛ عکس‌ها هم پیش‌نمایش خودشون رو دارن.',
   '🐱 آیسا حالا گربه‌های ما رو هم توی پروفایل خودش می‌بینه، کنار گربهٔ خودش.',
@@ -4326,7 +4331,7 @@ function renderFiles() {
   el.innerHTML = bar + shownF.map(f => `
     <div class="playlist-item file-item${fileSel.has(f.id) ? ' selected' : ''}" data-dsec="files" data-did="${escapeHtml(f.id)}" draggable="true">
       ${filesSelMode ? `<input type="checkbox" class="file-chk" ${fileSel.has(f.id) ? 'checked' : ''} onchange="toggleFileSel('${f.id}')" />` : ''}
-      <div class="pl-icon" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><span class="pl-glyph">${fileBadge(f.name, f.mime, 40, f.url)}</span></div>
+      <div class="pl-icon" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><span class="pl-glyph">${fileBadge(f.name, f.mime, 48, f.url)}</span></div>
       <div class="pl-info" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><div class="pl-title">${escapeHtml(f.name)}</div><div class="pl-sub">${fmtSize(f.size || 0)}${f.author ? ' · ' + escapeHtml(f.author) : ''}</div></div>
       ${filesSelMode ? '' : `<button class="pl-loop" onclick="openFile('${f.id}')" title="باز کردن توی سایت">👁️</button>
       <a class="pl-loop" href="${escapeHtml(f.url)}" target="_blank" rel="noopener" download="${escapeHtml(f.name)}" title="دانلود" style="text-decoration:none">⬇️</a>
