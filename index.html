@@ -2655,7 +2655,7 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-08h';
+const SITE_VERSION = '2026-11-08i';
 const SITE_CHANGES = [
   '✨ منوی اصلی قشنگ‌تر شد: هالهٔ چرخان دور زنبور، کارت خوش‌آمد با ساعت و تاریخ، جملهٔ قشنگ روز، ماه/خورشید، قلب‌های شناور و ترکوندن قلب با کلیک؛ روی اسم سایت ۵ بار پشت‌سرهم بزن تا کانفتی بباره 🎉',
   '📎 آیکون فایل‌ها مثل ویندوز شد: RAR کتاب‌های رنگی، ورد W آبی، اکسل X سبز، PDF قرمز و ... ؛ عکس‌ها هم پیش‌نمایش خودشون رو دارن.',
@@ -4293,7 +4293,7 @@ function fileBadge(n, m, sz, url) {
   const T = (ext || 'file').toUpperCase(), tile = (c, ch) => `<rect x="6" y="14" width="24" height="24" rx="3" fill="${c}"/><text x="18" y="32" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-weight="700" font-size="17" fill="#fff">${ch}</text>`;
   const lines = (x, y, n2) => Array.from({ length: n2 }, (_, k) => `<rect x="${x}" y="${y + k * 5}" width="${k % 2 ? 14 : 20}" height="2.2" rx="1" fill="#9aa5b5"/>`).join('');
   const G = {
-    rar: '<rect x="8" y="30" width="26" height="7" rx="1.5" fill="#2f6fb5" transform="rotate(-4 21 33)"/><rect x="9" y="23" width="24" height="7" rx="1.5" fill="#c0392b" transform="rotate(3 21 26)"/><rect x="10" y="16" width="22" height="7" rx="1.5" fill="#8e44ad" transform="rotate(-2 21 19)"/><rect x="12" y="17.5" width="10" height="1.6" fill="#fff" opacity=".6"/><rect x="12" y="25" width="10" height="1.6" fill="#fff" opacity=".6"/>',
+    rar: '<path d="M5 22l13-6 13 6v14l-13 6-13-6z" fill="#d99a4e"/><path d="M5 22l13 6 13-6" fill="none" stroke="#a8702c" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 28v14" stroke="#a8702c" stroke-width="1.4"/><path d="M5 22l13 6v14l-13-6z" fill="#c9843a"/><path d="M13 19l13 6v5l-5-2.2v-5.4z" fill="#f5e6c8" opacity=".9"/><circle cx="26" cy="19" r="0" fill="none"/><rect x="21" y="30" width="7" height="3.4" rx=".8" fill="#fff" opacity=".85" transform="rotate(26 24 31)"/>',
     zip: '<rect x="18" y="6" width="6" height="34" fill="#f0c24b"/>' + Array.from({ length: 8 }, (_, k) => `<rect x="${k % 2 ? 22 : 17}" y="${8 + k * 4}" width="3" height="2" fill="#7a5b00"/>`).join('') + '<rect x="16" y="34" width="10" height="8" rx="2" fill="#c98f00"/>',
     pdf: '<path d="M7 36c8-4 14-12 15-22 1 8 5 14 12 17-9-1-16 2-27 5z" fill="none" stroke="#d93025" stroke-width="3" stroke-linejoin="round"/><rect x="3" y="38" width="30" height="9" rx="1.5" fill="#d93025"/><text x="18" y="45.3" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="7.5" fill="#fff">PDF</text>',
     doc: tile('#2b579a', 'W') + lines(8, 42, 2), xls: tile('#217346', 'X') + lines(8, 42, 2), ppt: tile('#d24726', 'P') + lines(8, 42, 2),
