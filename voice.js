@@ -391,7 +391,8 @@
       const d = dayLabel(m.ts); if (d && d !== last) { last = d; html += `<div class="vc-day">${esc(d)}</div>`; }
       const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span dir="${txDir(m.reply.text)}">${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
       const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" data-zoom="${esc(m.img)}">` : '';
-      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${linkify(m.text)}</span>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
+      const bc = m.name === BOT ? botCut(m.text) : null, shown = bc && !moreOpen.has(m.id) ? bc.head + '…' : m.text;
+      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${linkify(shown)}</span>` : ''}${bc ? `<button type="button" class="vc-more" data-more="${esc(m.id)}">${moreOpen.has(m.id) ? 'کمتر ▴' : 'ادامه ▾ (' + fa(bc.rest) + ' حرف دیگه)'}</button>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
     });
     try { renderEmoFav(); } catch (e) {}
     list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
@@ -419,13 +420,20 @@
   }
   function onChat(p) {
     if (!p || p.from === ID || (!p.text && !p.img)) return;
-    const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text || '').slice(0, 1500), ts: p.ts || Date.now(),
+    const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text || '').slice(0, 8000), ts: p.ts || Date.now(),
       img: /^https?:\/\//.test(p.img || '') ? p.img : '', reply: p.reply && p.reply.id ? { id: String(p.reply.id), name: String(p.reply.name || '').slice(0, 30), text: String(p.reply.text || '').slice(0, 120) } : null };
     delete typers[p.from]; if (p.name === BOT) delete typers.bot;
     if (addMsg(m)) { saveMsgs(); renderChat(); renderTyping(); markSeen(); blip('recv'); if (window.ChatDock && !ChatDock.isOpen()) { ChatDock.bump(); say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); } }
   }
   /* ---------- ✓✓ سین، ✍️ در حال نوشتن، 🧸 پفیلا (دستیار مشترک) ---------- */
   const BOT = 'پفیلا';
+  /* جواب‌های بلند پفیلا: اول بخش اول رو نشون می‌دیم و با دکمهٔ «ادامه» بقیه باز می‌شه */
+  const moreOpen = new Set(); const BOT_CUT = 450;
+  function botCut(t) {
+    t = String(t || ''); if (t.length <= BOT_CUT + 120) return null;
+    const c = t.slice(0, BOT_CUT), i = Math.max(c.lastIndexOf('\n\n'), c.lastIndexOf('\n'), c.lastIndexOf('. '), c.lastIndexOf('؟ '), c.lastIndexOf('! '), c.lastIndexOf('؛ '));
+    const head = (i > 200 ? c.slice(0, i + 1) : c).trimEnd(); return { head, rest: t.length - head.length };
+  }
   let botOn = true, editing = null; try { botOn = localStorage.getItem('vc_bot') !== '0'; } catch (e) {}
   let seenBy = {}, typers = {}, lastTypeSent = 0, typeIdle = null, mySeenSent = 0;
   try { mySeenSent = Number(localStorage.getItem('vc_seen_sent')) || 0; } catch (e) {}
@@ -637,7 +645,7 @@
     let t = n.replace(/(معنی|یعنی چی|یعنی چه|چیه|چیست|کیه|کیست|کی بود|چی بود|چی هست|کجاست|کجا هست|درباره|توضیح بده|توضیح|بگو|بده|رو بگو|لطفا|پفیلا|chatgpt)/gi, ' ').replace(/\s(?:رو|را|ی|ـ)\s/g, ' ').replace(/\s+/g, ' ').trim(); if (t.length < 2) return null;
     const sr = await getJ('https://fa.wikipedia.org/w/api.php?action=query&list=search&srlimit=1&format=json&origin=*&srsearch=' + encodeURIComponent(t)); const hit = sr.query && sr.query.search && sr.query.search[0]; if (!hit) return null;
     const sm = await getJ('https://fa.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(hit.title.replace(/ /g, '_'))); let x = String(sm.extract || '').trim(); if (!x || x.length < 20) return null;
-    if (x.length > 420) { const cut = x.slice(0, 420), i = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('؛ '), cut.lastIndexOf('، ')); x = (i > 120 ? cut.slice(0, i + 1) : cut) + '…'; }
+    if (x.length > 1400) { const cut = x.slice(0, 1400), i = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('؛ '), cut.lastIndexOf('، ')); x = (i > 400 ? cut.slice(0, i + 1) : cut) + '…'; }
     return '📚 ' + (sm.title || hit.title) + ': ' + x + ' (ویکی‌پدیا)';
   }
 
@@ -737,10 +745,10 @@
     const clean = t => String(t || '').split('\n').filter(l => !/pollinations/i.test(l) && !/^\s*---+\s*$/.test(l)).join('\n').replace(/\*\*(.+?)\*\*/g, '$1').trim();
     const c = new AbortController(), to = setTimeout(() => c.abort(), 22000);
     try {
-      const r = await fetch('https://text.pollinations.ai/openai', { method: 'POST', signal: c.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai', private: true, max_tokens: 900, messages: [{ role: 'system', content: PERSONA + '\n\nزمینه:\n' + botContext(who) }, ...hist] }) });
+      const r = await fetch('https://text.pollinations.ai/openai', { method: 'POST', signal: c.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai', private: true, max_tokens: 2500, messages: [{ role: 'system', content: PERSONA + '\n\nزمینه:\n' + botContext(who) }, ...hist] }) });
       if (!r.ok) throw new Error('http ' + r.status);
       const j = await r.json(), t = clean(j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
-      if (!t || t.length < 2) throw new Error('empty'); return t.slice(0, 1500);
+      if (!t || t.length < 2) throw new Error('empty'); return t.slice(0, 8000);
     } finally { clearTimeout(to); }
   }
   let gptDownUntil = 0;
@@ -887,6 +895,7 @@
       const eb = e.target.closest('[data-edit]'); if (eb) { startEdit(eb.dataset.edit); return; }
       const db = e.target.closest('[data-del]'); if (db) { delMsg(db.dataset.del); return; }
       const rb = e.target.closest('[data-reply]'); if (rb) { const m = msgs.find(x => x.id === rb.dataset.reply); if (m) { replyTo = { id: m.id, name: m.name, text: m.text }; renderComposer(); const i = $('vcChatInput'); if (i) i.focus(); } return; }
+      const mo = e.target.closest('[data-more]'); if (mo) { const k = mo.dataset.more; moreOpen.has(k) ? moreOpen.delete(k) : moreOpen.add(k); renderChat(true); return; }
       const g = e.target.closest('[data-goto]'); if (g) { const t = cl.querySelector('[data-mid="' + CSS.escape(g.dataset.goto) + '"]'); if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 1400); } }
     });
     const bt = $('botToggle'); if (bt) bt.addEventListener('click', () => setBot(!botOn));

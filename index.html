@@ -1617,6 +1617,7 @@ body.reading-mode .reading-content {
 .vc-pres span{display:inline-flex;align-items:center;gap:5px}.vc-pres span.on{color:#3ddc84}
 .vc-pres .pr-dot{position:static;width:9px;height:9px;border:0;display:inline-block}
 .vc-older{align-self:center;background:rgba(212,165,255,.14);border:1px solid rgba(212,165,255,.3);color:inherit;border-radius:14px;padding:6px 14px;font-size:.78rem;cursor:pointer;flex:none}
+.vc-more{display:block;margin:4px 0 2px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:inherit;border-radius:999px;padding:4px 12px;font:inherit;font-size:.78rem;cursor:pointer}.vc-more:hover{background:rgba(212,165,255,.25)}
 .vc-msg .vc-tx{display:block;unicode-bidi:isolate;text-align:start;overflow-wrap:anywhere}
 #vcChatInput{unicode-bidi:isolate}
 .vc-emofav{display:flex;gap:2px;padding:3px 8px;border-top:1px solid rgba(212,165,255,.15);flex:none;align-items:center}
@@ -2648,8 +2649,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-08c';
+const SITE_VERSION = '2026-11-08d';
 const SITE_CHANGES = [
+  '🧸 جواب‌های پفیلا دیگه کوتاه نمی‌شن؛ جواب بلند با دکمهٔ «ادامه» کامل باز می‌شه.',
   '☑️ انتخاب دسته‌جمعی توی پوشه‌ها: چند آیتم یا چند پوشه رو با هم انتخاب کن و یکجا منتقل، از پوشه خارج یا حذف کن.',
   '🧸 پفیلا حالا به یک هوش مصنوعی رایگان وصله و تقریباً به هر سوالی جواب می‌ده (بدون هیچ تنظیمی).',
   '🧸 پفیلا باهوش‌تر شد: تاریخ و ساعت، رویدادها و شمارش معکوس تقویم، تبدیل واحد، ترجمه، راهنمای همهٔ بخش‌های سایت و جواب‌های بلندتر.',
