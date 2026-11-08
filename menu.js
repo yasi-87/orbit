@@ -300,8 +300,8 @@
   }
   function petMove(now) {
     const p = $('mmPet'); if (!p || !stage) return; const r = stage.getBoundingClientRect(), t = now / 1000;
-    let tx, ty2; if (pet.on) { tx = pet.mx + Math.cos(t * 2.2) * 26; ty2 = pet.my - 30 + Math.sin(t * 3) * 14; } else { tx = r.width / 2 + Math.cos(t * .9) * Math.min(300, r.width * .35); ty2 = 130 + Math.sin(t * 1.3) * 60; }
-    pet.x += (tx - pet.x) * .08; pet.y += (ty2 - pet.y) * .08; const dx = tx - pet.x;
+    let tx, ty2; if (pet.on) { tx = pet.mx + Math.cos(t * 1.3) * 26; ty2 = pet.my - 30 + Math.sin(t * 1.8) * 14; } else { tx = r.width / 2 + Math.cos(t * .5) * Math.min(300, r.width * .35); ty2 = 130 + Math.sin(t * .8) * 60; }
+    pet.x += (tx - pet.x) * .035; pet.y += (ty2 - pet.y) * .035; const dx = tx - pet.x;
     p.style.transform = `translate(${pet.x.toFixed(1)}px,${pet.y.toFixed(1)}px) scaleX(${dx < -1 ? -1 : 1}) rotate(${Math.max(-18, Math.min(18, dx * .2)).toFixed(0)}deg)`;
   }
   function build() {
