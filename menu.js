@@ -54,6 +54,30 @@
 .mm-tile .mm-lbl::after{content:'';display:block;width:0;height:2px;margin:4px auto 0;border-radius:2px;background:linear-gradient(90deg,#ffd45a,#ff9ed2);transition:width .3s}.mm-tile:hover .mm-lbl::after{width:60%}
 .mm-conf{position:absolute;top:-20px;z-index:5;pointer-events:none;animation:mmFall linear forwards;font-size:20px}
 @keyframes mmFall{to{transform:translateY(calc(100vh + 40px)) rotate(540deg);opacity:.2}}
+/* موج‌های متحرک پایین صحنه */
+.mm-waves{position:absolute;left:0;right:0;bottom:0;height:90px;z-index:1;pointer-events:none;overflow:hidden;opacity:.9}
+.mm-waves svg{position:absolute;bottom:0;left:0;width:200%;height:100%;animation:mmWave 14s linear infinite}
+.mm-waves svg.w2{animation-duration:22s;animation-direction:reverse;opacity:.6;bottom:6px}
+.mm-waves svg.w3{animation-duration:32s;opacity:.4;bottom:14px}
+@keyframes mmWave{to{transform:translateX(-50%)}}
+/* حلقه‌های ضربانی از زنبور */
+.mm-pulse{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,212,90,.5);pointer-events:none;opacity:0;animation:mmPulse 4.5s ease-out infinite}
+.mm-pulse.p2{animation-delay:1.5s;border-color:rgba(255,158,210,.5)}.mm-pulse.p3{animation-delay:3s;border-color:rgba(127,217,255,.5)}
+@keyframes mmPulse{0%{transform:scale(.4);opacity:.8}100%{transform:scale(3.2);opacity:0}}
+.mm-beew{transition:transform .25s ease-out;will-change:transform}
+/* زنبور همراه که دنبال موس می‌پره */
+.mm-pet{position:absolute;z-index:4;left:0;top:0;font-size:22px;pointer-events:none;will-change:transform;filter:drop-shadow(0 4px 8px rgba(255,200,60,.6))}
+.mm-pet::after{content:'';position:absolute;left:50%;top:100%;width:34px;height:3px;margin-left:-17px;border-radius:50%;background:rgba(0,0,0,.25);filter:blur(2px)}
+/* زنبورهای کوچیک که از عرض صحنه رد می‌شن */
+.mm-fly{position:absolute;z-index:3;font-size:20px;pointer-events:none;left:-40px;animation:mmFly linear infinite;filter:drop-shadow(0 3px 6px rgba(255,200,60,.5))}
+@keyframes mmFly{0%{transform:translate(0,0) scaleX(1)}25%{transform:translate(28vw,-30px)}50%{transform:translate(56vw,20px)}75%{transform:translate(84vw,-24px)}100%{transform:translate(112vw,0)}}
+/* ایکون‌های کاشی‌ها: نفس‌کشیدن آروم و موج نور پشت‌سرهم */
+.mm-ico{animation:mmBreath 3.6s ease-in-out infinite;animation-delay:calc(var(--i)*-.4s)}
+@keyframes mmBreath{0%,100%{transform:translateZ(30px) translateY(0) scale(1)}50%{transform:translateZ(30px) translateY(-4px) scale(1.07)}}
+.mm-tile .mm-shine{position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);animation:mmTShine 7s ease-in-out infinite;animation-delay:calc(var(--i)*.35s);pointer-events:none}
+@keyframes mmTShine{0%,70%{left:-70%}100%{left:140%}}
+.mm-caret{display:inline-block;width:2px;height:1em;background:#ffd45a;margin-right:3px;vertical-align:-2px;animation:mmBlink 1s steps(2) infinite}
+@keyframes mmBlink{50%{opacity:0}}
 @media (max-width:520px){.mm-ring{width:220px;height:220px;margin:-110px 0 0 -110px}.mm-ring.r2{width:270px;height:270px;margin:-135px 0 0 -135px}.mm-grid{grid-template-columns:repeat(2,1fr);gap:12px}.mm-tile{height:112px}.mm-bee{width:210px;height:195px}}
 @media (prefers-reduced-motion:reduce){.mm-tile,.mm-ico,.mm-title,.mm-tile::before{animation:none!important;opacity:1}}
 `;
@@ -245,7 +269,7 @@
 
   /* ================= ساخت صفحه ================= */
   let lastClk = 0, lastF = 0, built = false, raf = 0, running = false, bee, bg, stage;
-  const SUBS = ['هر جا بری، خاطره‌هامون همراهته 💛', 'زنبور ما هم اینجاست؛ بهش دست بزن 🐝', 'یه جا برای همهٔ دنیامون ✨', 'کجا بریم امروز؟ 💜'];
+  const SUBS = ['هر جا بری، خاطره‌هامون همراهته 💛', 'زنبور ما هم اینجاست؛ بهش دست بزن 🐝', 'یه جا برای همهٔ دنیامون ✨', 'کجا بریم امروز؟ 💜', 'امروز چه خاطره‌ای بسازیم؟ 📖', 'کنار هم، قشنگ‌ترین جای دنیاست 🌍'];
   const NOTES = ['هر روزی که کنار همیم، یه خاطرهٔ قشنگ تازه‌ست 💜', 'خاطره‌ها رو بنویس؛ یه روزی با هم می‌خونیمشون و می‌خندیم 📖', 'یه آهنگ بذار و بذار امشب فقط مال خودمون باشه 🎵', 'کوچیک‌ترین لحظه‌ها، قشنگ‌ترین خاطره‌ها رو می‌سازن ✨', 'امروز یه عکس بذار توی گالری، فردا بهش لبخند می‌زنیم 🖼️', 'کنار تو، حتی یه روز معمولی هم جشنه 🎉', 'یه نقاشی بکش و به همدیگه هدیه بده 🎨', 'گربه‌هامون منتظرن ببینن امروز نوازششون می‌کنی 🐱', 'دنیای ما کوچیکه، ولی از همهٔ دنیا قشنگ‌تره 🌍💛', 'یه فیلم انتخاب کنید و با هم تماشا کنید، حتی از دور 🍿'];
   const pad = n => (n < 10 ? '0' : '') + n;
   function greet() {
@@ -266,17 +290,31 @@
     if (reduce() || !stage) return; const em = ['💛', '💜', '🌸', '✨', '🐝', '⭐', '🎉', '💖'];
     for (let i = 0; i < 26; i++) { const e = document.createElement('span'); e.className = 'mm-conf'; e.textContent = em[i % em.length]; e.style.left = (Math.random() * 100) + '%'; e.style.animationDuration = (2.6 + Math.random() * 2.4) + 's'; e.style.animationDelay = (Math.random() * .8) + 's'; e.style.fontSize = (16 + Math.random() * 16) + 'px'; stage.appendChild(e); setTimeout(() => e.remove(), 6500); }
   }
+  /* تایپ‌شدن زیرعنوان + زنبور همراه */
+  const ty = { i: 0, k: 0, t: 0, hold: 0, del: false }, pet = { x: 200, y: 120, mx: -1, my: -1, on: false };
+  function typer(now) {
+    const el = $('mmSub'); if (!el || now - ty.t < 70) return; ty.t = now; const full = SUBS[ty.i % SUBS.length];
+    if (ty.hold > 0) { ty.hold--; return; }
+    if (!ty.del) { ty.k++; if (ty.k >= full.length) { ty.del = true; ty.hold = 30; } } else { ty.k -= 2; if (ty.k <= 0) { ty.k = 0; ty.del = false; ty.i++; ty.hold = 4; } }
+    el.innerHTML = full.slice(0, ty.k) + '<span class="mm-caret"></span>';
+  }
+  function petMove(now) {
+    const p = $('mmPet'); if (!p || !stage) return; const r = stage.getBoundingClientRect(), t = now / 1000;
+    let tx, ty2; if (pet.on) { tx = pet.mx + Math.cos(t * 2.2) * 26; ty2 = pet.my - 30 + Math.sin(t * 3) * 14; } else { tx = r.width / 2 + Math.cos(t * .9) * Math.min(300, r.width * .35); ty2 = 130 + Math.sin(t * 1.3) * 60; }
+    pet.x += (tx - pet.x) * .08; pet.y += (ty2 - pet.y) * .08; const dx = tx - pet.x;
+    p.style.transform = `translate(${pet.x.toFixed(1)}px,${pet.y.toFixed(1)}px) scaleX(${dx < -1 ? -1 : 1}) rotate(${Math.max(-18, Math.min(18, dx * .2)).toFixed(0)}deg)`;
+  }
   function build() {
     const host = $('screen-menu'); if (!host) return false;
     if (!$('mmCss')) { const s = document.createElement('style'); s.id = 'mmCss'; s.textContent = CSS; document.head.appendChild(s); }
-    host.innerHTML = '<div class="mm-stage" id="mmStage"><canvas class="mm-bg" id="mmBg"></canvas><div class="mm-glow" id="mmGlow"></div><div class="mm-in"><div class="mm-beew"><div class="mm-ring"><i>✨</i><i>💛</i></div><div class="mm-ring r2"><i>🌸</i><i>⭐</i></div><canvas class="mm-bee" id="mmBee" title="بهش دست بزن"></canvas></div><h1 class="mm-title" id="mmTitle">Our Memories</h1><p class="mm-sub" id="mmSub"></p><div class="mm-card"><span class="mm-hi" id="mmHi"></span><span class="mm-clk" id="mmClk"></span><span class="mm-dt" id="mmDt"></span></div><button type="button" class="mm-note" id="mmNote"></button><div class="mm-grid" id="mmGrid"></div></div></div>';
+    host.innerHTML = '<div class="mm-stage" id="mmStage"><canvas class="mm-bg" id="mmBg"></canvas><div class="mm-glow" id="mmGlow"></div><div class="mm-waves"><svg class="w3" viewBox="0 0 1200 90" preserveAspectRatio="none"><path d="M0 50 Q150 10 300 50 T600 50 T900 50 T1200 50 V90 H0z" fill="#7fd9ff" opacity=".25"/></svg><svg class="w2" viewBox="0 0 1200 90" preserveAspectRatio="none"><path d="M0 55 Q150 20 300 55 T600 55 T900 55 T1200 55 V90 H0z" fill="#c9a2ff" opacity=".3"/></svg><svg viewBox="0 0 1200 90" preserveAspectRatio="none"><path d="M0 60 Q150 30 300 60 T600 60 T900 60 T1200 60 V90 H0z" fill="#ff9ed2" opacity=".28"/></svg></div><span class="mm-pet" id="mmPet">🐝</span><span class="mm-fly" style="top:18%;animation-duration:19s">🦋</span><span class="mm-fly" style="top:46%;animation-duration:27s;animation-delay:-9s">🐝</span><span class="mm-fly" style="top:70%;animation-duration:23s;animation-delay:-15s">✨</span><div class="mm-in"><div class="mm-beew"><div class="mm-pulse"></div><div class="mm-pulse p2"></div><div class="mm-pulse p3"></div><div class="mm-ring"><i>✨</i><i>💛</i></div><div class="mm-ring r2"><i>🌸</i><i>⭐</i></div><canvas class="mm-bee" id="mmBee" title="بهش دست بزن"></canvas></div><h1 class="mm-title" id="mmTitle">Our Memories</h1><p class="mm-sub" id="mmSub"></p><div class="mm-card"><span class="mm-hi" id="mmHi"></span><span class="mm-clk" id="mmClk"></span><span class="mm-dt" id="mmDt"></span></div><button type="button" class="mm-note" id="mmNote"></button><div class="mm-grid" id="mmGrid"></div></div></div>';
     stage = $('mmStage');
     const grid = $('mmGrid'); let i = 0;
     document.querySelectorAll('.nav-bar .nav-btn[data-screen]').forEach(b => {
       const sc = b.dataset.screen; if (sc === 'menu') return;
       const txt = b.textContent.trim(), m = txt.match(/^(\S+)\s+(.*)$/), ico = m ? m[1] : '✨', lbl = m ? m[2] : txt;
       const el = document.createElement('button'); el.type = 'button'; el.className = 'mm-tile'; el.style.setProperty('--i', i++);
-      el.innerHTML = `<span class="mm-ico">${ico}</span><span class="mm-lbl">${lbl}</span>`;
+      el.innerHTML = `<i class="mm-shine"></i><span class="mm-ico">${ico}</span><span class="mm-lbl">${lbl}</span>`;
       el.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; el.style.setProperty('--ry', ((x - .5) * 18).toFixed(1) + 'deg'); el.style.setProperty('--rx', ((.5 - y) * 18).toFixed(1) + 'deg'); el.style.setProperty('--mx', (x * 100) + '%'); el.style.setProperty('--my', (y * 100) + '%'); });
       el.addEventListener('pointerleave', () => { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); });
       el.addEventListener('click', e => {
@@ -288,17 +326,18 @@
     });
     bee = Bee.make($('mmBee')); bg = makeBg($('mmBg'), stage);
     $('mmBee').addEventListener('click', () => bee.poke());
-    $('mmSub').textContent = SUBS[Math.floor(Math.random() * SUBS.length)];
+    ty.i = Math.floor(Math.random() * SUBS.length);
     tickInfo(); nextNote(); $('mmNote').addEventListener('click', e => { nextNote(); const sr = stage.getBoundingClientRect(); bg.burst(e.clientX - sr.left, e.clientY - sr.top); });
     let tt = 0, tc = 0; $('mmTitle').addEventListener('click', () => { const n = Date.now(); tc = n - tt < 700 ? tc + 1 : 1; tt = n; if (tc >= 5) { tc = 0; confetti(); bee.poke(); } });
     stage.addEventListener('click', e => { if (e.target.closest('.mm-tile,.mm-note,.mm-title,.mm-bee')) return; const sr = stage.getBoundingClientRect(); bg.burst(e.clientX - sr.left, e.clientY - sr.top, true); });
     const glow = $('mmGlow');
     stage.addEventListener('pointermove', e => {
       const r = stage.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      pet.on = true; pet.mx = x; pet.my = y; const bw = document.querySelector('.mm-beew'); if (bw) bw.style.transform = `translate(${((x / r.width - .5) * -16).toFixed(1)}px,${((y / r.height - .5) * -10).toFixed(1)}px)`;
       bg.move(x, y); glow.style.opacity = 1; glow.style.left = x + 'px'; glow.style.top = y + 'px';
       const br = $('mmBee').getBoundingClientRect(); bee.look(Math.max(-1, Math.min(1, (e.clientX - (br.left + br.width / 2)) / 400)), Math.max(-1, Math.min(1, (e.clientY - (br.top + br.height / 2)) / 400)));
     });
-    stage.addEventListener('pointerleave', () => { glow.style.opacity = 0; bg.move(-999, -999); bee.look(0, 0); });
+    stage.addEventListener('pointerleave', () => { glow.style.opacity = 0; pet.on = false; bg.move(-999, -999); bee.look(0, 0); const bw = document.querySelector('.mm-beew'); if (bw) bw.style.transform = ''; });
     window.addEventListener('resize', () => { if (!running) return; bg.size(); bee.size(); });
     return true;
   }
@@ -307,7 +346,7 @@
     const host = $('screen-menu');
     if (document.hidden || !host || !host.classList.contains('active')) { raf = requestAnimationFrame(loop); return; }
     if (now - lastF < 24) { raf = requestAnimationFrame(loop); return; } lastF = now;
-    if (now - lastClk > 1000) { lastClk = now; tickInfo(); } try { bg.frame(now); bee.frame(now); } catch (e) { console.warn('menu', e); }
+    if (now - lastClk > 1000) { lastClk = now; tickInfo(); } try { typer(now); petMove(now); bg.frame(now); bee.frame(now); } catch (e) { console.warn('menu', e); }
     raf = requestAnimationFrame(loop);
   }
   function start() {
