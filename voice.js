@@ -419,7 +419,7 @@
   }
   function onChat(p) {
     if (!p || p.from === ID || (!p.text && !p.img)) return;
-    const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text || '').slice(0, 500), ts: p.ts || Date.now(),
+    const m = { id: p.id || ('m_' + (p.ts || Date.now()) + '_' + p.from), name: String(p.name || 'اون یکی').slice(0, 30), text: String(p.text || '').slice(0, 1500), ts: p.ts || Date.now(),
       img: /^https?:\/\//.test(p.img || '') ? p.img : '', reply: p.reply && p.reply.id ? { id: String(p.reply.id), name: String(p.reply.name || '').slice(0, 30), text: String(p.reply.text || '').slice(0, 120) } : null };
     delete typers[p.from]; if (p.name === BOT) delete typers.bot;
     if (addMsg(m)) { saveMsgs(); renderChat(); renderTyping(); markSeen(); blip('recv'); if (window.ChatDock && !ChatDock.isOpen()) { ChatDock.bump(); say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); } }
@@ -556,7 +556,7 @@
     clearTimeout(typeIdle); typeIdle = setTimeout(() => { lastTypeSent = 0; ctSend({ k: 'typing', on: 0 }); }, 3000);
   }
   const rndp = a => a[Math.floor(Math.random() * a.length)];
-  const BOT_HELP = 'من پفیلام 🧸 دستیار مشترک شماها! بنویس «پفیلا، …» و یکی از اینا رو بخواه: جوک 😂 · فال ✨ · سوال دونفره ❓ · ایده برای دیت 💡 · سکه 🪙 · تاس 🎲 · «پیتزا یا برگر؟» (برات انتخاب می‌کنم) · تاریخ و ساعت ⏰';
+  const BOT_HELP = 'من پفیلام 🧸 دستیار مشترک شماها! بنویس «پفیلا، …» و از من بخواه: هر سوالی (علمی، تاریخی، آشپزی، برنامه‌نویسی، مشاوره…) 🧠 · ترجمه 🌐 · هوای هر شهر 🌤️ · ریاضی و تبدیل واحد 🧮 · تاریخ و ساعت ⏰ · رویدادها و شمارش معکوس تقویم 📅 · راهنمای همهٔ بخش‌های سایت 🗺️ · جوک 😂 · فال ✨ · ایده برای دیت 💡 · «پیتزا یا برگر؟» 🤔 · سکه 🪙 و تاس 🎲';
   const JOKES = ['به خرگوشه می‌گن چرا گوشات بلنده؟ می‌گه چون هر چی حرف می‌زنن، من اینا رو بلند گوش می‌دم 🐰', 'یارو می‌ره دکتر می‌گه همه‌ش حس می‌کنم نامرئی‌م. دکتر می‌گه: «بعدی!» 😅', 'به لاک‌پشته می‌گن چرا اینقدر آروم؟ می‌گه عجله نکن، خونه رو که همیشه با خودمه 🐢', 'دو تا ابر عاشق هم شدن؛ بعدش از خوشحالی بارون شدن ☁️💧', 'به کامپیوتره می‌گن چرا خسته‌ای؟ می‌گه امروز کلی «کوکی» خوردم 🍪', 'شنیدی ماه چرا همیشه سرحاله؟ چون هر شب «کامل» می‌شه! 🌕'];
   const QS = ['اگه فردا هیچ کاری نداشتیم، کجا می‌رفتیم؟', 'اولین چیزی که از من یادت می‌یاد چیه؟', 'یه خاطرهٔ خنده‌دار از ما که هیچ‌وقت یادت نمی‌ره؟', 'اگه می‌تونستیم یه روز جای هم باشیم، اول چیکار می‌کردی؟', 'یه آرزوی کوچیک که دوست داری با هم برآورده کنیم؟', 'کدوم آهنگ یاد من می‌ندازتت؟', 'بهترین هدیه‌ای که تا حالا گرفتی چی بوده؟', 'ده سال دیگه خودمون رو کجا می‌بینی؟'];
   const DATES = ['🍿 فیلم‌بازی توی اتاق تماشا با یه ظرف پاپ‌کورن', '🎨 هر دو یه طرح آماده رو توی بوم دو نیمه رنگ کنید', '🌙 پیاده‌روی شبانه و بستنی', '🍕 هرکی یه غذای مورد علاقه‌شو بپزه و عکسش رو برای اون یکی بفرسته', '🎧 یه پلی‌لیست مشترک با ۵ آهنگ از هر کدوم', '📞 یه تماس طولانی بدون هیچ دلیل، فقط برای حرف زدن', '🧩 یه بازی حدس کلمه توی بوم'];
@@ -608,9 +608,9 @@
   const LOCAL_Q = /^(?:راهنما|سکه|تاس|help)/;
   let botBusy = false; const GPT_FN = 'chatgpt';
   async function gptAnswer(q, who) {
-    const hist = msgs.filter(m => m.text && !String(m.id || '').startsWith('__')).slice(-8).map(m => ({ role: m.name === BOT ? 'assistant' : 'user', content: (m.name === BOT ? '' : (m.name || '') + ': ') + m.text }));
+    const hist = msgs.filter(m => m.text && !String(m.id || '').startsWith('__')).slice(-14).map(m => ({ role: m.name === BOT ? 'assistant' : 'user', content: (m.name === BOT ? '' : (m.name || '') + ': ') + m.text }));
     if (!hist.length || hist[hist.length - 1].role !== 'user') hist.push({ role: 'user', content: who + ': ' + q });
-    const call = n => dbClient.functions.invoke(n, { body: { messages: hist } });
+    const call = n => dbClient.functions.invoke(n, { body: { messages: hist, context: botContext(who) } });
     const r = await Promise.race([call(GPT_FN).then(x => (x && x.error && /not found|404|Failed to send|fetch|relay/i.test(String(x.error.message || x.error))) ? call('dynamic-service') : x, () => call('dynamic-service')), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
     if (r && r.error) { let d = ''; try { const c = r.error.context; if (c && c.json) { const j = await c.json(); d = j && (j.error || j.message || j.msg) || ''; } else if (c && c.text) d = await c.text(); } catch (e2) {} const er = new Error((d ? String(d) : '') + ' | ' + String(r.error.message || r.error)); er.detail = d; er.status = r.error.context && r.error.context.status; throw er; } const t = r && r.data && r.data.reply; if (!t) throw new Error((r && r.data && r.data.error) || 'empty'); return String(t);
   }
@@ -640,12 +640,106 @@
     if (x.length > 420) { const cut = x.slice(0, 420), i = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('؛ '), cut.lastIndexOf('، ')); x = (i > 120 ? cut.slice(0, i + 1) : cut) + '…'; }
     return '📚 ' + (sm.title || hit.title) + ': ' + x + ' (ویکی‌پدیا)';
   }
+
+  /* ---------- 🧠 دانش پفیلا ---------- */
+  const SITE_KB = [
+    [/منوی اصلی|صفحه اول|زنبور/, '✨ «منوی اصلی» صفحهٔ اوله: زنبور ناز، افکت‌های رنگی و کاشی‌های همهٔ بخش‌ها. به زنبور دست بزن تا بخنده، دو بار پشت‌سرهم بزنی پرواز می‌کنه 🐝'],
+    [/دفترچه|خاطره|فصل/, '📖 «دفترچه» جاییه که خاطره‌ها و فصل‌هاتون رو می‌نویسید؛ زیر هر نوشته می‌شه کامنت گذاشت و آهنگ پس‌زمینهٔ آروم پخش می‌شه.'],
+    [/پلی\s*لیست|آهنگ|موزیک/, '🎵 توی «پلی‌لیست» آهنگ‌هاتون رو آپلود می‌کنید یا لینک می‌دید و پلیر بالای صفحه پخششون می‌کنه. با «گوش دادن با هم» هر دو همزمان یک آهنگ رو می‌شنوید.'],
+    [/گالری|عکس|ویدیو/, '🖼️ «گالری» برای عکس و ویدیوهاست. می‌شه چندتا رو با هم آپلود کرد (با نوار پیشرفت)، چندتایی انتخاب و حذف یا به پوشه منتقل کرد.'],
+    [/پوشه/, '📁 پوشه: توی سینما، گیم، گالری، فایل‌ها و بوم بالای صفحه «➕ پوشهٔ جدید» رو بزن، اسم بنویس و Enter. داخل پوشه می‌شه پوشهٔ دیگه ساخت. برای انتقال از دکمهٔ 📂 روی هر مورد یا کشیدن و رها کردن روی پوشه استفاده کن، یا داخل پوشه «➕ افزودن از موجودها» رو بزن.'],
+    [/فایل/, '📁 «فایل‌ها» برای هر نوع فایل (pdf، زیپ، …) که می‌خواید نگه دارید. موقع آپلود، درصد و سرعت دیده می‌شه و می‌شه توی پوشه گذاشتشون.'],
+    [/گیم|بازی/, '🎮 «گیم» لینک و اسم گیم‌هاتونه. عکس هر گیم خودکار از روی اسم انگلیسیش میاد، پس اسم رو دقیق بنویس (مثلاً Minecraft).'],
+    [/اتاق\s*تماشا|فیلم|سریال|سینما|زیرنویس/, '🍿 «سینما» لینک فیلم و سریاله. «اتاق تماشا» فیلم رو برای هر دو همزمان پخش می‌کنه: از آرشیو یا آپلود از سیستم (mp4، webm، mkv) یا لینک مستقیم. زیرنویس توی خود فایل mkv/webm خونده می‌شه و می‌شه اندازه و شکلش رو عوض کرد. برای چند لینک یک‌جا از «اضافهٔ چند لینک یک‌جا» استفاده کن.'],
+    [/اسکرین\s*شیر|اشتراک\s*صفحه|صفحه\s*نمایش/, '🖥️ «اسکرین‌شیر» توی اتاق صحبته: صفحه‌ات رو زنده برای اون یکی نشون می‌دی. اگه وصل نشه خودش دوباره تلاش می‌کنه و اطلاعات فنی اتصال رو می‌تونی ببینی.'],
+    [/اتاق\s*صحبت|تماس|مکالمه/, '🎙️ «اتاق صحبت» برای تماس صوتیه؛ وارد شو، میکروفن رو روشن کن و مدت تماس‌هاتون ثبت می‌شه.'],
+    [/بوم|نقاشی|حدس\s*کلمه/, '🎨 «بوم» برای نقاشیه: قالب‌های محو برای پر رنگ کردن، قلم‌ها و رنگ‌ها، ذخیره توی گالری، کامنت زیر نقاشی‌ها و بازی «حدس کلمه».'],
+    [/تقویم|رویداد|یادآوری|کلاس/, '📅 «تقویم» شمسیه و تاریخ میلادی هم کوچیک زیرش هست. روی هر روز بزن تا رویداد یا یادآوری بذاری (تکرارشونده هم می‌شه) و تب «کلاس‌ها» برنامهٔ زوج/فرد داره.'],
+    [/باغ/, '🌳 «باغ» یه باغ مشترکه که با هم می‌کاریدش و بزرگ می‌شه.'],
+    [/پازل/, '🧩 «پازل» یه بازی دونفرهٔ تصویریه که با عکس‌های خودتون درست می‌شه.'],
+    [/سؤال\s*روز|سوال\s*روز/, '❓ «سؤال روز» هر روز یه سوال می‌پرسه و جواب هر دو بعد از ثبت دیده می‌شه.'],
+    [/یادداشت/, '📝 «یادداشت‌ها» برای نوشته‌های کوتاه و لیست‌هاتونه.'],
+    [/گربه/, '🐱 گربه‌های سایت (وقتی مهمونن یا توی «گربه‌های ما» توی پروفایل) با شما بازی می‌کنن.'],
+    [/پروفایل/, '👤 «پروفایل» اسم، عکس و گربه‌هاتونه و ته صفحه‌اش امضای Created by Love 😇 هست.'],
+    [/چت|پیام|لینک|ریپلای|ویرایش\s*پیام/, '💬 «چت کوچولو»: پیام و عکس بفرست (آپلود عکس از لحظهٔ انتخاب شروع می‌شه و می‌تونی همزمان چت کنی)، روی پیام ریپلای بزن، پیام خودت رو ویرایش کن و لینک‌ها قابل‌کلیک‌ان. من هم با «پفیلا، …» جواب می‌دم.'],
+    [/آپدیت|بروزرسانی|چی\s*اضافه/, '✨ دکمهٔ ✨ بالای صفحه لیست آخرین آپدیت‌ها رو نشون می‌ده.']
+  ];
+  const siteAns = n => {
+    if (!/(چطور|چجوری|چگونه|کجا|چیه|چی هست|چیکار|چه کار|بلدی|راهنما|کاربرد|میشه|می‌شه|چی بذارم|برای چیه|چه)/.test(n)) return null;
+    const hit = SITE_KB.filter(([re]) => re.test(n)).slice(0, 2); return hit.length ? hit.map(h => h[1]).join('\n\n') : null;
+  };
+  const evList = (from, days) => {
+    const out = []; try {
+      const evs = (typeof eventsCache !== 'undefined' && eventsCache) || [];
+      for (let i = 0; i <= days; i++) { const iso = Recur.addDaysIso(from, i); evs.forEach(e => { if (e.repeat === 'hours' ? e.event_date === iso : Recur.occursOn(e, iso)) out.push({ iso, e, i }); }); }
+    } catch (er) {} return out;
+  };
+  function dateAns(n) {
+    const w = Recur.epochToWall(Date.now()), d = new Date();
+    if (/ساعت\s*(?:الان)?\s*(?:چنده|چند)|الان\s*ساعت|ساعت\s*چنده/.test(n)) return '⏰ الان ساعت ' + fa(w.hhmm) + ' است.';
+    if (/(?:تاریخ|امروز|الان)[^.]*(?:چندمه|چنده|چندم|چه\s*روز|چی\s*هست)|چندمه|چه\s*روزیه|چند\s*شنبه|تاریخ\s*(?:امروز|میلادی|شمسی)|امروز\s*چه/.test(n)) return '📅 امروز ' + Recur.fmtJalaliLong(w.iso) + ' است (' + d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ') و ساعت ' + fa(w.hhmm) + '.';
+    return null;
+  }
+  function eventsAns(n) {
+    const asks = /(رویداد|مناسبت|یادآوری|برنامه|مونده|مانده|بعدی|قرار)/.test(n); if (!asks) return null;
+    const today = Recur.todayIso();
+    const m = n.match(/چند\s*روز\s*(?:مونده|مانده|دیگه)?\s*(?:به|تا)\s*(.+)$/);
+    if (m) {
+      const key = m[1].replace(/\s*(?:مونده|مانده)\s*$/, '').trim(); const f = evList(today, 366).find(x => x.e.title && (x.e.title.includes(key) || key.includes(x.e.title)));
+      if (f) return '⏳ تا «' + f.e.title + '» ' + (f.i === 0 ? 'امروزه! 🎉' : fa(f.i) + ' روز مونده (' + Recur.fmtJalaliShort(f.iso) + ')');
+      return null;
+    }
+    const days = /امروز/.test(n) ? 0 : /فردا/.test(n) ? 1 : /(هفته)/.test(n) ? 7 : /ماه/.test(n) ? 30 : 30;
+    let list = evList(days === 1 ? Recur.addDaysIso(today, 1) : today, days === 1 ? 0 : days); if (!/امروز|فردا|هفته|ماه|بعدی|نزدیک|مونده/.test(n)) return null;
+    if (/بعدی/.test(n)) list = list.slice(0, 1);
+    if (!list.length) return '📅 ' + (days === 0 ? 'امروز' : days === 1 ? 'فردا' : 'توی این بازه') + ' رویدادی توی تقویم ثبت نشده 💜';
+    return '📅 رویدادها:\n' + list.slice(0, 6).map(x => (x.e.emoji || '💜') + ' ' + x.e.title + ' — ' + (x.i === 0 && days !== 1 ? 'امروز' : Recur.fmtJalaliShort(x.iso))).join('\n');
+  }
+  const UNITS = { 'کیلومتر': ['l', 1000], 'کیلو متر': ['l', 1000], 'متر': ['l', 1], 'سانتی متر': ['l', .01], 'سانتیمتر': ['l', .01], 'مایل': ['l', 1609.344], 'فوت': ['l', .3048], 'اینچ': ['l', .0254], 'کیلوگرم': ['m', 1], 'کیلو': ['m', 1], 'گرم': ['m', .001], 'پوند': ['m', .45359237], 'اونس': ['m', .0283495], 'لیتر': ['v', 1], 'گالن': ['v', 3.785411784], 'سانتی گراد': ['t', 'c'], 'سانتیگراد': ['t', 'c'], 'درجه سانتی گراد': ['t', 'c'], 'فارنهایت': ['t', 'f'], 'کلوین': ['t', 'k'] };
+  function unitAns(q) {
+    const n = toEn(q).replace(/ي/g, 'ی').replace(/\s+/g, ' ');
+    const num = n.match(/(-?\d+(?:\.\d+)?)/); if (!num) return null;
+    const names = Object.keys(UNITS).sort((a, b) => b.length - a.length), found = [];
+    let rest = n; names.forEach(k => { const i = rest.indexOf(k); if (i >= 0) { found.push({ k, i }); rest = rest.slice(0, i) + ' '.repeat(k.length) + rest.slice(i + k.length); } });
+    if (found.length < 2) return null; found.sort((a, b) => a.i - b.i); const from = found[0].k, to = found[1].k, a = UNITS[from], b = UNITS[to]; if (a[0] !== b[0]) return null;
+    const x = Number(num[1]); let r;
+    if (a[0] === 't') { const c = a[1] === 'c' ? x : a[1] === 'f' ? (x - 32) * 5 / 9 : x - 273.15; r = b[1] === 'c' ? c : b[1] === 'f' ? c * 9 / 5 + 32 : c + 273.15; }
+    else r = x * a[1] / b[1];
+    return '📐 ' + fa(x) + ' ' + from + ' ≈ ' + fa(Number(r.toFixed(3))) + ' ' + to;
+  }
+  async function translateAns(q) {
+    const m = q.match(/^(?:ترجمه(?:\s*کن)?|translate)\s*[:：]?\s*(.+)$/i) || q.match(/^(.+?)\s*(?:رو|را)?\s*(?:به|بە)\s*(انگلیسی|فارسی|عربی|ترکی|فرانسه|آلمانی|اسپانیایی|ایتالیایی|روسی)\s*(?:بگو|ترجمه کن|چی میشه|چی می‌شه|چی میگن|چی می‌گن|چیه)?\s*$/i);
+    if (!m) return null; let txt = (m[1] || '').trim(), tl = m[2] || ''; if (!txt) return null;
+    const CODE = { 'انگلیسی': 'en', 'فارسی': 'fa', 'عربی': 'ar', 'ترکی': 'tr', 'فرانسه': 'fr', 'آلمانی': 'de', 'اسپانیایی': 'es', 'ایتالیایی': 'it', 'روسی': 'ru' };
+    const latin = (txt.match(/[A-Za-z]/g) || []).length > txt.length / 2; const to = CODE[tl] || (latin ? 'fa' : 'en'), from = latin ? 'en' : 'fa';
+    if (from === to) return null;
+    const j = await getJ('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(txt.slice(0, 400)) + '&langpair=' + from + '|' + to);
+    const t = j && j.responseData && String(j.responseData.translatedText || '').trim(); if (!t || /MYMEMORY|INVALID/i.test(t)) return null;
+    return '🌐 ' + t;
+  }
+  function botContext(who) {
+    let c = '';
+    try {
+      const w = Recur.epochToWall(Date.now());
+      c += 'زمان الان: ' + Recur.fmtJalaliLong(w.iso) + ' (' + new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ') ساعت ' + w.hhmm + ' به وقت ایران.\\n';
+      c += 'کسی که الان باهات حرف می‌زنه: ' + (who || 'ناشناس') + '.\\n';
+      const ev = evList(Recur.todayIso(), 21).slice(0, 6); if (ev.length) c += 'رویدادهای نزدیک تقویم‌شون: ' + ev.map(x => x.e.title + ' (' + Recur.fmtJalaliShort(x.iso) + ')').join('، ') + '.\\n';
+    } catch (e) {}
+    c += 'بخش‌های سایت Our Memories: منوی اصلی، دفترچه (خاطره)، پلی‌لیست (آهنگ و گوش دادن با هم)، گالری، فایل‌ها، گیم، سینما (فیلم، سریال، اتاق تماشا با زیرنویس)، بوم (نقاشی و حدس کلمه)، اتاق صحبت (تماس صوتی و اسکرین‌شیر)، باغ، پازل، سؤال روز، یادداشت‌ها، تقویم (شمسی با میلادی)، پروفایل، چت. در گیم/سینما/گالری/فایل‌ها/بوم می‌شه پوشه (تو در تو) ساخت.';
+    return c.slice(0, 1800);
+  }
   let gptDownUntil = 0;
   async function smartAnswer(q) {
     const n = toEn(q).replace(/[؟?!.،,]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (Date.now() > gptDownUntil) { try { return await gptAnswer(q, nm()); } catch (e) { gptDownUntil = Date.now() + 10 * 60000; } }
+    /* مهارت‌های دقیق و محلی اول؛ جواب‌شون قطعیه و به اینترنت یا کلید نیاز نداره */
     let r = mathAns(q); if (r) return r;
+    r = dateAns(n); if (r) return r;
+    r = eventsAns(n); if (r) return r;
+    r = unitAns(q); if (r) return r;
+    r = siteAns(n); if (r) return r;
     if (/هوا/.test(n)) { try { r = await weatherAns(n); if (r) return r; } catch (e) {} }
+    try { r = await translateAns(q.trim()); if (r) return r; } catch (e) {}
+    if (Date.now() > gptDownUntil) { try { return await gptAnswer(q, nm()); } catch (e) { gptDownUntil = Date.now() + 10 * 60000; } }
     r = botAnswer(q, true); if (r) return r;
     try { r = await wikiAns(n); if (r) return r; } catch (e) {}
     return botAnswer(q);
