@@ -55,7 +55,7 @@
     b.classList.toggle('hide', !!hide); if (hide) return; const t = now / 1000;
     if (now - bee.last > 2500) { bee.tx = innerWidth * (.5 + Math.cos(t * .5) * .38); bee.ty = innerHeight * (.5 + Math.sin(t * .7) * .3); }
     const ox = Math.cos(t * 2.4) * 22, oy = Math.sin(t * 3.1) * 12 - 26;
-    const px = bee.x, nx = bee.x + (bee.tx + (now - bee.last > 2500 ? 0 : ox) - bee.x) * .06, ny = bee.y + (bee.ty + (now - bee.last > 2500 ? 0 : oy) - bee.y) * .06;
+    const px = bee.x, nx = bee.x + (bee.tx + (now - bee.last > 2500 ? 0 : ox) - bee.x) * .028, ny = bee.y + (bee.ty + (now - bee.last > 2500 ? 0 : oy) - bee.y) * .028;
     bee.vx = nx - px; bee.x = nx; bee.y = ny;
     b.style.transform = `translate(${nx.toFixed(1)}px,${ny.toFixed(1)}px) scaleX(${bee.vx < -.15 ? -1 : 1}) rotate(${Math.max(-16, Math.min(16, bee.vx * 4)).toFixed(0)}deg)`;
   }
