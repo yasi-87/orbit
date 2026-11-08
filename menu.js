@@ -36,7 +36,25 @@
 .mm-rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.45);transform:translate(-50%,-50%) scale(0);animation:mmRip .6s ease-out forwards;pointer-events:none}
 @keyframes mmRip{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
 .mm-tile:active{transform:scale(.96)}
-@media (max-width:520px){.mm-grid{grid-template-columns:repeat(2,1fr);gap:12px}.mm-tile{height:112px}.mm-bee{width:210px;height:195px}}
+/* هاله و ستاره‌های چرخان دور زنبور */
+.mm-beew{position:relative;display:flex;align-items:center;justify-content:center}
+.mm-ring{position:absolute;left:50%;top:50%;width:270px;height:270px;margin:-135px 0 0 -135px;border-radius:50%;pointer-events:none;border:1px dashed rgba(255,212,90,.28);animation:mmRot 22s linear infinite}
+.mm-ring.r2{width:330px;height:330px;margin:-165px 0 0 -165px;border-color:rgba(201,162,255,.22);animation-duration:34s;animation-direction:reverse}
+.mm-ring i{position:absolute;top:-7px;left:50%;margin-left:-7px;font-style:normal;font-size:14px;filter:drop-shadow(0 0 6px rgba(255,212,90,.9))}
+.mm-ring.r2 i{filter:drop-shadow(0 0 6px rgba(201,162,255,.9))}
+.mm-ring i:nth-child(2){top:auto;bottom:-7px}
+@keyframes mmRot{to{transform:rotate(360deg)}}
+/* کارت خوش‌آمد و ساعت */
+.mm-card{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;padding:10px 20px;border-radius:999px;background:linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,.25);margin:2px 0 6px}
+.mm-hi{font-weight:700;font-size:1rem}.mm-clk{font-variant-numeric:tabular-nums;font-size:.95rem;color:#ffd45a;letter-spacing:1px;direction:ltr}.mm-dt{font-size:.82rem;color:#cdbfe6}
+.mm-note{display:block;max-width:560px;width:100%;margin:0 0 16px;padding:12px 18px;border-radius:18px;border:1px solid rgba(255,158,210,.3);background:linear-gradient(135deg,rgba(255,158,210,.14),rgba(201,162,255,.1));color:#fff;font:inherit;font-size:.92rem;line-height:1.9;text-align:center;cursor:pointer;position:relative;overflow:hidden;transition:transform .2s}
+.mm-note:hover{transform:translateY(-2px)}.mm-note::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent);animation:mmSweep 6s ease-in-out infinite}
+.mm-note small{display:block;opacity:.6;font-size:.7rem}
+@keyframes mmSweep{0%,60%{left:-60%}100%{left:130%}}
+.mm-tile .mm-lbl::after{content:'';display:block;width:0;height:2px;margin:4px auto 0;border-radius:2px;background:linear-gradient(90deg,#ffd45a,#ff9ed2);transition:width .3s}.mm-tile:hover .mm-lbl::after{width:60%}
+.mm-conf{position:absolute;top:-20px;z-index:5;pointer-events:none;animation:mmFall linear forwards;font-size:20px}
+@keyframes mmFall{to{transform:translateY(calc(100vh + 40px)) rotate(540deg);opacity:.2}}
+@media (max-width:520px){.mm-ring{width:220px;height:220px;margin:-110px 0 0 -110px}.mm-ring.r2{width:270px;height:270px;margin:-135px 0 0 -135px}.mm-grid{grid-template-columns:repeat(2,1fr);gap:12px}.mm-tile{height:112px}.mm-bee{width:210px;height:195px}}
 @media (prefers-reduced-motion:reduce){.mm-tile,.mm-ico,.mm-title,.mm-tile::before{animation:none!important;opacity:1}}
 `;
 
@@ -168,7 +186,8 @@
   /* ================= پس‌زمینه: شفق + لانهٔ زنبور + شب‌تاب + ستارهٔ دنباله‌دار ================= */
   function makeBg(canvas, stage) {
     const ctx = canvas.getContext('2d'); let W = 0, H = 0; const SC = 0.5;
-    const flies = [], stars = [], bursts = []; let px = -999, py = -999, shoot = null, nextShoot = 3, fr = 0;
+    const flies = [], stars = [], bursts = [], hearts = []; const HE = ['💛', '💜', '🌸', '💖', '✨'], hsp = HE.map(e => { const c = mk2(28, 28), g = c.getContext('2d'); g.font = '20px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 14, 15); return c; }); let px = -999, py = -999, shoot = null, nextShoot = 3, fr = 0;
+    function mk2(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
     const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
     let aur = null, hexc = null, HS = 0, HH = 0;
     const spr = mk(48, 48); { const g = spr.getContext('2d'), gr = g.createRadialGradient(24, 24, 0, 24, 24, 24); gr.addColorStop(0, 'rgba(255,224,110,1)'); gr.addColorStop(.3, 'rgba(255,224,110,.45)'); gr.addColorStop(1, 'rgba(255,224,110,0)'); g.fillStyle = gr; g.fillRect(0, 0, 48, 48); }
@@ -177,6 +196,7 @@
       const r = stage.getBoundingClientRect(); W = Math.max(200, r.width * SC | 0); H = Math.max(200, r.height * SC | 0); canvas.width = W; canvas.height = H;
       flies.length = 0; for (let i = 0; i < 26; i++) flies.push({ x: Math.random() * W, y: Math.random() * H, r: 5 + Math.random() * 9, ph: Math.random() * 6.3, sp: .15 + Math.random() * .4 });
       stars.length = 0; for (let i = 0; i < 40; i++) stars.push({ x: Math.random() * W, y: Math.random() * H * .8, r: Math.random() * 1.2 + .5, ph: Math.random() * 6.3 });
+      hearts.length = 0; for (let i = 0; i < 12; i++) hearts.push({ x: Math.random() * W, y: Math.random() * H, s: 7 + Math.random() * 9, sp: .12 + Math.random() * .25, ph: Math.random() * 6.3, k: i % hsp.length });
       aur = mk(Math.ceil(W / 4), Math.ceil(H / 4));
       HS = 30 * SC * 1.4; HH = Math.sqrt(3) * HS; hexc = mk(W, H); const g = hexc.getContext('2d'); g.strokeStyle = 'rgba(255,200,90,.06)'; g.lineWidth = 1;
       for (let row = -1; row * HH * .5 < H + HH; row++) for (let col = -1; col * HS * 1.5 < W + HS * 2; col++) hexPath(g, col * HS * 1.5, row * HH + (col & 1 ? HH / 2 : 0), HS * .95), g.stroke();
@@ -205,24 +225,51 @@
       }
       stars.forEach(s => { ctx.globalAlpha = .3 + .5 * Math.abs(Math.sin(t * .8 + s.ph)); ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.r, s.r); }); ctx.globalAlpha = 1;
       flies.forEach(f => { f.x += Math.sin(t * f.sp + f.ph) * .35; f.y -= f.sp * .35; if (f.y < -12) { f.y = H + 12; f.x = Math.random() * W; } ctx.globalAlpha = .3 + .6 * Math.abs(Math.sin(t * 1.4 + f.ph)); ctx.drawImage(spr, f.x - f.r, f.y - f.r, f.r * 2, f.r * 2); }); ctx.globalAlpha = 1;
+      /* ماه یا خورشید گوشهٔ صحنه */
+      { const hh = new Date().getHours(), day = hh >= 6 && hh < 18, cx = W * .88, cy = H * .1, r = 22 * SC * 2, gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 3.2);
+        gr.addColorStop(0, day ? 'rgba(255,220,120,.55)' : 'rgba(200,215,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.fillRect(cx - r * 3.2, cy - r * 3.2, r * 6.4, r * 6.4);
+        ctx.fillStyle = day ? '#ffe08a' : '#eef2ff'; ctx.beginPath(); ctx.arc(cx, cy, r * .75, 0, 6.3); ctx.fill();
+        if (!day) { ctx.fillStyle = '#1a1030'; ctx.beginPath(); ctx.arc(cx + r * .3, cy - r * .12, r * .7, 0, 6.3); ctx.fill(); } }
+      hearts.forEach(h => { h.y -= h.sp; h.x += Math.sin(t * .6 + h.ph) * .3; if (h.y < -20) { h.y = H + 20; h.x = Math.random() * W; } ctx.globalAlpha = .35 + .25 * Math.sin(t + h.ph); ctx.drawImage(hsp[h.k], h.x, h.y, h.s * 2, h.s * 2); }); ctx.globalAlpha = 1;
       nextShoot -= 1 / 40; if (!shoot && nextShoot < 0) { shoot = { x: Math.random() * W * .8, y: Math.random() * H * .3, l: 0 }; nextShoot = 4 + Math.random() * 5; }
       if (shoot) { shoot.l += 1; const k = shoot.l / 30; const x = shoot.x + k * W * .35, y = shoot.y + k * H * .3; const g = ctx.createLinearGradient(x, y, x - 60, y - 40); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 60, y - 40); ctx.stroke(); if (shoot.l > 30) shoot = null; }
-      for (let i = bursts.length - 1; i >= 0; i--) { const b = bursts[i]; b.x += b.vx; b.y += b.vy; b.vy += .1; b.a -= .03; if (b.a <= 0) { bursts.splice(i, 1); continue; } ctx.globalAlpha = b.a; ctx.fillStyle = b.c; ctx.fillRect(b.x, b.y, b.s, b.s); } ctx.globalAlpha = 1;
+      for (let i = bursts.length - 1; i >= 0; i--) { const b = bursts[i]; b.x += b.vx; b.y += b.vy; b.vy += .1; b.a -= .03; if (b.a <= 0) { bursts.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, b.a); if (b.h) { ctx.drawImage(b.h, b.x, b.y, b.s * 2.4, b.s * 2.4); } else { ctx.fillStyle = b.c; ctx.fillRect(b.x, b.y, b.s, b.s); } } ctx.globalAlpha = 1;
     }
     return {
       frame, size,
       move(x, y) { px = x; py = y; },
-      burst(x, y) { const cols = ['#ffd45a', '#ff9ed2', '#c9a2ff', '#7fd9ff']; for (let i = 0; i < 22; i++) { const a = Math.random() * 6.28, v = 1 + Math.random() * 3; bursts.push({ x: x * SC, y: y * SC, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2, a: 1, s: 2 + Math.random() * 3, c: cols[i % 4] }); } }
+      burst(x, y, heart) { if (heart) { for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (Math.random() - .5) * 1.6, v = 1.5 + Math.random() * 2.5; bursts.push({ x: x * SC, y: y * SC, vx: Math.cos(a) * v, vy: Math.sin(a) * v, a: 1.4, s: 5 + Math.random() * 4, c: ['#ff9ed2', '#ffd45a', '#c9a2ff'][i % 3], h: hsp[i % hsp.length] }); } return; }
+        const cols = ['#ffd45a', '#ff9ed2', '#c9a2ff', '#7fd9ff']; for (let i = 0; i < 22; i++) { const a = Math.random() * 6.28, v = 1 + Math.random() * 3; bursts.push({ x: x * SC, y: y * SC, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2, a: 1, s: 2 + Math.random() * 3, c: cols[i % 4] }); } }
     };
   }
 
   /* ================= ساخت صفحه ================= */
-  let lastF = 0, built = false, raf = 0, running = false, bee, bg, stage;
+  let lastClk = 0, lastF = 0, built = false, raf = 0, running = false, bee, bg, stage;
   const SUBS = ['هر جا بری، خاطره‌هامون همراهته 💛', 'زنبور ما هم اینجاست؛ بهش دست بزن 🐝', 'یه جا برای همهٔ دنیامون ✨', 'کجا بریم امروز؟ 💜'];
+  const NOTES = ['هر روزی که کنار همیم، یه خاطرهٔ قشنگ تازه‌ست 💜', 'خاطره‌ها رو بنویس؛ یه روزی با هم می‌خونیمشون و می‌خندیم 📖', 'یه آهنگ بذار و بذار امشب فقط مال خودمون باشه 🎵', 'کوچیک‌ترین لحظه‌ها، قشنگ‌ترین خاطره‌ها رو می‌سازن ✨', 'امروز یه عکس بذار توی گالری، فردا بهش لبخند می‌زنیم 🖼️', 'کنار تو، حتی یه روز معمولی هم جشنه 🎉', 'یه نقاشی بکش و به همدیگه هدیه بده 🎨', 'گربه‌هامون منتظرن ببینن امروز نوازششون می‌کنی 🐱', 'دنیای ما کوچیکه، ولی از همهٔ دنیا قشنگ‌تره 🌍💛', 'یه فیلم انتخاب کنید و با هم تماشا کنید، حتی از دور 🍿'];
+  const pad = n => (n < 10 ? '0' : '') + n;
+  function greet() {
+    const h = new Date().getHours(), nm = (typeof myName === 'function' ? myName() : '') || '';
+    const g = h < 5 ? '🌙 شب بخیر' : h < 11 ? '☀️ صبح بخیر' : h < 15 ? '🌤️ ظهر بخیر' : h < 18 ? '🌸 عصر بخیر' : h < 22 ? '🌆 شب بخیر' : '🌙 شب بخیر';
+    return g + (nm ? ' ' + nm : '') + ' 💜';
+  }
+  function tickInfo() {
+    const d = new Date(), hi = $('mmHi'), c = $('mmClk'), dt = $('mmDt'); if (!hi) return;
+    hi.textContent = greet(); c.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    try { dt.textContent = Recur.fmtJalaliShort(Recur.todayIso()); } catch (e) { dt.textContent = ''; }
+  }
+  function nextNote(first) {
+    const n = $('mmNote'); if (!n) return; let i = Math.floor(Math.random() * NOTES.length);
+    n.innerHTML = NOTES[i] + '<small>برای جملهٔ بعدی بزن</small>';
+  }
+  function confetti() {
+    if (reduce() || !stage) return; const em = ['💛', '💜', '🌸', '✨', '🐝', '⭐', '🎉', '💖'];
+    for (let i = 0; i < 26; i++) { const e = document.createElement('span'); e.className = 'mm-conf'; e.textContent = em[i % em.length]; e.style.left = (Math.random() * 100) + '%'; e.style.animationDuration = (2.6 + Math.random() * 2.4) + 's'; e.style.animationDelay = (Math.random() * .8) + 's'; e.style.fontSize = (16 + Math.random() * 16) + 'px'; stage.appendChild(e); setTimeout(() => e.remove(), 6500); }
+  }
   function build() {
     const host = $('screen-menu'); if (!host) return false;
     if (!$('mmCss')) { const s = document.createElement('style'); s.id = 'mmCss'; s.textContent = CSS; document.head.appendChild(s); }
-    host.innerHTML = '<div class="mm-stage" id="mmStage"><canvas class="mm-bg" id="mmBg"></canvas><div class="mm-glow" id="mmGlow"></div><div class="mm-in"><canvas class="mm-bee" id="mmBee" title="بهش دست بزن"></canvas><h1 class="mm-title">Our Memories</h1><p class="mm-sub" id="mmSub"></p><div class="mm-grid" id="mmGrid"></div></div></div>';
+    host.innerHTML = '<div class="mm-stage" id="mmStage"><canvas class="mm-bg" id="mmBg"></canvas><div class="mm-glow" id="mmGlow"></div><div class="mm-in"><div class="mm-beew"><div class="mm-ring"><i>✨</i><i>💛</i></div><div class="mm-ring r2"><i>🌸</i><i>⭐</i></div><canvas class="mm-bee" id="mmBee" title="بهش دست بزن"></canvas></div><h1 class="mm-title" id="mmTitle">Our Memories</h1><p class="mm-sub" id="mmSub"></p><div class="mm-card"><span class="mm-hi" id="mmHi"></span><span class="mm-clk" id="mmClk"></span><span class="mm-dt" id="mmDt"></span></div><button type="button" class="mm-note" id="mmNote"></button><div class="mm-grid" id="mmGrid"></div></div></div>';
     stage = $('mmStage');
     const grid = $('mmGrid'); let i = 0;
     document.querySelectorAll('.nav-bar .nav-btn[data-screen]').forEach(b => {
@@ -242,6 +289,9 @@
     bee = Bee.make($('mmBee')); bg = makeBg($('mmBg'), stage);
     $('mmBee').addEventListener('click', () => bee.poke());
     $('mmSub').textContent = SUBS[Math.floor(Math.random() * SUBS.length)];
+    tickInfo(); nextNote(); $('mmNote').addEventListener('click', e => { nextNote(); const sr = stage.getBoundingClientRect(); bg.burst(e.clientX - sr.left, e.clientY - sr.top); });
+    let tt = 0, tc = 0; $('mmTitle').addEventListener('click', () => { const n = Date.now(); tc = n - tt < 700 ? tc + 1 : 1; tt = n; if (tc >= 5) { tc = 0; confetti(); bee.poke(); } });
+    stage.addEventListener('click', e => { if (e.target.closest('.mm-tile,.mm-note,.mm-title,.mm-bee')) return; const sr = stage.getBoundingClientRect(); bg.burst(e.clientX - sr.left, e.clientY - sr.top, true); });
     const glow = $('mmGlow');
     stage.addEventListener('pointermove', e => {
       const r = stage.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
@@ -257,7 +307,7 @@
     const host = $('screen-menu');
     if (document.hidden || !host || !host.classList.contains('active')) { raf = requestAnimationFrame(loop); return; }
     if (now - lastF < 24) { raf = requestAnimationFrame(loop); return; } lastF = now;
-    try { bg.frame(now); bee.frame(now); } catch (e) { console.warn('menu', e); }
+    if (now - lastClk > 1000) { lastClk = now; tickInfo(); } try { bg.frame(now); bee.frame(now); } catch (e) { console.warn('menu', e); }
     raf = requestAnimationFrame(loop);
   }
   function start() {
