@@ -728,6 +728,21 @@
     c += 'بخش‌های سایت Our Memories: منوی اصلی، دفترچه (خاطره)، پلی‌لیست (آهنگ و گوش دادن با هم)، گالری، فایل‌ها، گیم، سینما (فیلم، سریال، اتاق تماشا با زیرنویس)، بوم (نقاشی و حدس کلمه)، اتاق صحبت (تماس صوتی و اسکرین‌شیر)، باغ، پازل، سؤال روز، یادداشت‌ها، تقویم (شمسی با میلادی)، پروفایل، چت. در گیم/سینما/گالری/فایل‌ها/بوم می‌شه پوشه (تو در تو) ساخت.';
     return c.slice(0, 1800);
   }
+  /* هوش مصنوعی رایگان و بدون کلید (Pollinations): وقتی تابع Supabase نیست، پفیلا از اینجا باهوش می‌شه؛ نیازی به هیچ تنظیمی نیست */
+  const PERSONA = 'تو «پفیلا» هستی؛ دستیار هوشمند، مهربون و بسیار باسواد چت خصوصی یک زوج (عرشیا و یاسی/یاسنا) توی سایت Our Memories. همیشه فارسی روون و صمیمی جواب بده مگر اینکه زبان دیگه‌ای بخوان. سوال ساده: کوتاه (۱ تا ۳ جمله)؛ سوال علمی، فنی، آموزشی یا مشاوره‌ای: کامل و مرحله‌به‌مرحله (تا حدود ۱۲ جمله). تقریباً در هر زمینه‌ای کمک کن: علوم، ریاضی، تاریخ، جغرافیا، پزشکی عمومی (با توصیه به پزشک)، آشپزی، سفر، فیلم و سریال و گیم و موسیقی، ورزش، برنامه‌نویسی، ترجمه، شعر و پیام عاشقانه، ایدهٔ هدیه و دیت، مشاورهٔ رابطه و درس و کار. اگه چیزی رو دقیق نمی‌دونی یا ممکنه عوض شده باشه (قیمت، اخبار، نتیجهٔ مسابقه) راست بگو مطمئن نیستی و چیزی از خودت درنیار. ایموجی کم و بجا، گرم و بدون سخنرانی.';
+  let freeDownUntil = 0;
+  async function freeLLM(q, who) {
+    const hist = msgs.filter(m => m.text && !String(m.id || '').startsWith('__')).slice(-14).map(m => ({ role: m.name === BOT ? 'assistant' : 'user', content: (m.name === BOT ? '' : (m.name || '') + ': ') + String(m.text).slice(0, 700) }));
+    if (!hist.length || hist[hist.length - 1].role !== 'user') hist.push({ role: 'user', content: who + ': ' + q });
+    const clean = t => String(t || '').split('\n').filter(l => !/pollinations/i.test(l) && !/^\s*---+\s*$/.test(l)).join('\n').replace(/\*\*(.+?)\*\*/g, '$1').trim();
+    const c = new AbortController(), to = setTimeout(() => c.abort(), 22000);
+    try {
+      const r = await fetch('https://text.pollinations.ai/openai', { method: 'POST', signal: c.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai', private: true, max_tokens: 900, messages: [{ role: 'system', content: PERSONA + '\n\nزمینه:\n' + botContext(who) }, ...hist] }) });
+      if (!r.ok) throw new Error('http ' + r.status);
+      const j = await r.json(), t = clean(j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content);
+      if (!t || t.length < 2) throw new Error('empty'); return t.slice(0, 1500);
+    } finally { clearTimeout(to); }
+  }
   let gptDownUntil = 0;
   async function smartAnswer(q) {
     const n = toEn(q).replace(/[؟?!.،,]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -740,6 +755,7 @@
     if (/هوا/.test(n)) { try { r = await weatherAns(n); if (r) return r; } catch (e) {} }
     try { r = await translateAns(q.trim()); if (r) return r; } catch (e) {}
     if (Date.now() > gptDownUntil) { try { return await gptAnswer(q, nm()); } catch (e) { gptDownUntil = Date.now() + 10 * 60000; } }
+    if (Date.now() > freeDownUntil) { try { return await freeLLM(q, nm()); } catch (e) { freeDownUntil = Date.now() + 2 * 60000; } }
     r = botAnswer(q, true); if (r) return r;
     try { r = await wikiAns(n); if (r) return r; } catch (e) {}
     return botAnswer(q);
