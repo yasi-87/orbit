@@ -22,7 +22,7 @@
 @keyframes mgMini{to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.3);opacity:0}}
 .screen.active{animation:mgIn .45s cubic-bezier(.2,.8,.3,1)}
 @keyframes mgIn{from{opacity:0;transform:translateY(14px) scale(.992)}to{opacity:1;transform:none}}
-.mg-bee{position:fixed;left:0;top:0;z-index:45;font-size:24px;line-height:1;pointer-events:none;will-change:transform;filter:drop-shadow(0 4px 8px rgba(255,200,60,.55));transition:opacity .4s}
+.mg-bee{position:fixed;left:0;top:0;z-index:130;font-size:24px;line-height:1;pointer-events:none;will-change:transform;filter:drop-shadow(0 4px 8px rgba(255,200,60,.55));transition:opacity .4s}
 .mg-bee::after{content:'';position:absolute;left:50%;top:115%;width:30px;height:3px;margin-left:-15px;border-radius:50%;background:rgba(0,0,0,.28);filter:blur(2px)}
 .mg-bee.hide{opacity:0}.mg-bee.buzz{animation:mgBuzz .5s}
 @keyframes mgBuzz{0%,100%{rotate:0deg}25%{rotate:-25deg}75%{rotate:25deg}}
@@ -49,8 +49,9 @@
   }
   /* 🐝 زنبور کوچولو توی همهٔ صفحه‌ها (توی منوی اصلی زنبور خودش رو داره) */
   const bee = { el: null, x: 120, y: 160, tx: 120, ty: 160, last: 0, vx: 0 };
+  function chatOpen() { const d = document.getElementById('chatDock'); return !!d && d.offsetParent !== null || (!!d && getComputedStyle(d).display !== 'none'); }
   function beeFrame(now) {
-    const b = bee.el; if (!b) return; const menu = document.getElementById('screen-menu'), hide = !on || document.hidden || (menu && menu.classList.contains('active'));
+    const b = bee.el; if (!b) return; const menu = document.getElementById('screen-menu'), hide = !on || document.hidden || (menu && menu.classList.contains('active') && !chatOpen());
     b.classList.toggle('hide', !!hide); if (hide) return; const t = now / 1000;
     if (now - bee.last > 2500) { bee.tx = innerWidth * (.5 + Math.cos(t * .5) * .38); bee.ty = innerHeight * (.5 + Math.sin(t * .7) * .3); }
     const ox = Math.cos(t * 2.4) * 22, oy = Math.sin(t * 3.1) * 12 - 26;
