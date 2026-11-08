@@ -2294,6 +2294,7 @@ window.ChatDock = (function () {
 <script src="./voice.js" defer></script>
 <script src="./folders.js" defer></script>
 <script src="./menu.js" defer></script>
+<script src="./magic.js" defer></script>
 <script src="./watch.js" defer></script>
 <script src="./screen.js" defer></script>
 <script src="./canvas.js" defer></script>
@@ -2655,8 +2656,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-08i';
+const SITE_VERSION = '2026-11-08j';
 const SITE_CHANGES = [
+  '🍂 جادوی تازه: ذرات فصلی (الان برگ پاییز) روی کل سایت، رد ستاره‌ای دنبال موس، قلب با دابل‌کلیک، دکمهٔ رفتن به بالا با حلقهٔ پیشرفت و انیمیشن نرم عوض‌شدن صفحه‌ها. با دکمهٔ 🍂 بالای سایت خاموشش می‌کنی.',
   '✨ منوی اصلی قشنگ‌تر شد: هالهٔ چرخان دور زنبور، کارت خوش‌آمد با ساعت و تاریخ، جملهٔ قشنگ روز، ماه/خورشید، قلب‌های شناور و ترکوندن قلب با کلیک؛ روی اسم سایت ۵ بار پشت‌سرهم بزن تا کانفتی بباره 🎉',
   '📎 آیکون فایل‌ها مثل ویندوز شد: RAR کتاب‌های رنگی، ورد W آبی، اکسل X سبز، PDF قرمز و ... ؛ عکس‌ها هم پیش‌نمایش خودشون رو دارن.',
   '🐱 آیسا حالا گربه‌های ما رو هم توی پروفایل خودش می‌بینه، کنار گربهٔ خودش.',
