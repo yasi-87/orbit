@@ -24,7 +24,7 @@
 .fld-sep{opacity:.5}.fld-path a[data-act=go]{opacity:.85;color:var(--accent,#d4a5ff)}
 .fld-over{outline:2px dashed var(--accent,#d4a5ff);background:rgba(212,165,255,.22)!important}
 .fld-picklist{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto}
-.fld-pk{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.05);cursor:pointer}.fld-pk img{width:40px;height:40px;object-fit:cover;border-radius:8px}.fld-pk span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fld-pk{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.05);cursor:pointer}.fld-pk img{width:40px;height:40px;object-fit:cover;border-radius:8px}.fld-pki{display:inline-flex;flex-shrink:0}.fld-pk .fld-pki{flex:0 0 auto;overflow:visible}.fld-pk span:not(.fld-pki){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fld-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;padding:8px 4px}
 .fld-path{display:inline-flex;align-items:center;gap:8px;font-size:1rem}.fld-path a{cursor:pointer;opacity:.6;padding:0 4px}
 .fld-meta{flex:1;color:var(--muted,#aaa);font-size:.78rem}
@@ -292,7 +292,7 @@
     const free = (st.lab[sec] || []).filter(x => { const f = st.items[key(sec, x.id)]; return !f || !st.folders.some(z => z.id === f); });
     const ov = document.createElement('div'); ov.className = 'fld-ov';
     ov.innerHTML = '<div class="fld-box"><h4>➕ چی بیاد توی این پوشه؟</h4>' + (free.length
-      ? '<div class="fld-picklist">' + free.map(x => `<label class="fld-pk"><input type="checkbox" value="${esc(x.id)}" />${x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy">` : ''}<span>${esc(x.label)}</span></label>`).join('') + '</div><button type="button" class="fld-new" data-go="1">✓ اضافه کن</button>'
+      ? '<div class="fld-picklist">' + free.map(x => `<label class="fld-pk"><input type="checkbox" value="${esc(x.id)}" />${x.icon ? `<span class="fld-pki">${x.icon}</span>` : x.thumb ? `<img src="${esc(x.thumb)}" alt="" loading="lazy">` : ''}<span>${esc(x.label)}</span></label>`).join('') + '</div><button type="button" class="fld-new" data-go="1">✓ اضافه کن</button>'
       : '<div class="fld-note">چیزی بیرون از پوشه نمونده؛ یا همه‌شون توی پوشه‌ان یا هنوز چیزی اضافه نکردین.</div>')
       + '<button type="button" class="fld-chip" data-x="1">بستن</button></div>';
     ov.addEventListener('click', async e => {

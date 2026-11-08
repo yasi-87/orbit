@@ -568,7 +568,6 @@ body.reading-mode .catpal:hover{opacity:1}`;
     const byKey = {};
     rows.forEach(x => { const k = Recur.nameKey(x.name || ''); if (!k) return; if (!byKey[k] || (x.updated_at || 0) > (byKey[k].updated_at || 0)) byKey[k] = x; });
     rows = Object.keys(byKey).map(k => byKey[k]);
-    if (typeof guestMode !== 'undefined' && guestMode) rows = [];
     if (mine) { const mk = Recur.nameKey(mine.name); rows = rows.filter(x => Recur.nameKey(x.name || '') !== mk); rows.unshift(mine); }
     const pr = x => { let w = { acc: [], fur: 'cream' }; try { w = JSON.parse(x.worn) || w; } catch (e) {} return { worn: w, mood: x.mood || 'normal' }; };
     const total = Object.keys(ITEMS).length;

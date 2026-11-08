@@ -1806,7 +1806,7 @@ input.seek:disabled{opacity:.4;cursor:default}
 .gate-box input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(212,165,255,.4);background:rgba(10,10,15,.6);color:var(--text);font:inherit;font-size:1.05rem;text-align:center;direction:ltr;letter-spacing:1px}
 .gate-box .btn{width:100%;margin-top:12px}.gate-err{min-height:1.4em;margin-top:10px;color:#ff8fa8;font-size:.85rem}
 .gate-box.shake{animation:caShake .5s}
-body.guest .nav-btn:not([data-screen=canvas]):not([data-screen=profile]),body.guest #bellBtn,body.guest #updatesBtn,body.guest #notifPanel,body.guest #chatLauncher,body.guest #chatDock,body.guest #bioCard,body.guest #presCard,body.guest .profile-stats,body.guest #statMsgsBox,body.guest #catFamily,body.guest #catFamH{display:none !important}
+body.guest .nav-btn:not([data-screen=canvas]):not([data-screen=profile]),body.guest #bellBtn,body.guest #updatesBtn,body.guest #notifPanel,body.guest #chatLauncher,body.guest #chatDock,body.guest #bioCard,body.guest #presCard,body.guest .profile-stats,body.guest #statMsgsBox,body.guest #catFamH_off{display:none !important}
 body.guest #app{padding-left:0 !important}
 </style>
 </head>
@@ -2649,8 +2649,10 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-08d';
+const SITE_VERSION = '2026-11-08e';
 const SITE_CHANGES = [
+  '📎 آیکون فایل‌ها توی پوشه‌ها و بخش فایل‌ها مخصوص هر نوع شد (RAR، ZIP، PDF، DOC، MP3 و ...).',
+  '🐱 آیسا حالا گربه‌های ما رو هم توی پروفایل خودش می‌بینه، کنار گربهٔ خودش.',
   '🧸 جواب‌های پفیلا دیگه کوتاه نمی‌شن؛ جواب بلند با دکمهٔ «ادامه» کامل باز می‌شه.',
   '☑️ انتخاب دسته‌جمعی توی پوشه‌ها: چند آیتم یا چند پوشه رو با هم انتخاب کن و یکجا منتقل، از پوشه خارج یا حذف کن.',
   '🧸 پفیلا حالا به یک هوش مصنوعی رایگان وصله و تقریباً به هر سوالی جواب می‌ده (بدون هیچ تنظیمی).',
@@ -4270,6 +4272,21 @@ async function uploadGallery(ev) {
 const MAX_FILE_MB = 500;   // سقف سمت سایت؛ سقف واقعی رو تنظیمات Storage توی Supabase تعیین می‌کنه
 let filesList = [], filesLoaded = false, filesMissing = false;
 const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+/* آیکون مخصوص هر نوع فایل (RAR، ZIP، PDF، ...): برگهٔ رنگی با پسوند فایل */
+const FILE_KINDS = [
+  [/^(rar)$/, '#8e44ad'], [/^(zip|7z|tar|gz|tgz|bz2|xz|iso)$/, '#e67e22'],
+  [/^(pdf)$/, '#e74c3c'], [/^(doc|docx|rtf|odt)$/, '#2b7cd3'], [/^(xls|xlsx|csv|ods)$/, '#1e9e5a'], [/^(ppt|pptx|odp|key)$/, '#d9622b'],
+  [/^(txt|md|log)$/, '#7f8c8d'], [/^(mp3|wav|ogg|m4a|flac|aac|opus)$/, '#e84393'], [/^(mp4|mkv|mov|avi|webm|m4v|wmv)$/, '#6c5ce7'],
+  [/^(jpg|jpeg|png|gif|webp|bmp|svg|heic|avif)$/, '#12a8a0'], [/^(apk|aab)$/, '#3ddc84'], [/^(exe|msi|dmg|deb|pkg)$/, '#546e7a'],
+  [/^(js|ts|py|html|css|json|xml|java|c|cpp|cs|go|php|sh|sql)$/, '#34495e'], [/^(psd|ai|fig|sketch|xd)$/, '#3b5bdb'], [/^(ttf|otf|woff|woff2)$/, '#8d6e63'], [/^(srt|ass|vtt|sub)$/, '#c0873f']
+];
+function fileBadge(n, m, sz) {
+  const ext = (String(n || '').split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5);
+  let col = '#8b8fa3'; const k = FILE_KINDS.find(x => x[0].test(ext));
+  if (k) col = k[1]; else if (/^image\//.test(m || '')) col = '#12a8a0'; else if (/^video\//.test(m || '')) col = '#6c5ce7'; else if (/^audio\//.test(m || '')) col = '#e84393';
+  const t = (ext || 'file').toUpperCase(), fs = t.length > 4 ? 8.5 : t.length > 3 ? 9.5 : 11, h = sz || 40;
+  return `<svg class="fbadge" viewBox="0 0 36 44" width="${Math.round(h * 36 / 44)}" height="${h}" aria-label="${t}" role="img"><path d="M4 2h18l10 10v28a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="${col}"/><path d="M22 2l10 10H24a2 2 0 0 1-2-2z" fill="#fff" opacity=".45"/><rect x="2" y="24" width="32" height="14" rx="2" fill="rgba(0,0,0,.32)"/><text x="18" y="34.2" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="${fs}" fill="#fff">${t}</text></svg>`;
+}
 const fileIcon = (n, m) => /^image\//.test(m || '') ? '🖼️' : /^video\//.test(m || '') ? '🎬' : /^audio\//.test(m || '') ? '🎵' : /pdf/i.test(m || n) ? '📕' : /zip|rar|7z|tar|gz/i.test(n) ? '🗜️' : /doc|docx|txt|rtf/i.test(n) ? '📄' : /xls|csv/i.test(n) ? '📊' : /ppt/i.test(n) ? '📽️' : '📎';
 async function loadFiles() {
   if (filesLoaded) renderFiles();
@@ -4280,7 +4297,7 @@ async function loadFiles() {
 function renderFiles() {
   const el = document.getElementById('filesList');
   if (filesMissing) { el.innerHTML = '<div class="empty-state"><div class="emoji">🛠️</div><p>برای بخش فایل‌ها باید فایل supabase-setup.sql رو یک بار توی Supabase اجرا کنی.</p></div>'; return; }
-  if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => ({ id: f.id, label: f.name })), { del: async ids => { const { error } = await dbClient.from('files').delete().in('id', ids); if (error) return false; const paths = filesList.filter(f => ids.includes(f.id) && f.file_path).map(f => f.file_path); if (paths.length) dbClient.storage.from('songs').remove(paths); filesList = filesList.filter(f => !ids.includes(f.id)); return true; } });
+  if (window.Folders) Folders.mount('files', el, renderFiles, filesList.map(f => ({ id: f.id, label: f.name, icon: fileBadge(f.name, f.mime, 36) })), { del: async ids => { const { error } = await dbClient.from('files').delete().in('id', ids); if (error) return false; const paths = filesList.filter(f => ids.includes(f.id) && f.file_path).map(f => f.file_path); if (paths.length) dbClient.storage.from('songs').remove(paths); filesList = filesList.filter(f => !ids.includes(f.id)); return true; } });
   const shownF = window.Folders ? Folders.filter('files', filesList) : filesList;
   if (filesList.length && !shownF.length) { el.innerHTML = (window.Folders && Folders.inFolder('files')) ? '<div class="empty-state"><div class="emoji">📂</div><p>این پوشه هنوز خالیه… با دکمهٔ 📂 روی هر فایل، بیارش اینجا.</p></div>' : ''; return; }
   if (!filesList.length) { el.innerHTML = '<div class="empty-state"><div class="emoji">📁</div><p>هنوز فایلی نذاشتیم...</p></div>'; return; }
@@ -4291,7 +4308,7 @@ function renderFiles() {
   el.innerHTML = bar + shownF.map(f => `
     <div class="playlist-item file-item${fileSel.has(f.id) ? ' selected' : ''}" data-dsec="files" data-did="${escapeHtml(f.id)}" draggable="true">
       ${filesSelMode ? `<input type="checkbox" class="file-chk" ${fileSel.has(f.id) ? 'checked' : ''} onchange="toggleFileSel('${f.id}')" />` : ''}
-      <div class="pl-icon" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><span class="pl-glyph">${fileIcon(f.name, f.mime)}</span></div>
+      <div class="pl-icon" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><span class="pl-glyph">${fileBadge(f.name, f.mime, 38)}</span></div>
       <div class="pl-info" style="cursor:pointer" onclick="${filesSelMode ? `toggleFileSel('${f.id}')` : `openFile('${f.id}')`}"><div class="pl-title">${escapeHtml(f.name)}</div><div class="pl-sub">${fmtSize(f.size || 0)}${f.author ? ' · ' + escapeHtml(f.author) : ''}</div></div>
       ${filesSelMode ? '' : `<button class="pl-loop" onclick="openFile('${f.id}')" title="باز کردن توی سایت">👁️</button>
       <a class="pl-loop" href="${escapeHtml(f.url)}" target="_blank" rel="noopener" download="${escapeHtml(f.name)}" title="دانلود" style="text-decoration:none">⬇️</a>
@@ -4459,7 +4476,7 @@ async function renderFileInto(body, f, alive) {
     };
     draw(); return;
   }
-  body.innerHTML = `<div class="fv-msg"><div style="font-size:3rem">${fileIcon(f.name, f.mime)}</div>این نوع فایل (${escapeHtml((f.name.split('.').pop() || '').toUpperCase())}) توی خود سایت قابل نمایش نیست.<br><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener" download="${escapeHtml(f.name)}">⬇️ دانلود</a></div>`;
+  body.innerHTML = `<div class="fv-msg"><div style="font-size:3rem">${fileBadge(f.name, f.mime, 72)}</div>این نوع فایل (${escapeHtml((f.name.split('.').pop() || '').toUpperCase())}) توی خود سایت قابل نمایش نیست.<br><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener" download="${escapeHtml(f.name)}">⬇️ دانلود</a></div>`;
 }
 
 /* ============================================================
