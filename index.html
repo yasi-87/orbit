@@ -127,7 +127,8 @@ button { cursor: pointer; border: none; background: none; }
 .daily-chip.on{background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1b1026;font-weight:700;border-color:transparent}.daily-chip.done:not(.on){border-color:rgba(90,214,125,.5)}
 .daily-dp{background:rgba(10,10,15,.55);color:inherit;border:1px solid rgba(212,165,255,.3);border-radius:999px;padding:5px 10px;font:inherit;font-size:.8rem;margin-inline-start:auto}
 .daily-calbtn{margin-inline-start:auto}
-.daily-cal{margin:0 0 14px;padding:14px;border-radius:20px;background:linear-gradient(160deg,rgba(40,26,62,.96),rgba(24,16,40,.96));border:1px solid rgba(212,165,255,.35);box-shadow:0 14px 36px rgba(0,0,0,.5);max-width:340px;margin-inline-start:auto;animation:mgIn .25s ease}
+.daily-calwrap{position:relative;height:0;z-index:40}
+.daily-cal{position:absolute;top:-4px;left:0;width:min(330px,100%);padding:14px;border-radius:20px;background:linear-gradient(160deg,rgba(40,26,62,.96),rgba(24,16,40,.96));border:1px solid rgba(212,165,255,.35);box-shadow:0 14px 36px rgba(0,0,0,.5);animation:mgIn .25s ease}
 .dc-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.dc-h b{font-size:1rem}
 .dc-h button{width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.07);color:inherit;font-size:1.2rem;cursor:pointer;line-height:1}.dc-h button:disabled{opacity:.3;cursor:default}.dc-h button:hover:not(:disabled){background:rgba(212,165,255,.25)}
 .dc-w,.dc-g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}.dc-w i{font-style:normal;font-size:.72rem;color:var(--muted);padding:2px 0 6px}
@@ -2671,7 +2672,7 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-09c';
+const SITE_VERSION = '2026-11-09d';
 const SITE_CHANGES = [
   '❓ سؤال روز: جواب‌ها فقط وقتی هر دو نوشتیم (یا بعد از تموم‌شدن اون روز) نشون داده می‌شن؛ نوار اسکرول تاریخ‌ها برداشته شد و تقویم انتخاب تاریخ شمسی و قشنگ شد.',
   '🖼️ برای هر پوشه (سینما، گیم، گالری و ...) می‌تونی پوستر یا عکس بذاری: دکمهٔ 🖼️ کنار اسم پوشه؛ پوستر جای آیکون پوشه نشون داده می‌شه.',
@@ -4908,6 +4909,7 @@ const DAILY_QS = ["بهترین خاطره‌ای که از ما دوتا دار
 let dailyList = [], dailyMissing = false, dailyLoaded = false, dailyDay = '';
 function dailyShift(iso, n) { const [y, m, d] = iso.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, d + n)); return t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0') + '-' + String(t.getUTCDate()).padStart(2, '0'); }
 let dailyCal = null;
+document.addEventListener('click', e => { if (dailyCal && !e.target.closest('.daily-cal,.daily-calbtn,.dc-d')) { dailyCal = null; renderDaily(); } });
 function dailyCalToggle() { if (dailyCal) dailyCal = null; else { const j = Recur.jalaliFromIso(dailyDay || dailyToday()); dailyCal = { jy: j.jy, jm: j.jm }; } renderDaily(); }
 function dailyCalMove(n) { if (!dailyCal) return; let m = dailyCal.jm + n, y = dailyCal.jy; if (m > 12) { m = 1; y++; } if (m < 1) { m = 12; y--; } dailyCal = { jy: y, jm: m }; renderDaily(); }
 function dailyCalHtml(real, sel) {
@@ -4919,7 +4921,7 @@ function dailyCalHtml(real, sel) {
     const iso = Recur.isoFromJalali(jy, jm, d), fut = iso > real, mine = dailyMine(iso), both = new Set(dailyList.filter(r => r.day === iso).map(r => Recur.nameKey(r.author))).size >= 2;
     cells += `<button type="button" class="dc-d${iso === sel ? ' sel' : ''}${iso === real ? ' tod' : ''}${mine ? ' me' : ''}${both ? ' both' : ''}" ${fut ? 'disabled' : `onclick="dailyGo('${iso}');dailyCal=null;renderDaily()"`}>${fa(d)}</button>`;
   }
-  return `<div class="daily-cal"><div class="dc-h"><button type="button" onclick="dailyCalMove(-1)">‹</button><b>${Recur.JAL_MONTHS[jm - 1]} ${fa(jy)}</b><button type="button" ${nextOk ? '' : 'disabled'} onclick="dailyCalMove(1)">›</button></div><div class="dc-w">${['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map(x => `<i>${x}</i>`).join('')}</div><div class="dc-g">${cells}</div><div class="dc-k"><span><u class="me"></u> جواب دادم</span><span><u class="both"></u> هر دو جواب دادیم</span></div></div>`;
+  return `<div class="daily-calwrap"><div class="daily-cal"><div class="dc-h"><button type="button" onclick="dailyCalMove(-1)">‹</button><b>${Recur.JAL_MONTHS[jm - 1]} ${fa(jy)}</b><button type="button" ${nextOk ? '' : 'disabled'} onclick="dailyCalMove(1)">›</button></div><div class="dc-w">${['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map(x => `<i>${x}</i>`).join('')}</div><div class="dc-g">${cells}</div><div class="dc-k"><span><u class="me"></u> جواب دادم</span><span><u class="both"></u> هر دو جواب دادیم</span></div></div></div>`;
 }
 function dailyGo(iso) { const t = dailyToday(); dailyDay = !iso || iso >= t ? '' : iso; renderDaily(); }
 const dailyToday = () => Recur.todayIso();
