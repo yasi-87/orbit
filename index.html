@@ -2311,6 +2311,7 @@ window.ChatDock = (function () {
 <script src="./folders.js" defer></script>
 <script src="./menu.js" defer></script>
 <script src="./magic.js" defer></script>
+<script src="./pro.js" defer></script>
 <script src="./watch.js" defer></script>
 <script src="./screen.js" defer></script>
 <script src="./canvas.js" defer></script>
@@ -2672,8 +2673,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-09d';
+const SITE_VERSION = '2026-11-09e';
 const SITE_CHANGES = [
+  '💼 چندتا قابلیت حرفه‌ای: 🔍 جستجوی سریع (دکمهٔ بالا یا Ctrl+K یا زدن /) برای پرید به هر بخش یا پیدا کردن فصل دفترچه، فیلم، فایل و آهنگ؛ نوار رنگی پیشرفت اسکرول؛ اعلان قطع/وصل اینترنت؛ عنوان تب مرورگر با اسم هر بخش؛ اسکرول‌بار و انتخاب متن قشنگ‌تر.',
   '❓ سؤال روز: جواب‌ها فقط وقتی هر دو نوشتیم (یا بعد از تموم‌شدن اون روز) نشون داده می‌شن؛ نوار اسکرول تاریخ‌ها برداشته شد و تقویم انتخاب تاریخ شمسی و قشنگ شد.',
   '🖼️ برای هر پوشه (سینما، گیم، گالری و ...) می‌تونی پوستر یا عکس بذاری: دکمهٔ 🖼️ کنار اسم پوشه؛ پوستر جای آیکون پوشه نشون داده می‌شه.',
   '❓ سؤال روز برای روزهای قبل هم قابل جواب دادنه: با «روز قبل»، نوار ۹ روز اخیر یا انتخاب تاریخ برو به هر روز گذشته و جوابش رو بنویس (✅ یعنی جواب دادی).',
