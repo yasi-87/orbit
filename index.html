@@ -114,6 +114,7 @@ button { cursor: pointer; border: none; background: none; }
 .tg-ring{position:relative;width:150px;height:150px;flex-shrink:0}.tg-ring svg{width:100%;height:100%;filter:drop-shadow(0 0 10px rgba(255,158,210,.45))}
 .tg-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}.tg-num b{font-size:2.5rem;font-weight:800;color:#fff;text-shadow:0 0 18px rgba(255,158,210,.7)}.tg-num small{color:#d9c8f5;font-size:.85rem}
 .tg-side{display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;min-width:170px}.tg-parts{font-size:1.05rem;font-weight:700;color:#fff}
+.tg-beat{display:flex;align-items:center;justify-content:center;gap:12px;margin:12px 0 4px;padding:10px 14px;border-radius:16px;background:linear-gradient(135deg,rgba(255,107,157,.18),rgba(201,162,255,.14));border:1px solid rgba(255,140,180,.3)}.tg-bh{font-size:2rem;animation:tgBeat 1s ease-in-out infinite}@keyframes tgBeat{0%,100%{transform:scale(1)}15%{transform:scale(1.25)}30%{transform:scale(1)}45%{transform:scale(1.15)}}.tg-bn b{font-size:1.4rem;color:#ffd9e8;font-variant-numeric:tabular-nums}.tg-bn small{color:#eadcff}.tg-bs{font-size:.74rem;color:var(--muted)}
 .tg-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.tg-chips span{padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);font-size:.76rem;color:#eadcff}
 .tg-next{text-align:center;margin-top:14px;font-size:.88rem;color:#eadcff;position:relative}.tg-next b{color:#ffd45a}.tg-next small{color:#b9a6d6}
 .tg-bar{height:7px;border-radius:7px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden;position:relative}.tg-bar i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#ffd45a,#ff9ed2,#c9a2ff);box-shadow:0 0 10px rgba(255,158,210,.6)}
@@ -2719,8 +2720,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-09h';
+const SITE_VERSION = '2026-11-09i';
 const SITE_CHANGES = [
+  '🫀 توی پروفایل، کنار روزهای با هم بودن، شمارندهٔ ضربان قلب‌هامون اومد: هر روز یه ضربان تصادفی بین ۶۰ تا ۱۰۰ در دقیقه حساب می‌شه و عدد زنده بالا می‌ره.',
   '✏️ اسم «یسنا» توی چرخ تصمیم اصلاح شد.',
   '✨ چهار بخش تازه توی منوی اصلی: 🎡 چرخ تصمیم (چی بخوریم؟ چی ببینیم؟ + چرخ‌های خودمون)، 🗺️ نقشهٔ خاطره‌ها (سنجاق با عکس و یادداشت، آرزوها)، 💌 جعبهٔ صدا (پیام صوتی برای هم) و 🌙 شب بخیر (آسمون پرستاره، صدای باران/دریا/آتیش، تایمر خواب).',
   '💞 توی پروفایل شمارندهٔ روزهای با هم بودنمون اضافه شد (از ۱۶ تیر ۱۴۰۵): تعداد روز با حلقهٔ پیشرفت، سال/ماه/روز، هفته و ساعت، و تا روزگی بعدی چند روز مونده.',
@@ -4975,12 +4977,28 @@ function renderTogether() {
     <div class="tg-main"><div class="tg-ring"><svg viewBox="0 0 120 120"><defs><linearGradient id="tgG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd45a"/><stop offset=".5" stop-color="#ff9ed2"/><stop offset="1" stop-color="#c9a2ff"/></linearGradient></defs><circle cx="60" cy="60" r="${R}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="9"/><circle id="tgArc" cx="60" cy="60" r="${R}" fill="none" stroke="url(#tgG)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" transform="rotate(-90 60 60)"/></svg>
       <div class="tg-num"><b id="tgNum">۰</b><small>روز</small></div></div>
       <div class="tg-side"><div class="tg-parts">${parts}</div><div class="tg-chips"><span>📅 ${fa(Math.floor(days / 7))} هفته</span><span>⏳ ${fa(days * 24)} ساعت</span><span>💓 ${fa(days * 1440)} دقیقه</span></div></div></div>
+    <div class="tg-beat"><span class="tg-bh">🫀</span><div><div class="tg-bn"><b id="tgBeats">۰</b> <small>ضربان قلب</small></div><div class="tg-bs">از وقتی با هم‌ایم، قلب‌هامون این‌قدر زده 💗 <span id="tgBpm"></span></div></div></div>
     <div class="tg-next">🎯 تا <b>${nx.t}</b> مون <b>${fa(left)}</b> روز مونده <small>(${Recur.fmtJalaliShort(nxIso)})</small></div>
     <div class="tg-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
     <div class="tg-since">از ${Recur.fmtJalaliShort(TOGETHER_ISO)} · ۷ جولای ۲۰۲۶ 💜</div></div>`;
   cancelAnimationFrame(tgAnim); const num = document.getElementById('tgNum'), arc = document.getElementById('tgArc'), t0 = performance.now();
   const step = n => { const k = Math.min(1, (n - t0) / 1100), e = 1 - Math.pow(1 - k, 3); num.textContent = fa(Math.round(days * e)); arc.style.strokeDashoffset = (C * (1 - pct / 100 * e)).toFixed(1); if (k < 1) tgAnim = requestAnimationFrame(step); };
   tgAnim = requestAnimationFrame(step);
+  tgBeatStart();
+}
+/* 🫀 شمارندهٔ ضربان قلب: هر روز یه ضربان ثابتِ تصادفی بین ۶۰ تا ۱۰۰ در دقیقه (میانگین ≈ ۸۰) */
+let tgBeatTimer = 0;
+const tgBpm = di => { let h = (di + 1) * 2654435761 >>> 0; h ^= h >>> 15; h = Math.imul(h, 2246822519) >>> 0; h ^= h >>> 13; return 60 + (h % 41); };
+function tgBeatStart() {
+  clearInterval(tgBeatTimer); const el = document.getElementById('tgBeats'); if (!el) return;
+  const fa = Recur.toFa, start = new Date(TOGETHER_ISO + 'T00:00:00');
+  const calc = () => {
+    const now = new Date(), ms = Math.max(0, now - start), fullDays = Math.floor(ms / 864e5), minsToday = (ms - fullDays * 864e5) / 6e4;
+    let tot = 0; for (let d = 0; d < fullDays; d++) tot += 1440 * tgBpm(d);
+    const bpm = tgBpm(fullDays); tot += minsToday * bpm; return { tot: Math.floor(tot), bpm };
+  };
+  const tick = () => { const r = calc(); el.textContent = fa(r.tot.toLocaleString('en-US')); const b = document.getElementById('tgBpm'); if (b) b.textContent = '· الان حدود ' + fa(r.bpm) + ' در دقیقه'; };
+  tick(); tgBeatTimer = setInterval(() => { if (!document.getElementById('tgBeats')) return clearInterval(tgBeatTimer); tick(); }, 1000);
 }
 /* ============================================================
    ❓ سؤال روز: هر روز یه سؤال مشترک؛ هر نفر جدا جواب می‌ده و بعد از جواب دادن، جواب‌های همدیگه رو می‌بینیم
