@@ -104,6 +104,20 @@ button { cursor: pointer; border: none; background: none; }
 
 
 /* ❓ سؤال روز */
+.tg-card{position:relative;overflow:hidden;margin:0 0 18px;padding:20px 18px 16px;border-radius:26px;background:radial-gradient(circle at 15% 0%,rgba(255,158,210,.28),transparent 55%),radial-gradient(circle at 90% 100%,rgba(201,162,255,.3),transparent 55%),linear-gradient(160deg,#2b1d44,#1a1230);border:1px solid rgba(255,158,210,.4);box-shadow:0 14px 40px rgba(0,0,0,.45)}
+.tg-fl{position:absolute;bottom:-20px;font-size:18px;opacity:.5;pointer-events:none;animation:tgUp linear infinite}
+@keyframes tgUp{0%{transform:translateY(0) scale(.7);opacity:0}15%{opacity:.6}100%{transform:translateY(-260px) scale(1.2) rotate(20deg);opacity:0}}
+.tg-top{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:10px;position:relative}
+.tg-heart{font-size:1.8rem;animation:tgBeat 1.3s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(255,100,160,.8))}@keyframes tgBeat{0%,100%{transform:scale(1)}14%{transform:scale(1.25)}28%{transform:scale(1)}42%{transform:scale(1.18)}}
+.tg-lbl{font-weight:700;font-size:1.05rem;letter-spacing:.5px;background:linear-gradient(90deg,#ffd45a,#ff9ed2);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tg-main{display:flex;align-items:center;gap:18px;justify-content:center;flex-wrap:wrap;position:relative}
+.tg-ring{position:relative;width:150px;height:150px;flex-shrink:0}.tg-ring svg{width:100%;height:100%;filter:drop-shadow(0 0 10px rgba(255,158,210,.45))}
+.tg-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}.tg-num b{font-size:2.5rem;font-weight:800;color:#fff;text-shadow:0 0 18px rgba(255,158,210,.7)}.tg-num small{color:#d9c8f5;font-size:.85rem}
+.tg-side{display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;min-width:170px}.tg-parts{font-size:1.05rem;font-weight:700;color:#fff}
+.tg-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.tg-chips span{padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);font-size:.76rem;color:#eadcff}
+.tg-next{text-align:center;margin-top:14px;font-size:.88rem;color:#eadcff;position:relative}.tg-next b{color:#ffd45a}.tg-next small{color:#b9a6d6}
+.tg-bar{height:7px;border-radius:7px;background:rgba(255,255,255,.1);margin-top:8px;overflow:hidden;position:relative}.tg-bar i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#ffd45a,#ff9ed2,#c9a2ff);box-shadow:0 0 10px rgba(255,158,210,.6)}
+.tg-since{text-align:center;margin-top:10px;font-size:.78rem;color:#b9a6d6;position:relative}
 .daily-card { background: linear-gradient(145deg, rgba(212,165,255,0.16), rgba(255,158,199,0.1)); border: 1px solid rgba(212,165,255,0.35); border-radius: 22px; padding: 22px 20px; margin-bottom: 18px; box-shadow: 0 10px 34px rgba(0,0,0,0.3); }
 .daily-date { font-size: .82rem; color: var(--muted); margin-bottom: 8px; }
 .daily-q { font-size: 1.28rem; font-weight: 700; line-height: 1.9; color: #fff; margin-bottom: 14px; }
@@ -2191,6 +2205,7 @@ body.guest #app{padding-left:0 !important}
     <div class="chapters-header">
       <h2>👤 پروفایل من</h2>
     </div>
+    <div id="togetherBox"></div>
 
     <div class="profile-card">
       <label class="profile-avatar-big" id="profileAvatarBig">
@@ -2495,7 +2510,7 @@ function showScreen(name) {
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
   if (name === 'calendar') loadCalendar();
-  if (name === 'profile') { try { Presence.refresh(); } catch (e) {} loadProfileStats(); if (window.CatPal) CatPal.family(); }
+  if (name === 'profile') { try { renderTogether(); } catch (e) {} try { Presence.refresh(); } catch (e) {} loadProfileStats(); if (window.CatPal) CatPal.family(); }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2673,8 +2688,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-09e';
+const SITE_VERSION = '2026-11-09f';
 const SITE_CHANGES = [
+  '💞 توی پروفایل شمارندهٔ روزهای با هم بودنمون اضافه شد (از ۱۶ تیر ۱۴۰۵): تعداد روز با حلقهٔ پیشرفت، سال/ماه/روز، هفته و ساعت، و تا روزگی بعدی چند روز مونده.',
   '💼 چندتا قابلیت حرفه‌ای: 🔍 جستجوی سریع (دکمهٔ بالا یا Ctrl+K یا زدن /) برای پرید به هر بخش یا پیدا کردن فصل دفترچه، فیلم، فایل و آهنگ؛ نوار رنگی پیشرفت اسکرول؛ اعلان قطع/وصل اینترنت؛ عنوان تب مرورگر با اسم هر بخش؛ اسکرول‌بار و انتخاب متن قشنگ‌تر.',
   '❓ سؤال روز: جواب‌ها فقط وقتی هر دو نوشتیم (یا بعد از تموم‌شدن اون روز) نشون داده می‌شن؛ نوار اسکرول تاریخ‌ها برداشته شد و تقویم انتخاب تاریخ شمسی و قشنگ شد.',
   '🖼️ برای هر پوشه (سینما، گیم، گالری و ...) می‌تونی پوستر یا عکس بذاری: دکمهٔ 🖼️ کنار اسم پوشه؛ پوستر جای آیکون پوشه نشون داده می‌شه.',
@@ -4904,6 +4920,35 @@ document.getElementById('muteBtn').addEventListener('click', function() {
 
 
 
+/* ============================================================
+   💞 روزهای با هم بودن (از ۱۶ تیر ۱۴۰۵ = ۷ جولای ۲۰۲۶)
+   ============================================================ */
+const TOGETHER_ISO = '2026-07-07';
+const TG_MILES = [{ d: 50, t: '۵۰ روزگی' }, { d: 100, t: '۱۰۰ روزگی' }, { d: 150, t: '۱۵۰ روزگی' }, { d: 200, t: '۲۰۰ روزگی' }, { d: 250, t: '۲۵۰ روزگی' }, { d: 300, t: '۳۰۰ روزگی' }, { d: 365, t: 'یک سالگی' }, { d: 500, t: '۵۰۰ روزگی' }, { d: 730, t: 'دو سالگی' }, { d: 1000, t: '۱۰۰۰ روزگی' }, { d: 1095, t: 'سه سالگی' }, { d: 1461, t: 'چهار سالگی' }, { d: 1826, t: 'پنج سالگی' }, { d: 3650, t: 'ده سالگی' }];
+let tgAnim = 0;
+function renderTogether() {
+  const el = document.getElementById('togetherBox'); if (!el) return;
+  const today = Recur.todayIso(), days = Math.max(0, Recur.daysBetween(TOGETHER_ISO, today)), fa = Recur.toFa;
+  const j0 = Recur.jalaliFromIso(TOGETHER_ISO), j1 = Recur.jalaliFromIso(today);
+  let mo = (j1.jy - j0.jy) * 12 + (j1.jm - j0.jm), dd = j1.jd - j0.jd;
+  if (dd < 0) { mo--; const pm = j1.jm === 1 ? 12 : j1.jm - 1, py = j1.jm === 1 ? j1.jy - 1 : j1.jy; dd += Recur.jalaliMonthLength(py, pm); }
+  const yr = Math.floor(mo / 12), mo2 = mo % 12, parts = [yr ? fa(yr) + ' سال' : '', mo2 ? fa(mo2) + ' ماه' : '', dd ? fa(dd) + ' روز' : ''].filter(Boolean).join(' و ') || 'امروز شروع شد 💞';
+  const nx = TG_MILES.find(m => m.d > days) || { d: days + 1000, t: fa(days + 1000) + ' روزگی' }, prev = [...TG_MILES].reverse().find(m => m.d <= days), pd = prev ? prev.d : 0;
+  const pct = Math.max(0, Math.min(100, (days - pd) / (nx.d - pd) * 100)), left = nx.d - days, R = 54, C = 2 * Math.PI * R;
+  const nxIso = Recur.addDaysIso(TOGETHER_ISO, nx.d), ann = Recur.addDaysIso(TOGETHER_ISO, 0);
+  const hearts = ['💗', '💜', '💛', '✨', '🌸', '💖'].map((h, i) => `<span class="tg-fl" style="left:${8 + i * 16}%;animation-delay:${-i * 1.3}s;animation-duration:${6 + i % 3}s">${h}</span>`).join('');
+  el.innerHTML = `<div class="tg-card">${hearts}
+    <div class="tg-top"><span class="tg-heart">💞</span><div class="tg-lbl">با هم بودیم</div></div>
+    <div class="tg-main"><div class="tg-ring"><svg viewBox="0 0 120 120"><defs><linearGradient id="tgG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd45a"/><stop offset=".5" stop-color="#ff9ed2"/><stop offset="1" stop-color="#c9a2ff"/></linearGradient></defs><circle cx="60" cy="60" r="${R}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="9"/><circle id="tgArc" cx="60" cy="60" r="${R}" fill="none" stroke="url(#tgG)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" transform="rotate(-90 60 60)"/></svg>
+      <div class="tg-num"><b id="tgNum">۰</b><small>روز</small></div></div>
+      <div class="tg-side"><div class="tg-parts">${parts}</div><div class="tg-chips"><span>📅 ${fa(Math.floor(days / 7))} هفته</span><span>⏳ ${fa(days * 24)} ساعت</span><span>💓 ${fa(days * 1440)} دقیقه</span></div></div></div>
+    <div class="tg-next">🎯 تا <b>${nx.t}</b> مون <b>${fa(left)}</b> روز مونده <small>(${Recur.fmtJalaliShort(nxIso)})</small></div>
+    <div class="tg-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
+    <div class="tg-since">از ${Recur.fmtJalaliShort(TOGETHER_ISO)} · ۷ جولای ۲۰۲۶ 💜</div></div>`;
+  cancelAnimationFrame(tgAnim); const num = document.getElementById('tgNum'), arc = document.getElementById('tgArc'), t0 = performance.now();
+  const step = n => { const k = Math.min(1, (n - t0) / 1100), e = 1 - Math.pow(1 - k, 3); num.textContent = fa(Math.round(days * e)); arc.style.strokeDashoffset = (C * (1 - pct / 100 * e)).toFixed(1); if (k < 1) tgAnim = requestAnimationFrame(step); };
+  tgAnim = requestAnimationFrame(step);
+}
 /* ============================================================
    ❓ سؤال روز: هر روز یه سؤال مشترک؛ هر نفر جدا جواب می‌ده و بعد از جواب دادن، جواب‌های همدیگه رو می‌بینیم
    ============================================================ */
