@@ -2,7 +2,7 @@
    دو جدول: folders (خود پوشه‌ها) و folder_items (هر مورد توی کدوم پوشه‌ست).
    جدول‌های اصلی (gallery / files / links / canvas_art) هیچ تغییری نمی‌کنن؛ پس مورد‌های قدیمی هم می‌تونن بیان توی پوشه. */
 (function () {
-  const st = { folders: [], items: {}, loaded: false, missing: false, at: 0, sig: '', busy: false, cur: {}, reg: {}, ids: {}, lab: {}, creating: {}, sel: {}, opts: {} };
+  const st = { folders: [], items: {}, loaded: false, missing: false, at: 0, sig: '', busy: false, cur: {}, reg: {}, ids: {}, lab: {}, creating: {}, sel: {}, opts: {}, covers: {} };
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = m => { try { (window.toast || window.toast2)(m); } catch (e) {} };
   const key = (s, id) => s + ':' + id;
@@ -34,7 +34,7 @@
 .fld-list{width:100%;border:1px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;background:rgba(0,0,0,.18)}
 .fld-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.07);cursor:pointer;transition:background .15s}
 .fld-row:last-child{border-bottom:0}.fld-row:hover,.fld-row:focus-visible{background:rgba(212,165,255,.1);outline:none}
-.fld-ic{display:inline-flex;flex-shrink:0}.fld-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.fld-ic{display:inline-flex;flex-shrink:0}.fld-cv{width:36px;height:50px;border-radius:7px;overflow:hidden;flex-shrink:0;box-shadow:0 3px 10px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.25);display:inline-block}.fld-cv img{width:100%;height:100%;object-fit:cover;display:block}.fld-row.hascv{padding-top:7px;padding-bottom:7px}.fld-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .fld-by,.fld-ct,.fld-dt{color:var(--muted,#aaa);font-size:.78rem;white-space:nowrap}.fld-acts{display:inline-flex;gap:6px}
 @media (max-width:620px){.fld-row{flex-wrap:wrap;row-gap:4px}.fld-nm{flex-basis:calc(100% - 110px)}.fld-by,.fld-ct,.fld-dt{font-size:.72rem}}
 .fld-ov{position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -66,7 +66,7 @@
       if (er) { st.missing = /folders|folder_items|relation|schema cache/i.test(er.message || ''); sig = 'missing'; }
       else {
         st.missing = false; sig = JSON.stringify([a.data, b.data]);
-        st.folders = a.data || []; st.items = {}; (b.data || []).forEach(r => { st.items[r.key] = r.folder_id; });
+        st.folders = a.data || []; st.items = {}; st.covers = {}; (b.data || []).forEach(r => { if (r.section === 'cover') st.covers[r.folder_id] = r.item_id; else st.items[r.key] = r.folder_id; });
       }
       st.loaded = true; st.at = Date.now();
       if (sig !== st.sig) { st.sig = sig; rerender(); }
@@ -106,13 +106,14 @@
     const kids = childrenOf(sec, f ? f.id : null);
     const countOf = id => ids.filter(i => st.items[key(sec, i)] === id).length;
     const sx = S(sec); const selBtn = `<button type="button" class="fld-new fld-selbtn${sx.on ? ' on' : ''}" data-act="sel">☑️ ${sx.on ? 'پایان انتخاب' : 'انتخاب'}</button>`;
-    const rowBtns = id => `<span class="fld-acts"><button type="button" data-ract="ren" data-id="${esc(id)}" title="تغییر اسم">✏️</button><button type="button" data-ract="del" data-id="${esc(id)}" title="حذف پوشه">🗑️</button></span>`;
+    const icoOf = id => st.covers[id] ? `<span class="fld-cv"><img src="${esc(st.covers[id])}" alt="" loading="lazy"></span>` : `<span class="fld-ic">${ICON}</span>`;
+    const rowBtns = id => `<span class="fld-acts"><button type="button" data-ract="ren" data-id="${esc(id)}" title="تغییر اسم">✏️</button><button type="button" data-ract="cov" data-id="${esc(id)}" title="${st.covers[id] ? 'تغییر پوستر' : 'گذاشتن پوستر / عکس'}">🖼️</button>${st.covers[id] ? `<button type="button" data-ract="cov0" data-id="${esc(id)}" title="برداشتن پوستر">❌</button>` : ''}<button type="button" data-ract="del" data-id="${esc(id)}" title="حذف پوشه">🗑️</button></span>`;
     const newBtn = st.creating[sec] ? '<span class="fld-newin"><input type="text" class="fld-inp" maxlength="40" placeholder="اسم پوشه…" /><button type="button" class="fld-ok" data-act="ok" title="ساخت">✓</button><button type="button" class="fld-no" data-act="cancel" title="انصراف">✕</button></span>' : '<button type="button" class="fld-new" data-act="new">➕ پوشهٔ جدید</button>';
     let h;
     if (f) {
       const pth = pathOf(sec, f.id), par = parentOf(sec, f.id);
       h = `<div class="fld-head"><button type="button" class="fld-up" data-act="up" data-f="${esc(par || '')}" title="برگشت">↑</button><span class="fld-path"><a data-act="root">/</a>`
-        + pth.map((x, i) => i === pth.length - 1 ? `<span class="fld-ic">${ICON}</span><b>${esc(x.name)}</b>` : `<a data-act="go" data-id="${esc(x.id)}">${esc(x.name)}</a><span class="fld-sep">/</span>`).join('')
+        + pth.map((x, i) => i === pth.length - 1 ? `${icoOf(x.id)}<b>${esc(x.name)}</b>` : `<a data-act="go" data-id="${esc(x.id)}">${esc(x.name)}</a><span class="fld-sep">/</span>`).join('')
         + `</span><span class="fld-meta">${f.author ? '👤 ' + esc(f.author) + ' · ' : ''}${fa(countOf(f.id))} مورد${kids.length ? ' · ' + fa(kids.length) + ' پوشه' : ''}${f.created_at ? ' · ' + esc(dateOf(f.created_at)) : ''}</span>${newBtn}<button type="button" class="fld-new" data-act="pick">➕ افزودن از موجودها</button>${selBtn}${rowBtns(f.id)}</div>`;
     } else {
       h = `<div class="fld-head"><span class="fld-path">📂 <b>پوشه‌ها</b></span><span class="fld-meta">${kids.length ? fa(kids.length) + ' پوشه' : 'هنوز پوشه‌ای نداریم'}</span>${newBtn}${selBtn}</div>`;
@@ -124,7 +125,7 @@
     }
     if (kids.length) h += '<div class="fld-list">' + kids.map(x => {
       const nk = childrenOf(sec, x.id).length;
-      return `<div class="fld-row" data-f="${esc(x.id)}" data-dsec="fd_${esc(sec)}" data-did="${esc(x.id)}" draggable="true" tabindex="0">${sx.on ? '<span class="fld-cb"></span>' : ''}<span class="fld-ic">${ICON}</span><span class="fld-nm">${esc(x.name)}</span>`
+      return `<div class="fld-row${st.covers[x.id] ? ' hascv' : ''}" data-f="${esc(x.id)}" data-dsec="fd_${esc(sec)}" data-did="${esc(x.id)}" draggable="true" tabindex="0">${sx.on ? '<span class="fld-cb"></span>' : ''}${icoOf(x.id)}<span class="fld-nm">${esc(x.name)}</span>`
         + `<span class="fld-by">${x.author ? '👤 ' + esc(x.author) : ''}</span><span class="fld-ct">${fa(countOf(x.id))} مورد${nk ? ' · ' + fa(nk) + ' پوشه' : ''}</span><span class="fld-dt">${esc(dateOf(x.created_at))}</span>${rowBtns(x.id)}</div>`;
     }).join('') + '</div>';
     bar.innerHTML = h; mark(sec);
@@ -155,10 +156,31 @@
     }
     if (bad) { toast('⚠️ حذف نشد'); return false; }
     st.folders = st.folders.filter(x => !gone.includes(x.id));
-    Object.keys(st.items).forEach(k => { if (gone.includes(st.items[k]) || gone.some(g => k === pkey(sec, g))) delete st.items[k]; });
+    gone.forEach(g => { delete st.covers[g]; }); Object.keys(st.items).forEach(k => { if (gone.includes(st.items[k]) || gone.some(g => k === pkey(sec, g))) delete st.items[k]; });
     if (gone.includes(st.cur[sec])) st.cur[sec] = par || 'all';
     st.sig = ''; if (!quiet) { st.reg[sec] && st.reg[sec].re(); toast('🗑️ پوشه حذف شد'); }
     return true;
+  }
+  /* 🖼️ پوستر پوشه: عکس رو کوچیک می‌کنیم، توی Storage می‌ذاریم و آدرسش رو توی جدول folder_items (بدون تغییر دیتابیس) نگه می‌داریم */
+  function setCover(sec, fid) {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = async () => {
+      const f = inp.files && inp.files[0]; if (!f) return;
+      try {
+        toast('⏳ دارم پوستر رو آپلود می‌کنم...');
+        const dataUrl = await resizeImageFile(f, 640, .85), blob = await (await fetch(dataUrl)).blob();
+        const up = await uploadMediaFile(blob, 'jpg', 'پوستر پوشه');
+        const { error } = await dbClient.from('folder_items').upsert({ key: 'cover:' + fid, section: 'cover', item_id: up.url, folder_id: fid });
+        if (error) throw error;
+        st.covers[fid] = up.url; st.sig = ''; st.reg[sec] && st.reg[sec].re(); toast('🖼️ پوستر گذاشته شد');
+      } catch (e) { toast('⚠️ پوستر آپلود نشد' + (e && e.message ? ': ' + String(e.message).slice(0, 60) : '')); }
+    };
+    inp.click();
+  }
+  async function clearCover(sec, fid) {
+    const { error } = await dbClient.from('folder_items').delete().eq('key', 'cover:' + fid);
+    if (error) return toast('⚠️ برداشته نشد');
+    delete st.covers[fid]; st.sig = ''; st.reg[sec] && st.reg[sec].re(); toast('پوستر برداشته شد');
   }
   const selEnd = sec => { const x = S(sec); x.on = false; x.items.clear(); x.fds.clear(); };
   async function selAct(sec, act) {
@@ -195,7 +217,7 @@
     const bar = e.currentTarget, sec = bar.dataset.sec;
     if (e.target.closest('.fld-inp')) return;
     const rb = e.target.closest('[data-ract]');
-    if (rb) { e.stopPropagation(); return rb.dataset.ract === 'ren' ? renameF(sec, rb.dataset.id) : deleteF(sec, rb.dataset.id); }
+    if (rb) { e.stopPropagation(); const k = rb.dataset.ract, id = rb.dataset.id; return k === 'ren' ? renameF(sec, id) : k === 'cov' ? setCover(sec, id) : k === 'cov0' ? clearCover(sec, id) : deleteF(sec, id); }
     const a = e.target.closest('[data-act]');
     if (a) {
       if (a.dataset.act === 'sel') { const x = S(sec); x.on = !x.on; if (!x.on) { x.items.clear(); x.fds.clear(); } st.reg[sec] && st.reg[sec].re(); return draw(sec, bar); }
