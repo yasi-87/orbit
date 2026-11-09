@@ -1909,6 +1909,10 @@ body.guest #app{padding-left:0 !important}
     <button class="nav-btn" data-screen="voice" onclick="showScreen('voice')">🎙️ اتاق صحبت</button>
     <button class="nav-btn" data-screen="garden" onclick="showScreen('garden')">🌳 باغ</button>
     <button class="nav-btn" data-screen="puzzle" onclick="showScreen('puzzle')">🧩 پازل</button>
+    <button class="nav-btn" data-screen="wheel" onclick="showScreen('wheel')">🎡 چرخ تصمیم</button>
+    <button class="nav-btn" data-screen="map" onclick="showScreen('map')">🗺️ نقشهٔ خاطره‌ها</button>
+    <button class="nav-btn" data-screen="vbox" onclick="showScreen('vbox')">💌 جعبهٔ صدا</button>
+    <button class="nav-btn" data-screen="night" onclick="showScreen('night')">🌙 شب بخیر</button>
     <button class="nav-btn" data-screen="daily" onclick="showScreen('daily')">❓ سؤال روز</button>
     <button class="nav-btn" data-screen="notes" onclick="showScreen('notes')">📝 یادداشت‌ها</button>
     <button class="nav-btn" data-screen="calendar" onclick="showScreen('calendar')">📅 تقویم</button>
@@ -2129,6 +2133,23 @@ body.guest #app{padding-left:0 !important}
   </div>
 
   <!-- ============ پازل عکس ============ -->
+  <div class="container screen" id="screen-wheel">
+    <div class="chapters-header"><h2>🎡 چرخ تصمیم</h2></div>
+    <div id="wheelBox"></div>
+  </div>
+  <div class="container screen" id="screen-map">
+    <div class="chapters-header"><h2>🗺️ نقشهٔ خاطره‌های ما</h2></div>
+    <div id="mapBox"></div>
+  </div>
+  <div class="container screen" id="screen-vbox">
+    <div class="chapters-header"><h2>💌 جعبهٔ صدای ما</h2></div>
+    <div id="vboxBox"></div>
+  </div>
+  <div class="container screen" id="screen-night">
+    <div class="chapters-header"><h2>🌙 حالت شب بخیر</h2></div>
+    <div id="nightBox"></div>
+  </div>
+
   <div class="container screen" id="screen-puzzle">
     <div class="chapters-header"><h2>🧩 پازل عکس‌های ما</h2></div>
     <div id="puzzleBox"></div>
@@ -2295,6 +2316,11 @@ body.guest #app{padding-left:0 !important}
 <script src="./poster.js" defer></script>
 <script src="./garden.js" defer></script>
 <script src="./puzzle.js" defer></script>
+<script src="./kv.js" defer></script>
+<script src="./wheel.js" defer></script>
+<script src="./mapmem.js" defer></script>
+<script src="./vbox.js" defer></script>
+<script src="./night.js" defer></script>
 <script src="./classes.js" defer></script>
 <script src="./sync.js" defer></script>
 <script src="./presence.js" defer></script>
@@ -2509,6 +2535,11 @@ function showScreen(name) {
   if (name === 'voice' && window.Screen2) Screen2.load();
   if (name === 'garden' && window.Garden) Garden.load();
   if (name === 'puzzle' && window.Puzzle) Puzzle.load();
+  if (name === 'wheel' && window.Wheel) Wheel.load();
+  if (name === 'map' && window.MapMem) MapMem.load();
+  if (name === 'vbox' && window.VBox) VBox.load();
+  if (name === 'night' && window.Night) Night.load();
+  if (name !== 'night' && window.Night) Night.leave();
   if (name === 'calendar') loadCalendar();
   if (name === 'profile') { try { renderTogether(); } catch (e) {} try { Presence.refresh(); } catch (e) {} loadProfileStats(); if (window.CatPal) CatPal.family(); }
 
@@ -2688,8 +2719,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-09f';
+const SITE_VERSION = '2026-11-09g';
 const SITE_CHANGES = [
+  '✨ چهار بخش تازه توی منوی اصلی: 🎡 چرخ تصمیم (چی بخوریم؟ چی ببینیم؟ + چرخ‌های خودمون)، 🗺️ نقشهٔ خاطره‌ها (سنجاق با عکس و یادداشت، آرزوها)، 💌 جعبهٔ صدا (پیام صوتی برای هم) و 🌙 شب بخیر (آسمون پرستاره، صدای باران/دریا/آتیش، تایمر خواب).',
   '💞 توی پروفایل شمارندهٔ روزهای با هم بودنمون اضافه شد (از ۱۶ تیر ۱۴۰۵): تعداد روز با حلقهٔ پیشرفت، سال/ماه/روز، هفته و ساعت، و تا روزگی بعدی چند روز مونده.',
   '💼 چندتا قابلیت حرفه‌ای: 🔍 جستجوی سریع (دکمهٔ بالا یا Ctrl+K یا زدن /) برای پرید به هر بخش یا پیدا کردن فصل دفترچه، فیلم، فایل و آهنگ؛ نوار رنگی پیشرفت اسکرول؛ اعلان قطع/وصل اینترنت؛ عنوان تب مرورگر با اسم هر بخش؛ اسکرول‌بار و انتخاب متن قشنگ‌تر.',
   '❓ سؤال روز: جواب‌ها فقط وقتی هر دو نوشتیم (یا بعد از تموم‌شدن اون روز) نشون داده می‌شن؛ نوار اسکرول تاریخ‌ها برداشته شد و تقویم انتخاب تاریخ شمسی و قشنگ شد.',
@@ -5700,7 +5732,7 @@ const isMine = n => sameName(n.author, myName() || 'ناشناس');
 const forMe = n => !isMine(n) && (!n.target || sameName(n.target, myName()));
 function saveNotifSeen() { try { localStorage.setItem(NOTIF_SEEN_KEY, String(notifSeen)); } catch (e) {} if (window.ProfileSync) ProfileSync.push(); }
 
-const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar', voice: 'voice', canvas: 'canvas', canvas_art: 'canvas' };
+const NOTIF_SCREEN = { class_rem: 'calendar', files: 'files', gallery: 'gallery', chapter: 'chapters', chapter_update: 'chapters', comment: 'chapters', song: 'playlist', note: 'notes', event: 'calendar', reminder: 'calendar', daily: 'daily', class: 'calendar', voice: 'voice', canvas: 'canvas', canvas_art: 'canvas', vbox: 'vbox', night: 'menu', pin: 'map' };
 const notifText = n => Recur.notifLine(n);
 
 async function notify(type, title, refId, opts) {

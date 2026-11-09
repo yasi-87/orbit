@@ -66,7 +66,7 @@
       if (er) { st.missing = /folders|folder_items|relation|schema cache/i.test(er.message || ''); sig = 'missing'; }
       else {
         st.missing = false; sig = JSON.stringify([a.data, b.data]);
-        st.folders = a.data || []; st.items = {}; st.covers = {}; (b.data || []).forEach(r => { if (r.section === 'cover') st.covers[r.folder_id] = r.item_id; else st.items[r.key] = r.folder_id; });
+        st.folders = a.data || []; st.items = {}; st.covers = {}; (b.data || []).forEach(r => { if (r.section === 'cover') st.covers[r.folder_id] = r.item_id; else if (!/^x_/.test(r.section || '')) st.items[r.key] = r.folder_id; });
       }
       st.loaded = true; st.at = Date.now();
       if (sig !== st.sig) { st.sig = sig; rerender(); }
