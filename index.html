@@ -126,7 +126,16 @@ button { cursor: pointer; border: none; background: none; }
 .daily-chip:hover:not(:disabled){background:rgba(212,165,255,.22)}.daily-chip:disabled{opacity:.35;cursor:default}
 .daily-chip.on{background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1b1026;font-weight:700;border-color:transparent}.daily-chip.done:not(.on){border-color:rgba(90,214,125,.5)}
 .daily-dp{background:rgba(10,10,15,.55);color:inherit;border:1px solid rgba(212,165,255,.3);border-radius:999px;padding:5px 10px;font:inherit;font-size:.8rem;margin-inline-start:auto}
-.daily-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:thin}
+.daily-calbtn{margin-inline-start:auto}
+.daily-cal{margin:0 0 14px;padding:14px;border-radius:20px;background:linear-gradient(160deg,rgba(40,26,62,.96),rgba(24,16,40,.96));border:1px solid rgba(212,165,255,.35);box-shadow:0 14px 36px rgba(0,0,0,.5);max-width:340px;margin-inline-start:auto;animation:mgIn .25s ease}
+.dc-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.dc-h b{font-size:1rem}
+.dc-h button{width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,165,255,.3);background:rgba(255,255,255,.07);color:inherit;font-size:1.2rem;cursor:pointer;line-height:1}.dc-h button:disabled{opacity:.3;cursor:default}.dc-h button:hover:not(:disabled){background:rgba(212,165,255,.25)}
+.dc-w,.dc-g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}.dc-w i{font-style:normal;font-size:.72rem;color:var(--muted);padding:2px 0 6px}
+.dc-d{aspect-ratio:1;border:0;border-radius:12px;background:rgba(255,255,255,.05);color:inherit;font:inherit;font-size:.88rem;cursor:pointer;position:relative;transition:transform .12s,background .15s}
+.dc-d:hover:not(:disabled){background:rgba(212,165,255,.3);transform:scale(1.08)}.dc-d:disabled{opacity:.22;cursor:default}
+.dc-d.tod{box-shadow:inset 0 0 0 2px #ffd45a}.dc-d.me::after,.dc-d.both::after{content:'';position:absolute;bottom:4px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#ff9ed2}.dc-d.both::after{background:#5ad67d;box-shadow:0 0 6px #5ad67d}
+.dc-d.sel{background:linear-gradient(135deg,#d4a5ff,#ff8fb8);color:#1b1026;font-weight:700}
+.dc-k{display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:.72rem;color:var(--muted)}.dc-k u{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff9ed2;margin-left:4px}.dc-k u.both{background:#5ad67d}
 .daily-stat { text-align: center; color: var(--muted); font-size: .9rem; margin: 14px 0 0; }
 
 
@@ -2662,8 +2671,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-09b';
+const SITE_VERSION = '2026-11-09c';
 const SITE_CHANGES = [
+  '❓ سؤال روز: جواب‌ها فقط وقتی هر دو نوشتیم (یا بعد از تموم‌شدن اون روز) نشون داده می‌شن؛ نوار اسکرول تاریخ‌ها برداشته شد و تقویم انتخاب تاریخ شمسی و قشنگ شد.',
   '🖼️ برای هر پوشه (سینما، گیم، گالری و ...) می‌تونی پوستر یا عکس بذاری: دکمهٔ 🖼️ کنار اسم پوشه؛ پوستر جای آیکون پوشه نشون داده می‌شه.',
   '❓ سؤال روز برای روزهای قبل هم قابل جواب دادنه: با «روز قبل»، نوار ۹ روز اخیر یا انتخاب تاریخ برو به هر روز گذشته و جوابش رو بنویس (✅ یعنی جواب دادی).',
   '🐝 زنبور کوچولو حالا توی همهٔ بخش‌های سایت (حتی روی چت، جلوتر از اون) همراهته: دنبال موس (یا جایی که لمس می‌کنی) می‌پره و وقتی کاری نمی‌کنی خودش می‌چرخه. با دکمهٔ 🍂 بالا خاموش می‌شه.',
@@ -4897,6 +4907,20 @@ document.getElementById('muteBtn').addEventListener('click', function() {
 const DAILY_QS = ["بهترین خاطره‌ای که از ما دوتا داری چیه؟", "اولین چیزی که از من یادت می‌آد چی بود؟", "اگه فردا یه روز تعطیل کامل داشتیم، دوست داشتی چیکار کنیم؟", "چه آهنگی منو یاد تو می‌ندازه؟", "یه چیز کوچیک که حالت رو خوب می‌کنه چیه؟", "بزرگ‌ترین آرزوت برای ۵ سال آینده چیه؟", "کدوم لحظهٔ امروز بهترین بود؟", "اگه می‌تونستی با من به یه جای دنیا سفر کنی، کجا؟", "یه چیزی که ازم یاد گرفتی چیه؟", "غذای مورد علاقه‌ای که دوست داری باهم درست کنیم؟", "چه فیلم یا سریالی رو دوست داری دوباره باهم ببینیم؟", "یه عادت من که دوستش داری چیه؟", "وقتی ناراحتی، چی بیشتر کمکت می‌کنه؟", "اگه یه ابرقدرت داشتی، چی بود؟", "یه خاطرهٔ خنده‌دار از ما که هنوزم می‌خندی بهش؟", "دوست داری ۱۰ سال دیگه کجا زندگی کنیم؟", "یه کاری که همیشه می‌خواستی بکنی ولی نکردی؟", "چی باعث می‌شه احساس امنیت کنی؟", "بهترین هدیه‌ای که تا حالا گرفتی چی بوده؟", "امروز به چی فکر می‌کردی که لبخند بزنی؟", "یه ویژگی از خودت که دوست داری و یه ویژگی که دوست داری بهتر بشه؟", "اگه فقط یه آهنگ برای همیشه می‌تونستی گوش بدی، کدوم؟", "چه چیزی از دوران بچگی‌ت رو بیشتر از همه دوست داشتی؟", "یه جملهٔ قشنگ که دوست داری از من بشنوی؟", "فصل مورد علاقه‌ات چیه و چرا؟", "اگه می‌تونستی به خودِ ۱۰ سال پیشت یه نصیحت بکنی، چی می‌گفتی؟", "یه کار عاشقانهٔ ساده که دوست داری برات انجام بدم؟", "کدوم مکان دنیا بیشتر از همه آرومت می‌کنه؟", "بهترین روز زندگیت تا الان کدوم بوده؟", "یه چیزی که ازش می‌ترسی و دوست داری بهش غلبه کنی؟", "اگه یه روز می‌تونستی جای من باشی، اول چیکار می‌کردی؟", "یه کتاب یا فیلمی که زندگیت رو عوض کرد؟", "چه چیز ما دوتا رو خاص می‌کنه؟", "دوست داری چه چیزی رو بیشتر باهم تجربه کنیم؟", "یه رازِ کوچیک و بامزه از خودت بگو.", "صبح‌ها رو دوست داری یا شب‌ها رو؟ چرا؟", "چه بو یا مزه‌ای تو رو یاد بهترین خاطره‌ها می‌ندازه؟", "اگه می‌تونستی یه چیز رو توی دنیا عوض کنی چی بود؟", "یه لحظه‌ای که حس کردی واقعاً دوستت دارم؟", "بزرگ‌ترین درسی که از یه اشتباه گرفتی؟", "یه ماجراجویی که دوست داری باهم داشته باشیم؟", "اگه یه کافه یا رستوران مال خودت بود، چه شکلی بود؟", "چه چیزی هست که دوست داری بیشتر ازش تشکر کنی؟", "یه شعر، جمله یا دیالوگ که دوستش داری؟", "چه کاری رو می‌تونی ساعت‌ها انجام بدی بدون اینکه خسته بشی؟", "اگه امشب می‌تونستیم هر شام دلخواهی بخوریم، چی سفارش می‌دادی؟", "یه چیز از من که هنوز نمی‌دونی و دوست داری بپرسی؟", "چه چیزی باعث می‌شه خودت باشی؟", "بهترین توصیه‌ای که تا حالا شنیدی؟", "یه جای قشنگ توی شهر که دوست داری باهم بریم؟", "اگه می‌تونستی یه ساز رو فوری یاد بگیری، کدوم؟", "چه چیزی توی من آرومت می‌کنه؟", "یه رویای عجیب یا قشنگ که یادته؟", "یه کار بامزه که دوست داری باهم انجام بدیم؟", "اگه می‌تونستی یه روز رو دوباره زندگی کنی، کدوم روز؟", "چه چیزی بیشتر از همه دلت رو گرم می‌کنه؟", "یه قولی که دوست داری بهم بدی؟", "اگه یه حیوون بودی، کدوم بودی و چرا؟", "چه چیزی از امروز می‌خوای یادت بمونه؟", "دوست داری سال بعد چه چیزی رو در مورد ما جشن بگیریم؟", "یه لحظه‌ای که از خودت خیلی خوشحال شدی؟", "بهترین قسمت یه روز معمولی کنار هم چیه؟", "اگه می‌تونستی یه نامه برای ۵ سال بعدمون بنویسی، اولین جمله‌اش چی بود؟", "چی باعث شد با من احساس راحتی کنی؟", "یه چیزی که این روزا ازش خیلی ممنونی؟", "اگه فقط ۳ چیز می‌تونستی با خودت به یه جزیرهٔ دور ببری، چی بود؟", "یه کلمه که ما دوتا رو توصیف کنه؟"];
 let dailyList = [], dailyMissing = false, dailyLoaded = false, dailyDay = '';
 function dailyShift(iso, n) { const [y, m, d] = iso.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, d + n)); return t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0') + '-' + String(t.getUTCDate()).padStart(2, '0'); }
+let dailyCal = null;
+function dailyCalToggle() { if (dailyCal) dailyCal = null; else { const j = Recur.jalaliFromIso(dailyDay || dailyToday()); dailyCal = { jy: j.jy, jm: j.jm }; } renderDaily(); }
+function dailyCalMove(n) { if (!dailyCal) return; let m = dailyCal.jm + n, y = dailyCal.jy; if (m > 12) { m = 1; y++; } if (m < 1) { m = 12; y--; } dailyCal = { jy: y, jm: m }; renderDaily(); }
+function dailyCalHtml(real, sel) {
+  if (!dailyCal) return '';
+  const { jy, jm } = dailyCal, len = Recur.jalaliMonthLength(jy, jm), first = Recur.weekdayIndex(Recur.isoFromJalali(jy, jm, 1)), fa = Recur.toFa;
+  const rj = Recur.jalaliFromIso(real), nextOk = jy < rj.jy || (jy === rj.jy && jm < rj.jm);
+  let cells = '<span></span>'.repeat(first);
+  for (let d = 1; d <= len; d++) {
+    const iso = Recur.isoFromJalali(jy, jm, d), fut = iso > real, mine = dailyMine(iso), both = new Set(dailyList.filter(r => r.day === iso).map(r => Recur.nameKey(r.author))).size >= 2;
+    cells += `<button type="button" class="dc-d${iso === sel ? ' sel' : ''}${iso === real ? ' tod' : ''}${mine ? ' me' : ''}${both ? ' both' : ''}" ${fut ? 'disabled' : `onclick="dailyGo('${iso}');dailyCal=null;renderDaily()"`}>${fa(d)}</button>`;
+  }
+  return `<div class="daily-cal"><div class="dc-h"><button type="button" onclick="dailyCalMove(-1)">‹</button><b>${Recur.JAL_MONTHS[jm - 1]} ${fa(jy)}</b><button type="button" ${nextOk ? '' : 'disabled'} onclick="dailyCalMove(1)">›</button></div><div class="dc-w">${['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map(x => `<i>${x}</i>`).join('')}</div><div class="dc-g">${cells}</div><div class="dc-k"><span><u class="me"></u> جواب دادم</span><span><u class="both"></u> هر دو جواب دادیم</span></div></div>`;
+}
 function dailyGo(iso) { const t = dailyToday(); dailyDay = !iso || iso >= t ? '' : iso; renderDaily(); }
 const dailyToday = () => Recur.todayIso();
 function dailyQuestion(iso) { const [y, m, d] = iso.split('-').map(Number); const n = Math.floor(Date.UTC(y, m - 1, d) / 864e5); const i = ((n % DAILY_QS.length) + DAILY_QS.length) % DAILY_QS.length; return { idx: i, text: DAILY_QS[i] }; }
@@ -4914,18 +4938,18 @@ function renderDaily() {
   const real = dailyToday(), today = dailyDay && dailyDay < real ? dailyDay : real, isPast = today !== real, q = dailyQuestion(today), mine = dailyMine(today);
   const others = dailyList.filter(r => r.day === today && r !== mine && !sameName(r.author, dailyMe()));
   const ans = (r, me) => `<div class="daily-ans${me ? ' me' : ''}"><b>${me ? '💜 جواب تو' : '💗 ' + escapeHtml(r.author || 'ناشناس')}</b><p>${escapeHtml(r.text)}</p></div>`;
-  const strip = Array.from({ length: 9 }, (_, i) => dailyShift(real, -i)).map(k => `<button type="button" class="daily-chip${k === today ? ' on' : ''}${dailyMine(k) ? ' done' : ''}" onclick="dailyGo('${k}')">${dailyMine(k) ? '✅ ' : ''}${k === real ? 'امروز' : Recur.fmtJalaliShort(k)}</button>`).join('');
-  let h = `<div class="daily-nav"><button type="button" class="daily-chip" onclick="dailyGo('${dailyShift(today, -1)}')">◀ روز قبل</button><button type="button" class="daily-chip" ${isPast ? '' : 'disabled'} onclick="dailyGo('${dailyShift(today, 1)}')">روز بعد ▶</button><input type="date" class="daily-dp" max="${real}" value="${today}" onchange="dailyGo(this.value)" title="انتخاب تاریخ"></div><div class="daily-strip">${strip}</div>`;
+  let h = `<div class="daily-nav"><button type="button" class="daily-chip" onclick="dailyGo('${dailyShift(today, -1)}')">◀ روز قبل</button><button type="button" class="daily-chip" ${isPast ? '' : 'disabled'} onclick="dailyGo('${dailyShift(today, 1)}')">روز بعد ▶</button><button type="button" class="daily-chip daily-calbtn" onclick="dailyCalToggle()">📅 انتخاب تاریخ</button></div>${dailyCalHtml(real, today)}`;
   h += `<div class="daily-card"><div class="daily-date">${isPast ? '⏪ سؤال روزهای قبل · ' : ''}📅 ${Recur.fmtJalaliLong(today)}</div><div class="daily-q">${escapeHtml(q.text)}</div>
     <textarea id="dailyInput" maxlength="1000" placeholder="جوابت رو بنویس...">${mine ? escapeHtml(mine.text) : ''}</textarea>
     <div class="daily-row"><button class="btn" type="button" onclick="saveDaily()">${mine ? '✏️ ذخیرهٔ ویرایش' : '💌 ثبت جواب'}</button>${myName() ? '' : '<small>⚠️ اسمت رو توی «پروفایل» بنویس تا جواب‌ها قاطی نشن</small>'}</div></div>`;
-  if (mine) {
-    h += '<div class="daily-sub">💞 جواب‌های ' + (isPast ? 'این روز' : 'امروز') + '</div>' + ans(mine, true) + others.map(r => ans(r, false)).join('');
-    if (!others.length) h += '<div class="daily-lock">⏳ هنوز طرف مقابل ' + (isPast ? 'به این روز' : '') + ' جواب نداده' + (isPast ? '' : '... خبرش می‌کنم') + ' 💜</div>';
-  } else {
-    h += `<div class="daily-lock">🔒 ${others.length ? 'طرف مقابل جواب داده! ' : ''}اول خودت جواب بده تا جواب‌ها رو ببینی</div>`;
-  }
+  const vis = isPast || (mine && others.length);
+  if (mine || (vis && others.length)) h += '<div class="daily-sub">💞 جواب‌های ' + (isPast ? 'این روز' : 'امروز') + '</div>';
+  if (mine) h += ans(mine, true);
+  if (vis) h += others.map(r => ans(r, false)).join('');
+  if (!vis) h += mine ? '<div class="daily-lock">🔒 جواب طرف مقابل وقتی نوشت (یا بعد از تموم‌شدن این روز) نشون داده می‌شه 💜</div>' : `<div class="daily-lock">🔒 ${others.length ? 'طرف مقابل جواب داده! ' : ''}اول خودت جواب بده؛ جواب‌ها وقتی هر دو نوشتیم (یا بعد از تموم‌شدن روز) نشون داده می‌شن</div>`;
+  else if (isPast && !mine && !others.length) h += '<div class="daily-lock">هیچ‌کدوم این روز جواب ندادیم... جوابت رو بنویس 💜</div>';
   const days = {}; dailyList.forEach(r => { if (r.day !== today) (days[r.day] = days[r.day] || []).push(r); });
+  Object.keys(days).forEach(k => { if (k >= real && new Set(days[k].map(r => Recur.nameKey(r.author))).size < 2) delete days[k]; });
   const keys = Object.keys(days).sort().reverse();
   const both = new Set(dailyList.filter(r => r.day !== real).map(r => r.day)).size;
   const bothDays = new Set(dailyList.map(r => r.day)).size && [...new Set(dailyList.map(r => r.day))].filter(k => new Set(dailyList.filter(r => r.day === k).map(r => Recur.nameKey(r.author))).size >= 2).length;
