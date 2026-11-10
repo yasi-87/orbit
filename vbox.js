@@ -40,7 +40,7 @@
   async function start() {
     if (R) return stop(); if (busy) return;
     if (!navigator.mediaDevices || !window.MediaRecorder) return toast('مرورگرت ضبط صدا رو پشتیبانی نمی‌کنه');
-    let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); } catch (e) { return toast('اجازهٔ میکروفون داده نشد 🎙️'); }
+    let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); } catch (e) { return toast('اجازهٔ میکروفون داده نشد 🎙️'); }
     const mime = mimeOpt(), rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [], peaks = [];
     const ac = new (window.AudioContext || window.webkitAudioContext)(), an = ac.createAnalyser(); an.fftSize = 256; ac.createMediaStreamSource(stream).connect(an); const buf = new Uint8Array(an.frequencyBinCount);
     R = { rec, stream, ac, an, buf, chunks, peaks, t0: Date.now(), mime: rec.mimeType || mime || 'audio/webm', raf: 0, tm: 0 };
