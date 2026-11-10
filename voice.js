@@ -383,23 +383,51 @@
   function dayLabel(ts) { try { return Recur.fmtJalaliLong(Recur.epochToWall(ts).iso); } catch (e) { return ''; } }
   /* جهت متن: هر پیامی که حتی یک حرف فارسی/عربی داره راست‌به‌چپه (انگلیسی‌هاش وسط جمله درست می‌شینن)؛ فقط پیام کاملاً انگلیسی چپ‌به‌راسته */
   const txDir = t => { t = String(t || ''); return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(t) || !/[A-Za-z]/.test(t) ? 'rtl' : 'ltr'; };
+  /* ⚡ رندر سریع چت: فقط ۱۰۰ پیام آخر توی صفحه‌ست، HTML هر پیام کش می‌شه و اگه فقط پیام تازه اومده باشه، همونو ته لیست اضافه می‌کنیم (نه ساختن دوبارهٔ کل لیست) */
+  let shownN = 100, prevTotal = 0, lastKeys = [], msgCache = new Map(), dayMemo = new Map(), firstPaint = true;
+  const dayOf = ts => { let d = dayMemo.get(ts); if (d === undefined) { d = dayLabel(ts); if (dayMemo.size > 4000) dayMemo.clear(); dayMemo.set(ts, d); } return d; };
+  function msgHtml(m) {
+    const sig = [m.text, m.edited ? 1 : 0, m.img || '', moreOpen.has(m.id) ? 1 : 0, isMine(m.name) ? tick(m) : '', m.reply ? m.reply.id : ''].join('\u0001');
+    const c = msgCache.get(m.id); if (c && c.sig === sig) return c;
+    const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span dir="${txDir(m.reply.text)}">${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
+    const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" decoding="async" data-zoom="${esc(m.img)}">` : '';
+    const bc = m.name === BOT ? botCut(m.text) : null, shown = bc && !moreOpen.has(m.id) ? bc.head + '…' : m.text;
+      const html = `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${linkify(shown)}</span>` : ''}${bc ? `<button type="button" class="vc-more" data-more="${esc(m.id)}">${moreOpen.has(m.id) ? 'کمتر ▴' : 'ادامه ▾ (' + fa(bc.rest) + ' حرف دیگه)'}</button>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
+    if (msgCache.size > 600) msgCache.clear();
+    const o = { sig, html }; msgCache.set(m.id, o); return o;
+  }
+  const nearBottom = l => l.scrollHeight - l.scrollTop - l.clientHeight < 140;
   function renderChat(keep) {
     const list = $('vcChatList'); if (!list) return;
-    const prevH = list.scrollHeight, prevT = list.scrollTop;
-    let last = '', html = hasMore ? '<button type="button" class="vc-older" id="vcOlder">' + (loadingOld ? '⏳ دارم پیام‌های قدیمی‌تر رو می‌گیرم…' : '⬆️ پیام‌های قدیمی‌تر') + '</button>' : '';
-    msgs.forEach(m => {
-      const d = dayLabel(m.ts); if (d && d !== last) { last = d; html += `<div class="vc-day">${esc(d)}</div>`; }
-      const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span dir="${txDir(m.reply.text)}">${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
-      const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" data-zoom="${esc(m.img)}">` : '';
-      const bc = m.name === BOT ? botCut(m.text) : null, shown = bc && !moreOpen.has(m.id) ? bc.head + '…' : m.text;
-      html += `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${linkify(shown)}</span>` : ''}${bc ? `<button type="button" class="vc-more" data-more="${esc(m.id)}">${moreOpen.has(m.id) ? 'کمتر ▴' : 'ادامه ▾ (' + fa(bc.rest) + ' حرف دیگه)'}</button>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
+    const total = msgs.length; if (prevTotal && total > prevTotal && shownN < 260) shownN += total - prevTotal; prevTotal = total;
+    const win = msgs.slice(-shownN), canMore = total > win.length || hasMore;
+    const items = []; let last = '';
+    if (canMore) items.push({ k: 'older:' + loadingOld, html: '<button type="button" class="vc-older" id="vcOlder">' + (loadingOld ? '⏳ دارم پیام‌های قدیمی‌تر رو می‌گیرم…' : '⬆️ پیام‌های قدیمی‌تر') + '</button>' });
+    win.forEach(m => {
+      const d = dayOf(m.ts); if (d && d !== last) { last = d; items.push({ k: 'day:' + d, html: `<div class="vc-day">${esc(d)}</div>` }); }
+      const o = msgHtml(m); items.push({ k: m.id + '|' + o.sig, html: o.html });
     });
-    try { renderEmoFav(); } catch (e) {}
-    list.innerHTML = html || '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>';
-    if (chatMissing) list.innerHTML += '<div class="vc-empty">برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن.</div>';
-    if (keep) list.scrollTop = Math.max(0, list.scrollHeight - prevH + prevT); else list.scrollTop = list.scrollHeight;
+    if (!items.length) items.push({ k: 'empty', html: '<div class="vc-empty">هنوز پیامی نیست؛ یه چیز قشنگ بنویس 💞</div>' });
+    if (chatMissing) items.push({ k: 'missing', html: '<div class="vc-empty">برای ماندگار شدن پیام‌ها، بلوک ۲۱ فایل SQL رو یک بار توی Supabase اجرا کن.</div>' });
+    const keys = items.map(x => x.k);
+    let same = keys.length === lastKeys.length && keys.every((k, i) => k === lastKeys[i]);
+    if (same && !firstPaint) return;
+    const wasNear = nearBottom(list), lastMine = win.length && isMine(win[win.length - 1].name);
+    let pre = 0; while (pre < lastKeys.length && pre < keys.length && lastKeys[pre] === keys[pre]) pre++;
+    const appendOnly = !firstPaint && !keep && pre === lastKeys.length && keys.length > pre && lastKeys.length > 0 && !/^(empty|missing)$/.test(lastKeys[lastKeys.length - 1]);
+    if (appendOnly) {
+      list.insertAdjacentHTML('beforeend', items.slice(pre).map(x => x.html).join(''));
+    } else {
+      const prevH = list.scrollHeight, prevT = list.scrollTop;
+      list.innerHTML = items.map(x => x.html).join('');
+      if (keep) list.scrollTop = Math.max(0, list.scrollHeight - prevH + prevT);
+    }
+    lastKeys = keys;
+    if (!keep && (firstPaint || wasNear || lastMine || !appendOnly)) list.scrollTop = list.scrollHeight;
+    if (win.length) firstPaint = false;
   }
   async function loadOlder() {
+    if (msgs.length > shownN) { shownN += 100; renderChat(true); return; }
     if (loadingOld || !hasMore || !chatOldest) return; loadingOld = true; renderChat(true);
     try {
       const r = await dbClient.from('voice_chat').select('*').lt('ts', chatOldest).order('ts', { ascending: false }).limit(PAGE);
@@ -425,6 +453,71 @@
     delete typers[p.from]; if (p.name === BOT) delete typers.bot;
     if (addMsg(m)) { saveMsgs(); renderChat(); renderTyping(); markSeen(); blip('recv'); if (window.ChatDock && !ChatDock.isOpen()) { ChatDock.bump(); say('💬 ' + m.name + ': ' + (m.text ? m.text.slice(0, 40) : '📷 تصویر')); } }
   }
+
+  /* 🔍 جستجو توی چت: همین الان توی پیام‌های لود‌شده، و با دکمهٔ «تاریخچهٔ کامل» از دیتابیس (بدون تغییر در Supabase) */
+  const normS = t => String(t || '').replace(/[\u064B-\u065F\u0670\u200c\u200d\u200f\u200e]/g, '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/ة/g, 'ه').replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).toLowerCase();
+  let srchOpen = false, srchT = 0, srchQ = '', srchDb = false;
+  function srchLocal(q) { const nq = normS(q); if (!nq) return []; const out = []; for (let i = msgs.length - 1; i >= 0 && out.length < 80; i--) { const m = msgs[i]; if (m.id && String(m.id).startsWith('__')) continue; const nt = normS(m.text); if (nt.includes(nq) || normS(m.name).includes(nq)) out.push(m); } return out; }
+  function snip(text, q) {
+    const t = String(text || ''), nt = normS(t), nq = normS(q); let i = nt.indexOf(nq); if (i < 0 || nt.length !== t.length) { const j = t.toLowerCase().indexOf(q.toLowerCase()); i = j; }
+    let a = Math.max(0, (i < 0 ? 0 : i) - 24), e = Math.min(t.length, (i < 0 ? 0 : i) + q.length + 48), pre = a > 0 ? '…' : '', post = e < t.length ? '…' : '';
+    const seg = t.slice(a, e); if (i < 0) return esc(seg) + post;
+    const rel = i - a; return pre + esc(seg.slice(0, rel)) + '<mark>' + esc(seg.slice(rel, rel + q.length)) + '</mark>' + esc(seg.slice(rel + q.length)) + post;
+  }
+  function renderSearch(more) {
+    const box = $('vcSrRes'); if (!box) return; const q = srchQ.trim();
+    if (!q) { box.innerHTML = '<div class="vc-sr-hint">یه کلمه بنویس تا توی همهٔ پیام‌هامون بگردم 🔍</div>'; return; }
+    const res = srchLocal(q);
+    const rows = res.map(m => { let w = ''; try { const x = Recur.epochToWall(m.ts); w = Recur.fmtJalaliShort(x.iso) + ' · ' + fa(x.hhmm); } catch (e) {} return `<button type="button" class="vc-sr-i" data-sr="${esc(m.id)}"><span class="vc-sr-m"><b>${esc(m.name)}</b><i>${esc(w)}</i></span><span class="vc-sr-t" dir="${txDir(m.text)}">${m.text ? snip(m.text, q) : '📷 تصویر'}</span></button>`; }).join('');
+    box.innerHTML = '<div class="vc-sr-n">' + (res.length ? fa(res.length) + (res.length >= 80 ? '+' : '') + ' نتیجه' : 'چیزی پیدا نشد') + '</div>' + rows +
+      (srchDb ? '<div class="vc-sr-hint">⏳ دارم توی تاریخچهٔ کامل می‌گردم…</div>' : '<button type="button" class="vc-sr-db" id="vcSrDb">🗂️ جستجو توی تاریخچهٔ کامل</button>');
+  }
+  async function srchHistory() {
+    const q = srchQ.trim(); if (!q || srchDb) return; srchDb = true; renderSearch();
+    try {
+      const pat = '%' + q.replace(/[%_,()]/g, ' ').trim() + '%';
+      const r = await dbClient.from('voice_chat').select('*').ilike('text', pat).order('ts', { ascending: false }).limit(300);
+      if (r.error) throw r.error; let n = 0;
+      (r.data || []).forEach(x => { const id = String(x.id); if (id.startsWith('__')) return; if (addMsg({ edited: !!x.edited, id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null })) n++; });
+      say(n ? '🗂️ ' + fa(n) + ' پیام قدیمی‌تر هم پیدا شد' : '🗂️ توی تاریخچه چیز تازه‌ای نبود');
+    } catch (e) { say('⚠️ جستجو توی تاریخچه نشد'); }
+    srchDb = false; if (srchOpen) renderSearch();
+  }
+  function gotoMsg(id) {
+    const i = msgs.findIndex(x => x.id === id); if (i < 0) return;
+    const needed = msgs.length - i; if (needed > shownN) { shownN = needed + 20; }
+    renderChat(true);
+    const l = $('vcChatList'); const t = l && l.querySelector('[data-mid="' + CSS.escape(id) + '"]');
+    if (t) { closeSearch(); requestAnimationFrame(() => { t.scrollIntoView({ block: 'center' }); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 1600); }); }
+  }
+  function openSearch() {
+    const bx = $('vcSearch'); if (!bx) return; srchOpen = true; bx.style.display = 'flex'; document.getElementById('chatDock').classList.add('searching');
+    const i = $('vcSrIn'); if (i) { i.focus(); i.select(); } renderSearch();
+  }
+  function closeSearch() { srchOpen = false; const bx = $('vcSearch'); if (bx) bx.style.display = 'none'; const d = document.getElementById('chatDock'); if (d) d.classList.remove('searching'); const i = $('vcSrIn'); if (i) i.blur(); }
+  function bindSearch() {
+    const btn = $('srBtn'), inp = $('vcSrIn'); if (!btn || !inp || btn.dataset.b) return; btn.dataset.b = 1;
+    btn.addEventListener('click', () => srchOpen ? closeSearch() : openSearch());
+    $('vcSrX').addEventListener('click', closeSearch);
+    inp.addEventListener('input', () => { srchQ = inp.value; clearTimeout(srchT); srchT = setTimeout(() => renderSearch(), 120); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Escape') closeSearch(); if (e.key === 'Enter') { e.preventDefault(); srchHistory(); } });
+    $('vcSrRes').addEventListener('click', e => { const b = e.target.closest('[data-sr]'); if (b) { gotoMsg(b.dataset.sr); return; } if (e.target.closest('#vcSrDb')) srchHistory(); });
+  }
+
+  /* 📡 اگه پیامی از broadcast جا افتاد (نت ضعیف، تب پس‌زمینه)، هر چند ثانیه از دیتابیس فقط پیام‌های تازه رو می‌گیریم */
+  let pollBusy = false, lastPoll = 0;
+  async function pollNew() {
+    if (pollBusy || chatMissing || document.hidden || !(window.ChatDock && ChatDock.isOpen())) return; pollBusy = true; lastPoll = Date.now();
+    try {
+      const since = msgs.length ? msgs[msgs.length - 1].ts : 0;
+      const r = await dbClient.from('voice_chat').select('*').gt('ts', since - 1).order('ts', { ascending: true }).limit(100);
+      if (r && !r.error) { let got = 0; (r.data || []).forEach(x => { const id = String(x.id); if (id.startsWith('__')) return; const fresh = !msgs.some(y => y.id === x.id); if (addMsg({ edited: !!x.edited, id: x.id, name: x.name || 'ناشناس', text: x.text || '', ts: Number(x.ts) || 0, img: x.img || '', reply: x.reply_id ? { id: x.reply_id, name: x.reply_name || '', text: x.reply_text || '' } : null }) && fresh) { got++; if (!isMine(x.name)) blip('recv'); } }); if (got) { saveMsgs(); renderChat(); markSeen(); } }
+    } catch (e) {}
+    pollBusy = false;
+  }
+  setInterval(pollNew, 7000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pollNew(); });
+
   /* ---------- ✓✓ سین، ✍️ در حال نوشتن، 🧸 پفیلا (دستیار مشترک) ---------- */
   const BOT = 'پفیلا';
   /* جواب‌های بلند پفیلا: اول بخش اول رو نشون می‌دیم و با دکمهٔ «ادامه» بقیه باز می‌شه */
@@ -501,6 +594,8 @@
     $('vcEmGrid').innerHTML = splitEmo(EMO[emoTab][1]).filter(x => x.trim()).map(x => '<button type="button" data-em="' + x + '">' + x + '</button>').join('');
     $('vcEmGrid').scrollTop = 0;
   }
+  const isSmall = () => window.matchMedia('(max-width:700px)').matches;
+  function emoKb() { const i = $('vcChatInput'); if (!i || !isSmall()) return; if (emoOpen) i.blur(); else i.focus({ preventScroll: true }); const l = $('vcChatList'); if (l) requestAnimationFrame(() => { l.scrollTop = l.scrollHeight; }); }
   function insertEmoji(e) {
     const i = $('vcChatInput'); if (!i) return; const a = i.selectionStart == null ? i.value.length : i.selectionStart, b = i.selectionEnd == null ? a : i.selectionEnd;
     if ((i.value.length + e.length) > (i.maxLength || 500)) return;
@@ -879,8 +974,10 @@
     });
     const f = $('vcChatForm'); if (f) f.addEventListener('submit', e => { e.preventDefault(); sendChat(); });
     const ci = $('vcChatInput'); if (ci) { ci.addEventListener('input', () => { ci.dir = txDir(ci.value); }); ci.addEventListener('input', onTyping); }
-    const ef = $('vcEmoFav'); if (ef) ef.addEventListener('click', e => { const b = e.target.closest('[data-ef]'); if (b) { insertEmoji(b.dataset.ef); return; } if (e.target.closest('[data-efm]')) { emoOpen = !emoOpen; renderEmoji(); } }); renderEmoFav();
-    const eb = $('vcEmoBtn'); if (eb) eb.addEventListener('click', () => { emoOpen = !emoOpen; renderEmoji(); });
+    const ef = $('vcEmoFav'); if (ef) ef.addEventListener('click', e => { const b = e.target.closest('[data-ef]'); if (b) { insertEmoji(b.dataset.ef); return; } if (e.target.closest('[data-efm]')) { emoOpen = !emoOpen; renderEmoji(); emoKb(); } }); renderEmoFav();
+    const eb = $('vcEmoBtn'); if (eb) eb.addEventListener('click', () => { emoOpen = !emoOpen; renderEmoji(); emoKb(); });
+    /* 📱 موبایل: دکمه‌ها فوکوس رو از کادر نمی‌دزدن (کیبورد نمی‌پره و صفحه تکون نمی‌خوره) */
+    ['vcEmoji', 'vcEmoFav', 'vcChatForm'].forEach(id => { const el = $(id); if (el) el.addEventListener('mousedown', e => { if (e.target.closest('button') && !e.target.closest('#vcEmoBtn,#vcImgBtn')) e.preventDefault(); }); });
     const gb = $('bgBtn'); if (gb) gb.addEventListener('click', toggleBgPop); applyBg();
     const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
     const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
@@ -889,7 +986,8 @@
     const cf = $('vcChatForm'); if (cf) { cf.addEventListener('dragover', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault(); }); cf.addEventListener('drop', e => { const f = imgOf(e.dataTransfer); if (f) { e.preventDefault(); pickImage(f); } }); }
     const cb = $('vcImgBtn'); if (cb && pk) cb.addEventListener('click', () => pk.click());
     const cmp = $('vcComposer'); if (cmp) cmp.addEventListener('click', e => { const b = e.target.closest('[data-cmp]'); if (!b) return; if (b.dataset.cmp === 'noreply') replyTo = null; else if (b.dataset.cmp === 'noedit') { editing = null; const i = $('vcChatInput'); if (i) i.value = ''; } else { if (pendImg && pendImg.up && pendImg.ctl) pendImg.ctl.abort(); pendImg = null; } renderComposer(); });
-    const cl0 = $('vcChatList'); if (cl0) { cl0.addEventListener('click', e => { if (e.target.closest('#vcOlder')) loadOlder(); }); cl0.addEventListener('scroll', () => { if (cl0.scrollTop < 80 && hasMore && !loadingOld) loadOlder(); }, { passive: true }); }
+    try { bindSearch(); } catch (e) {}
+    const cl0 = $('vcChatList'); if (cl0) { cl0.addEventListener('click', e => { if (e.target.closest('#vcOlder')) loadOlder(); }); cl0.addEventListener('scroll', () => { if (cl0.scrollTop < 80 && (hasMore || msgs.length > shownN) && !loadingOld) loadOlder(); }, { passive: true }); }
     const cl = $('vcChatList'); if (cl) cl.addEventListener('click', e => {
       const z = e.target.closest('[data-zoom]'); if (z) { zoom(z.dataset.zoom); return; }
       const eb = e.target.closest('[data-edit]'); if (eb) { startEdit(eb.dataset.edit); return; }
