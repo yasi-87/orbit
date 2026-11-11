@@ -1694,6 +1694,11 @@ body.reading-mode .reading-content {
 .bot-tg i{width:26px;height:14px;border-radius:8px;background:#555;position:relative;transition:.2s}.bot-tg i::after{content:"";position:absolute;top:2px;right:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:.2s}
 .bot-tg.on{opacity:1;border-color:rgba(255,200,120,.6)}.bot-tg.on i{background:#4cd964}.bot-tg.on i::after{right:14px}
 .vc-ed{font-size:.62rem;opacity:.7}
+.vc-sr-i.cur{border-color:rgba(255,214,102,.7);background:rgba(255,214,102,.1)}
+.vc-srnav{display:none;align-items:center;gap:6px;padding:6px 8px;background:#1d1530;border-top:1px solid rgba(212,165,255,.3);flex-shrink:0}
+.vc-srnav span{flex:1;text-align:center;font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vc-srnav button{background:rgba(255,255,255,.1);border:0;color:inherit;border-radius:10px;min-width:40px;height:38px;font-size:.95rem;cursor:pointer}.vc-srnav button:disabled{opacity:.3}
+#chatDock.searching>.vc-srnav{display:none!important}
 .vc-msg.flash{animation:vcFlash 1.4s}
 @keyframes vcFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 2px var(--accent,#d4a5ff)}}
 .vc-chat-list.hasbg{background-size:cover;background-position:center;border-radius:0}
@@ -2760,8 +2765,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-11a';
+const SITE_VERSION = '2026-11-11b';
 const SITE_CHANGES = [
+  '🔍 جستجوی چت حالا ادامه‌دار شد: بعد از رفتن به یه نتیجه، نوار «نتیجهٔ ۳ از ۷» با فلش قبلی/بعدی و برگشت به لیست می‌مونه و جستجو پاک نمی‌شه.',
   '💬 چت: جستجو توی پیام‌ها (🔍 بالای چت)، رندر خیلی سریع‌تر، دریافت مطمئن پیام‌ها، و چت موبایل تمام‌صفحه و بدون تکون خوردن با کیبورد و ایموجی.',
   '🎙️ نویزکنسلینگ و تنظیم خودکار بلندی صدا توی تماس و ضبط ویس خاموش شد تا صدا طبیعی و بدون قطع‌وصل بره.',
   '🫀 توی پروفایل، کنار روزهای با هم بودن، شمارندهٔ ضربان قلب‌هامون اومد: هر روز یه ضربان تصادفی بین ۶۰ تا ۱۰۰ در دقیقه حساب می‌شه و عدد زنده بالا می‌ره.',

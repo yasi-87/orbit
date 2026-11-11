@@ -412,7 +412,7 @@
     const keys = items.map(x => x.k);
     let same = keys.length === lastKeys.length && keys.every((k, i) => k === lastKeys[i]);
     if (same && !firstPaint) return;
-    const wasNear = nearBottom(list), lastMine = win.length && isMine(win[win.length - 1].name);
+    const prevTop = list.scrollTop, wasNear = nearBottom(list), lastMine = win.length && isMine(win[win.length - 1].name);
     let pre = 0; while (pre < lastKeys.length && pre < keys.length && lastKeys[pre] === keys[pre]) pre++;
     const appendOnly = !firstPaint && !keep && pre === lastKeys.length && keys.length > pre && lastKeys.length > 0 && !/^(empty|missing)$/.test(lastKeys[lastKeys.length - 1]);
     if (appendOnly) {
@@ -423,7 +423,8 @@
       if (keep) list.scrollTop = Math.max(0, list.scrollHeight - prevH + prevT);
     }
     lastKeys = keys;
-    if (!keep && (firstPaint || wasNear || lastMine || !appendOnly)) list.scrollTop = list.scrollHeight;
+    if (!keep && (firstPaint || wasNear || lastMine)) list.scrollTop = list.scrollHeight;
+    else if (!keep && !appendOnly && typeof prevTop === 'number') list.scrollTop = prevTop;
     if (win.length) firstPaint = false;
   }
   async function loadOlder() {
@@ -456,7 +457,7 @@
 
   /* 🔍 جستجو توی چت: همین الان توی پیام‌های لود‌شده، و با دکمهٔ «تاریخچهٔ کامل» از دیتابیس (بدون تغییر در Supabase) */
   const normS = t => String(t || '').replace(/[\u064B-\u065F\u0670\u200c\u200d\u200f\u200e]/g, '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/ة/g, 'ه').replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).toLowerCase();
-  let srchOpen = false, srchT = 0, srchQ = '', srchDb = false;
+  let srchOpen = false, srchT = 0, srchQ = '', srchDb = false, srchIds = [], srchIdx = -1, srchKeep = false, srchScroll = 0;
   function srchLocal(q) { const nq = normS(q); if (!nq) return []; const out = []; for (let i = msgs.length - 1; i >= 0 && out.length < 80; i--) { const m = msgs[i]; if (m.id && String(m.id).startsWith('__')) continue; const nt = normS(m.text); if (nt.includes(nq) || normS(m.name).includes(nq)) out.push(m); } return out; }
   function snip(text, q) {
     const t = String(text || ''), nt = normS(t), nq = normS(q); let i = nt.indexOf(nq); if (i < 0 || nt.length !== t.length) { const j = t.toLowerCase().indexOf(q.toLowerCase()); i = j; }
@@ -467,9 +468,9 @@
   function renderSearch(more) {
     const box = $('vcSrRes'); if (!box) return; const q = srchQ.trim();
     if (!q) { box.innerHTML = '<div class="vc-sr-hint">یه کلمه بنویس تا توی همهٔ پیام‌هامون بگردم 🔍</div>'; return; }
-    const res = srchLocal(q);
-    const rows = res.map(m => { let w = ''; try { const x = Recur.epochToWall(m.ts); w = Recur.fmtJalaliShort(x.iso) + ' · ' + fa(x.hhmm); } catch (e) {} return `<button type="button" class="vc-sr-i" data-sr="${esc(m.id)}"><span class="vc-sr-m"><b>${esc(m.name)}</b><i>${esc(w)}</i></span><span class="vc-sr-t" dir="${txDir(m.text)}">${m.text ? snip(m.text, q) : '📷 تصویر'}</span></button>`; }).join('');
-    box.innerHTML = '<div class="vc-sr-n">' + (res.length ? fa(res.length) + (res.length >= 80 ? '+' : '') + ' نتیجه' : 'چیزی پیدا نشد') + '</div>' + rows +
+    const res = srchLocal(q); srchIds = res.map(m => m.id); if (srchIdx >= srchIds.length) srchIdx = -1;
+    const rows = res.map((m, ri) => { let w = ''; try { const x = Recur.epochToWall(m.ts); w = Recur.fmtJalaliShort(x.iso) + ' · ' + fa(x.hhmm); } catch (e) {} return `<button type="button" class="vc-sr-i${ri === srchIdx ? ' cur' : ''}" data-sr="${esc(m.id)}"><span class="vc-sr-m"><b>${esc(m.name)}</b><i>${esc(w)}</i></span><span class="vc-sr-t" dir="${txDir(m.text)}">${m.text ? snip(m.text, q) : '📷 تصویر'}</span></button>`; }).join('');
+    const keepT = box.scrollTop; box.innerHTML = '<div class="vc-sr-n">' + (res.length ? fa(res.length) + (res.length >= 80 ? '+' : '') + ' نتیجه' : 'چیزی پیدا نشد') + '</div>' + rows +
       (srchDb ? '<div class="vc-sr-hint">⏳ دارم توی تاریخچهٔ کامل می‌گردم…</div>' : '<button type="button" class="vc-sr-db" id="vcSrDb">🗂️ جستجو توی تاریخچهٔ کامل</button>');
   }
   async function srchHistory() {
@@ -483,23 +484,37 @@
     } catch (e) { say('⚠️ جستجو توی تاریخچه نشد'); }
     srchDb = false; if (srchOpen) renderSearch();
   }
-  function gotoMsg(id) {
+  function gotoMsg(id, fromNav) {
     const i = msgs.findIndex(x => x.id === id); if (i < 0) return;
+    const k = srchIds.indexOf(id); if (k >= 0) srchIdx = k;
+    const box = $('vcSrRes'); if (box && srchOpen) srchScroll = box.scrollTop;
     const needed = msgs.length - i; if (needed > shownN) { shownN = needed + 20; }
     renderChat(true);
     const l = $('vcChatList'); const t = l && l.querySelector('[data-mid="' + CSS.escape(id) + '"]');
-    if (t) { closeSearch(); requestAnimationFrame(() => { t.scrollIntoView({ block: 'center' }); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 1600); }); }
+    hideSearchPanel(); srchKeep = true; updNav();
+    if (t) requestAnimationFrame(() => { t.scrollIntoView({ block: 'center' }); l.querySelectorAll('.vc-msg.flash').forEach(x => x.classList.remove('flash')); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 2200); });
   }
+  /* نوار «نتیجهٔ ۳ از ۷» بعد از رفتن به یه نتیجه: می‌شه بین نتیجه‌ها جلو و عقب رفت یا برگشت به لیست، جستجو پاک نمی‌شه */
+  function updNav() {
+    let nv = $('vcSrNav'); const on = srchKeep && srchIds.length;
+    if (!nv) { const l = $('vcChatList'); if (!l) return; nv = document.createElement('div'); nv.id = 'vcSrNav'; nv.className = 'vc-srnav'; l.parentNode.insertBefore(nv, l.nextSibling); nv.addEventListener('click', e => { const b = e.target.closest('[data-nv]'); if (!b) return; const a = b.dataset.nv; if (a === 'older') navStep(1); else if (a === 'newer') navStep(-1); else if (a === 'list') openSearch(); else if (a === 'x') clearSearch(); }); }
+    nv.style.display = on ? 'flex' : 'none'; if (!on) return;
+    nv.innerHTML = '<button type="button" data-nv="list" title="لیست نتیجه‌ها">☰</button><span>«' + esc(srchQ.trim().slice(0, 18)) + '» · ' + fa(srchIdx + 1) + ' از ' + fa(srchIds.length) + '</span><button type="button" data-nv="older" title="قدیمی‌تر" ' + (srchIdx >= srchIds.length - 1 ? 'disabled' : '') + '>▲</button><button type="button" data-nv="newer" title="جدیدتر" ' + (srchIdx <= 0 ? 'disabled' : '') + '>▼</button><button type="button" data-nv="x" title="بستن جستجو">✕</button>';
+  }
+  function navStep(d) { const n = srchIdx + d; if (n < 0 || n >= srchIds.length) return; srchIdx = n; gotoMsg(srchIds[n]); }
+  function clearSearch() { srchKeep = false; srchQ = ''; srchIds = []; srchIdx = -1; srchScroll = 0; const i = $('vcSrIn'); if (i) i.value = ''; updNav(); hideSearchPanel(); }
   function openSearch() {
-    const bx = $('vcSearch'); if (!bx) return; srchOpen = true; bx.style.display = 'flex'; document.getElementById('chatDock').classList.add('searching');
-    const i = $('vcSrIn'); if (i) { i.focus(); i.select(); } renderSearch();
+    const bx = $('vcSearch'); if (!bx) return; srchOpen = true; bx.style.display = 'flex'; document.getElementById('chatDock').classList.add('searching'); const nv = $('vcSrNav'); if (nv) nv.style.display = 'none';
+    const i = $('vcSrIn'); if (i) { i.value = srchQ; if (!srchQ) i.focus(); } renderSearch();
+    const box = $('vcSrRes'); if (box) { box.scrollTop = srchScroll; const c = box.querySelector('.vc-sr-i.cur'); if (c && !srchScroll) c.scrollIntoView({ block: 'center' }); }
   }
-  function closeSearch() { srchOpen = false; const bx = $('vcSearch'); if (bx) bx.style.display = 'none'; const d = document.getElementById('chatDock'); if (d) d.classList.remove('searching'); const i = $('vcSrIn'); if (i) i.blur(); }
+  function hideSearchPanel() { srchOpen = false; const bx = $('vcSearch'); if (bx) bx.style.display = 'none'; const d = document.getElementById('chatDock'); if (d) d.classList.remove('searching'); const i = $('vcSrIn'); if (i) i.blur(); }
+  function closeSearch() { hideSearchPanel(); updNav(); }
   function bindSearch() {
     const btn = $('srBtn'), inp = $('vcSrIn'); if (!btn || !inp || btn.dataset.b) return; btn.dataset.b = 1;
     btn.addEventListener('click', () => srchOpen ? closeSearch() : openSearch());
-    $('vcSrX').addEventListener('click', closeSearch);
-    inp.addEventListener('input', () => { srchQ = inp.value; clearTimeout(srchT); srchT = setTimeout(() => renderSearch(), 120); });
+    $('vcSrX').addEventListener('click', () => { if (srchQ.trim()) { closeSearch(); if (srchIds.length) { srchKeep = true; updNav(); } } else closeSearch(); });
+    inp.addEventListener('input', () => { srchQ = inp.value; srchIdx = -1; srchScroll = 0; srchKeep = false; clearTimeout(srchT); srchT = setTimeout(() => renderSearch(), 120); });
     inp.addEventListener('keydown', e => { if (e.key === 'Escape') closeSearch(); if (e.key === 'Enter') { e.preventDefault(); srchHistory(); } });
     $('vcSrRes').addEventListener('click', e => { const b = e.target.closest('[data-sr]'); if (b) { gotoMsg(b.dataset.sr); return; } if (e.target.closest('#vcSrDb')) srchHistory(); });
   }
