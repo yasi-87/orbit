@@ -87,6 +87,7 @@
         .on('broadcast', { event: 'chat' }, m => onChat(m && m.payload))
         .on('broadcast', { event: 'ct' }, m => onCt(m && m.payload))
         .on('broadcast', { event: 'au' }, m => onAudio(m && m.payload))
+        .on('broadcast', { event: 'cu' }, m => onCu(m && m.payload))
         .on('presence', { event: 'sync' }, onPresence)
         .subscribe(s => { if (s === 'SUBSCRIBED') { subscribed = true; if (joined) track(); setTimeout(onPresence, 200); render(); renderChat(); } });
     } catch (e) { console.warn('voice off', e); ch = null; }
@@ -115,13 +116,14 @@
     pc.ontrack = e => { P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
-      if (s === 'connected') { if (P.state !== 'connected') { say(P.relay ? '✅ اتصال مستقیم برقرار شد' : '💞 با ' + P.name + ' وصل شدی! حرف بزنین'); if (!P.relay) blip('up'); } P.state = 'connected'; P.warned = false; P.relay = false; clearTimeout(P.rt); stopTxIfIdle(); }
+      if (s === 'connected') { if (P.state !== 'connected') { P.wasUp = true; const dp = drops[id]; if (dp) { delete drops[id]; if (Date.now() - dp.at > 2500) requestResume(id, dp); } say(P.relay ? '✅ اتصال مستقیم برقرار شد' : '💞 با ' + P.name + ' وصل شدی! حرف بزنین'); if (!P.relay) blip('up'); } P.state = 'connected'; P.warned = false; P.relay = false; clearTimeout(P.rt); stopTxIfIdle(); }
       else if (s === 'failed') {
+        if (!drops[id] && (P.state === 'connected' || P.wasUp)) drops[id] = { at: Date.now() };
         if (P.state !== 'failed' && P.tries >= 1 && !P.relay) blip('down');
         P.state = 'failed'; enableRelay(id);
         if (!(P.tries >= 1)) { P.tries = 1; setTimeout(() => { if (peers[id] === P && P.state === 'failed') retryPeer(id, true); }, 800); }   // یک بار خودکار دوباره امتحان می‌کنیم
       }
-      else if (s === 'disconnected' || s === 'connecting') { if (P.state === 'connected' && !P.warned) { P.warned = true; say('📶 ارتباط ضعیف شد یا قطع شد…'); blip('down'); } P.state = 'connecting'; }
+      else if (s === 'disconnected' || s === 'connecting') { if (!drops[id] && (P.state === 'connected' || P.wasUp)) drops[id] = { at: Date.now() }; if (P.state === 'connected' && !P.warned) { P.warned = true; say('📶 ارتباط ضعیف شد یا قطع شد…'); blip('down'); } P.state = 'connecting'; }
       trackCall(); render();
     };
     P.rt = setTimeout(() => { if (peers[id] === P && P.state !== 'connected') enableRelay(id); }, relayDelay);
@@ -146,6 +148,9 @@
     const id = p.from;
     try {
       if (p.t === 'reset') { const nm0 = (peers[id] || {}).name || 'اون یکی', tr = (peers[id] || {}).tries || 0; closePeer(id); startPeer(id, nm0); if (peers[id]) peers[id].tries = tr; return; }
+      if (p.t === 'resume') { startCuTx(id, p.since); return; }
+      if (p.t === 'resumeend') { stopCuTx(id); return; }
+      if (p.t === 'cuNone') { cuEnd(id); return; }
       if (p.t === 'bye') { const had = !!peers[id]; closePeer(id); render(); if (had) blip('down'); return; }
       if (p.t === 'cid') { if (curCall && !curCall.id && p.id) { curCall.id = p.id; curCall.start = Number(p.start) || curCall.start; saveCall(false); } return; }
       if (!peers[id]) { const o = others().find(x => x.id === id); startPeer(id, o ? o.name : 'اون یکی'); }
@@ -174,7 +179,7 @@
 
 
   /* ---------- 🛟 مسیر پشتیبان: وقتی اتصال مستقیم برقرار نمی‌شه (مثلاً فیلتر یا NAT سخت)، صدا فشرده (Opus) و از همون کانال Supabase رد می‌شه ---------- */
-  let tx = null, rxDec = {}, playCtx = null, playGain = null, playAt = 0;
+  let tx = null, rxDec = {}, playCtx = null, playGain = null, playAt = 0, ring = [], drops = {}, heard = {}, cuTx = {}, cuRx = {};
   const WC = () => typeof AudioEncoder !== 'undefined' && typeof AudioDecoder !== 'undefined' && typeof MediaStreamTrackProcessor !== 'undefined';
   const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
   const unb64 = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
@@ -184,7 +189,7 @@
     P.relay = true; say('🟡 اتصال مستقیم نشد؛ از مسیر پشتیبان وصل شدی (صدا کمی تأخیر داره)'); blip('up');
     startTx(); trackCall(); render();
   }
-  function stopTxIfIdle() { if (tx && !Object.values(peers).some(p => p.relay)) { tx.stop = true; tx = null; } }
+  function stopTxIfIdle() { if (tx && !joined) { tx.stop = true; tx = null; } }
   async function startTx() {
     if (tx || !local || !WC()) return;
     const track = local.getAudioTracks()[0]; if (!track) return;
@@ -194,6 +199,7 @@
       let enc = null, pack = [], seq = 0, last = 0;
       const flush = () => {
         if (!pack.length) return;
+        if (!Object.values(peers).some(p => p.relay)) { pack = []; return; }
         let n = 4; pack.forEach(p => { n += 1 + p.length; }); const u = new Uint8Array(n); const dv = new DataView(u.buffer); dv.setUint32(0, seq++);
         let o = 4; pack.forEach(p => { u[o++] = p.length; u.set(p, o); o += p.length; }); pack = [];
         try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'au', payload: { from: ID, s: b64(u) } }); diag.tx = (diag.tx || 0) + 1; } catch (e) {}
@@ -201,7 +207,7 @@
       while (!me.stop) {
         const r = await reader.read(); if (r.done) break; const f = r.value;
         try {
-          if (!enc) { enc = new AudioEncoder({ output: c => { const b = new Uint8Array(c.byteLength); c.copyTo(b); if (b.length < 255) pack.push(b); }, error: e => diag.errs.push('enc ' + e) }); enc.configure({ codec: 'opus', sampleRate: f.sampleRate, numberOfChannels: f.numberOfChannels, bitrate: 24000 }); }
+          if (!enc) { enc = new AudioEncoder({ output: c => { const b = new Uint8Array(c.byteLength); c.copyTo(b); if (b.length < 255) { pack.push(b); const tn = Date.now(); ring.push({ t: tn, b }); while (ring.length && ring[0].t < tn - 120000) ring.shift(); } }, error: e => diag.errs.push('enc ' + e) }); enc.configure({ codec: 'opus', sampleRate: f.sampleRate, numberOfChannels: f.numberOfChannels, bitrate: 24000 }); }
           if (micOn) enc.encode(f);
         } catch (e) { diag.errs.push('tx ' + e); }
         f.close();
@@ -230,6 +236,63 @@
     } catch (e) { diag.errs.push('rx ' + e); }
   }
 
+
+  /* ⏪ ادامهٔ صدای از‌دست‌رفته: هر کس صدای خودش رو ۲ دقیقه آخر (فشرده) نگه می‌داره. وقتی تماس بعد از قطعی برگشت، طرف مقابل می‌گه «از کجا نشنیدم» و
+     همون قسمت (کمی سریع‌تر) براش پخش می‌شه تا به صدای زنده برسه — بدون تغییر در Supabase، از همون کانال‌ها */
+  const CU_RATE = 1.25;
+  const cuBuild = (pk, seq) => { let n = 4; pk.forEach(x => { n += 1 + x.length; }); const u = new Uint8Array(n); new DataView(u.buffer).setUint32(0, seq); let o = 4; pk.forEach(x => { u[o++] = x.length; u.set(x, o); o += x.length; }); return u; };
+  function cuCompact(list) {   // سکوتِ ابتدا حذف و سکوت‌های طولانی وسط کوتاه می‌شه
+    const out = []; let run = 0, started = false;
+    for (const r of list) { const quiet = r.b.length <= 9; if (!started) { if (quiet) continue; started = true; } if (quiet) { run++; if (run > 25) continue; } else run = 0; out.push(r); }
+    while (out.length && out[out.length - 1].b.length <= 9) out.pop(); return out;
+  }
+  function stopCuTx(id) { const S = cuTx[id]; if (S) { clearInterval(S.timer); delete cuTx[id]; } }
+  function startCuTx(id, since) {
+    stopCuTx(id); if (!joined || !tx || !ring.length) { send({ t: 'cuNone' }, id); return; }
+    const S = cuTx[id] = { cursor: Math.max(Number(since) || 0, Date.now() - 90000), seq: 0, first: true, t0: Date.now() };
+    const step = () => {
+      if (!joined || Date.now() - S.t0 > 150000) { stopCuTx(id); return; }
+      let list = ring.filter(r => r.t > S.cursor).slice(0, 150); if (!list.length) return;
+      const lastT = list[list.length - 1].t; S.cursor = lastT; if (S.first || true) list = cuCompact(list);
+      const lag = Date.now() - lastT; if (!list.length) { if (lag < 700 && S.sent) try { ch.send({ type: 'broadcast', event: 'cu', payload: { from: ID, to: id, s: '', lag } }); } catch (e) {} return; }
+      S.first = false; S.sent = true;
+      try { if (ch && subscribed) ch.send({ type: 'broadcast', event: 'cu', payload: { from: ID, to: id, s: b64(cuBuild(list.map(r => r.b), S.seq++)), lag } }); } catch (e) {}
+    };
+    S.timer = setInterval(step, 160); step();
+  }
+  const cuLive = (id, mute) => { const a = $('vcA_' + id); if (a) a.muted = deaf || mute; };
+  function cuEnd(id, why) {
+    const R = cuRx[id]; if (!R) return; delete cuRx[id]; try { R.dec.close(); } catch (e) {}
+    cuLive(id, false); if (R.started) { send({ t: 'resumeend' }, id); say('✅ به صدای زندهٔ ' + ((peers[id] || {}).name || 'اون یکی') + ' رسیدی'); }
+  }
+  function requestResume(id, dp) {
+    if (!WC() || deaf) return; const since = Math.max((heard[id] || (dp.at - 1500)) - 400, dp.at - 60000);
+    cuRx[id] && cuEnd(id); send({ t: 'resume', since }, id);
+    cuRx[id] = { started: false, playAt: 0, ts: 0, lag: 9999, last: Date.now(), t0: Date.now(), dec: null };
+  }
+  function onCu(p) {
+    if (!p || p.to !== ID || !joined || !WC()) return; const id = p.from, R = cuRx[id]; if (!R || deaf) return;
+    R.last = Date.now(); R.lag = Number(p.lag); if (isNaN(R.lag)) R.lag = 9999;
+    if (!p.s) return;
+    try {
+      playCtx = playCtx || new (window.AudioContext || window.webkitAudioContext)(); if (playCtx.state === 'suspended') playCtx.resume().catch(() => {});
+      if (!R.dec) {
+        R.dec = new AudioDecoder({ output: a => { try { const n = a.numberOfFrames, buf = playCtx.createBuffer(1, n, a.sampleRate), ar = new Float32Array(n); a.copyTo(ar, { planeIndex: 0, format: 'f32-planar' }); buf.copyToChannel(ar, 0); a.close();
+          const src = playCtx.createBufferSource(); src.buffer = buf; src.playbackRate.value = CU_RATE; src.connect(playCtx.destination); const now = playCtx.currentTime; if (R.playAt < now + 0.05) R.playAt = now + 0.15; src.start(R.playAt); R.playAt += buf.duration / CU_RATE; diag.cu = (diag.cu || 0) + 1; } catch (e) { diag.errs.push('cu out ' + e); } }, error: e => diag.errs.push('cu dec ' + e) });
+        R.dec.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
+      }
+      if (!R.started) { R.started = true; cuLive(id, true); say('⏪ دارم صدایی که قطع شده بود رو برات ادامه می‌دم…'); blip('up'); }
+      const u = unb64(p.s); let o = 4; while (o < u.length) { const l = u[o++]; R.dec.decode(new EncodedAudioChunk({ type: 'key', timestamp: R.ts, data: u.subarray(o, o + l) })); R.ts += 20000; o += l; }
+    } catch (e) { diag.errs.push('cu rx ' + e); }
+  }
+  setInterval(() => {
+    Object.keys(cuRx).forEach(id => {
+      const R = cuRx[id], now = Date.now(); const backlog = R.started && playCtx ? R.playAt - playCtx.currentTime : 0;
+      if (!R.started) { if (now - R.t0 > 6000) cuEnd(id); return; }
+      if ((backlog < 0.35 && R.lag < 900) || now - R.last > 5000 || now - R.t0 > 140000) cuEnd(id);
+    });
+  }, 250);
+
   /* ---------- نشانگرها: «دارن حرف می‌زنن» و «صدای من داره می‌ره» ---------- */
   function analyser(stream) {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)();
@@ -245,7 +308,7 @@
       myLvl = myAn && micOn ? level(myAn) : 0;
       const m = $('vcMeter'); if (m) m.style.width = Math.min(100, myLvl * 4) + '%';
       const me = document.querySelector('.vc-tile[data-who="me"]'); if (me) me.classList.toggle('speak', myLvl > 12);
-      Object.keys(peers).forEach(id => { const P = peers[id], t = document.querySelector('.vc-tile[data-peer="' + id + '"]'); if (t) t.classList.toggle('speak', !deaf && ((P.an && level(P.an) > 12) || (P.relay && P.lvl > 0.05))); });
+      Object.keys(peers).forEach(id => { const P = peers[id]; if (P.an && P.state === 'connected' && level(P.an) > 10) heard[id] = Date.now(); const t = document.querySelector('.vc-tile[data-peer="' + id + '"]'); if (t) t.classList.toggle('speak', !deaf && ((P.an && level(P.an) > 12) || (P.relay && P.lvl > 0.05))); });
     }, 120);
     clearInterval(statT);
     statT = setInterval(async () => {   // آیا بایت‌های صدای من واقعاً داره ارسال می‌شه؟
@@ -270,7 +333,7 @@
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { noMic = true; say('🎧 این مرورگر میکروفون نداره؛ فقط گوش می‌دی'); }
     else try { local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false }, video: false }); }
     catch (e) { local = null; noMic = true; say('🎧 بدون میکروفون وارد شدی؛ می‌تونی صدای اون یکی رو بشنوی و تو چت بنویسی'); }
-    joined = true; micOn = true; deaf = false; t0 = Date.now(); sentPrev = 0;
+    joined = true; micOn = true; deaf = false; t0 = Date.now(); sentPrev = 0; ring = []; drops = {}; heard = {}; try { startTx(); } catch (e) {}
     if (!ch) connectChannel();
     if (ch && subscribed) { track(); setTimeout(onPresence, 150); }
     startMeters();
@@ -282,7 +345,7 @@
     if (!joined) return;
     if (tx) { tx.stop = true; tx = null; } send({ t: 'bye' }); const fin = curCall ? finishCall() : null; Object.keys(peers).forEach(closePeer);
     try { if (local) local.getTracks().forEach(t => t.stop()); } catch (e) {} local = null;
-    joined = false; duck(false); track();
+    joined = false; duck(false); track(); if (tx) { tx.stop = true; tx = null; } ring = []; drops = {}; heard = {}; Object.keys(cuTx).forEach(stopCuTx); Object.keys(cuRx).forEach(i => { try { cuRx[i].dec && cuRx[i].dec.close(); } catch (e) {} delete cuRx[i]; });
     clearInterval(tickT); clearInterval(meterT); clearInterval(statT);
     if (!quiet) { say('📴 از اتاق صحبت خارج شدی'); blip('down'); }
     render();
@@ -1019,6 +1082,6 @@
     render(); renderChat();
     setInterval(() => { const d = $('vcDiag'), box = $('vcDiagBox'); if (d && box && box.open) d.textContent = diagText(); }, 1000);
   }
-  window.Voice = { _setRelayDelay: ms => { relayDelay = ms; }, _diag: diagText, busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
+  window.Voice = { _cu: { id: () => ID, ring: () => ring, build: cuBuild, rx: onCu, start: id => { cuRx[id] = { started: false, playAt: 0, ts: 0, lag: 0, last: Date.now(), t0: Date.now(), dec: null }; }, state: () => cuRx, compact: cuCompact }, _setRelayDelay: ms => { relayDelay = ms; }, _diag: diagText, busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
