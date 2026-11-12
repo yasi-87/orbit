@@ -6,11 +6,11 @@
   const ID = Math.random().toString(36).slice(2, 9);
   /* STUN برای پیدا کردن آدرس؛ TURN (سرور واسطه) برای وقتی که شبکه‌ها (مثل اینترنت موبایل یا مودم‌های بسته) اجازهٔ اتصال مستقیم نمی‌دن.
    صدا رمزنگاری‌شده (DTLS-SRTP) رد می‌شه و سرور واسطه فقط داده‌ی رمز می‌بینه. */
-  const ICE = { iceCandidatePoolSize: 2, iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }, { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }] };
+  const ICE = { iceCandidatePoolSize: 4, bundlePolicy: 'max-bundle', rtcpMuxPolicy: 'require', iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }, { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp', 'turns:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }] };
   const CHAT_KEY = 'vc_chat';
   let ch = null, subscribed = false, joined = false, local = null, micOn = true, deaf = false, t0 = 0, tickT = null, meterT = null, statT = null;
   const diag = { sent: {}, recv: {}, errs: [], subs: '' };
-  let relayDelay = 12000, relayed = false, noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
+  let relayDelay = 4500, relayed = false, noMic = false, lastHtml = '', lastNotify = 0, actx = null, myAn = null, myLvl = 0, sending = false, sentPrev = 0;
   const peers = {};   // id -> { pc, stream, remoteSet, pending, state, an, lvl, name }
   const $ = id => document.getElementById(id);
   const nm = () => (typeof myName === 'function' ? myName() : '') || 'من';
@@ -75,6 +75,7 @@
         ${joined && anyBad ? '<button class="btn" data-vc="retry" type="button">🔄 تلاش دوباره</button>' : ''}</div>
       <p class="vc-note">برای صحبت، مرورگر اجازهٔ میکروفون می‌خواد؛ ولی اجباری نیست، بدونش هم می‌تونی گوش بدی و توی چت بنویسی. بهتره هدفون بزنید تا صدا برگشت نخوره.</p></div>`;
     if (html !== lastHtml) { lastHtml = html; box.innerHTML = html; }
+    const vb = $('vcVolBar'); if (vb) { vb.style.display = joined ? 'flex' : 'none'; bindVol(); }
     const nb = document.querySelector('.nav-btn[data-screen="voice"]'); if (nb) nb.textContent = joined ? '🎙️ در تماس' : '🎙️ اتاق صحبت';
   }
 
@@ -113,7 +114,7 @@
     P.lc = { host: 0, srflx: 0, relay: 0, other: 0 }; P.rc = 0;
     pc.onicecandidateerror = e => { diag.errs.push((e.url || '') + ' ' + e.errorCode + ' ' + (e.errorText || '')); if (diag.errs.length > 6) diag.errs.shift(); };
     pc.onicecandidate = e => { if (e.candidate) { const ty = (/ typ (\w+)/.exec(e.candidate.candidate) || [])[1]; P.lc[ty in P.lc ? ty : 'other']++; } if (e.candidate) send({ t: 'ice', c: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }, id); };
-    pc.ontrack = e => { P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
+    pc.ontrack = e => { try { pc.getReceivers().forEach(r => { if ('jitterBufferTarget' in r) r.jitterBufferTarget = 40; else if ('playoutDelayHint' in r) r.playoutDelayHint = 0.04; }); } catch (e2) {} P.stream = e.streams[0] || new MediaStream([e.track]); attachAudio(id, P.stream); watch(P); render(); };
     pc.onconnectionstatechange = () => {
       const s = pc.connectionState;
       if (s === 'connected') { if (P.state !== 'connected') { P.wasUp = true; const dp = drops[id]; if (dp) { delete drops[id]; if (Date.now() - dp.at > 2500) requestResume(id, dp); } say(P.relay ? '✅ اتصال مستقیم برقرار شد' : '💞 با ' + P.name + ' وصل شدی! حرف بزنین'); if (!P.relay) blip('up'); } P.state = 'connected'; P.warned = false; P.relay = false; clearTimeout(P.rt); stopTxIfIdle(); }
@@ -121,7 +122,7 @@
         if (!drops[id] && (P.state === 'connected' || P.wasUp)) drops[id] = { at: Date.now() };
         if (P.state !== 'failed' && P.tries >= 1 && !P.relay) blip('down');
         P.state = 'failed'; enableRelay(id);
-        if (!(P.tries >= 1)) { P.tries = 1; setTimeout(() => { if (peers[id] === P && P.state === 'failed') retryPeer(id, true); }, 800); }   // یک بار خودکار دوباره امتحان می‌کنیم
+        if (!(P.tries >= 1)) { P.tries = 1; setTimeout(() => { if (peers[id] === P && P.state === 'failed') retryPeer(id, true); }, 400); }   // یک بار خودکار دوباره امتحان می‌کنیم
       }
       else if (s === 'disconnected' || s === 'connecting') { if (!drops[id] && (P.state === 'connected' || P.wasUp)) drops[id] = { at: Date.now() }; if (P.state === 'connected' && !P.warned) { P.warned = true; say('📶 ارتباط ضعیف شد یا قطع شد…'); blip('down'); } P.state = 'connecting'; }
       trackCall(); render();
@@ -174,7 +175,7 @@
   function attachAudio(id, stream) {
     let a = $('vcA_' + id);
     if (!a) { a = document.createElement('audio'); a.id = 'vcA_' + id; a.autoplay = true; a.setAttribute('playsinline', ''); ($('vcAudios') || document.body).appendChild(a); }
-    a.srcObject = stream; a.muted = deaf; const p = a.play(); if (p && p.catch) p.catch(() => {});
+    a.srcObject = stream; a.muted = deaf; try { a.volume = vol; } catch (e) {} const p = a.play(); if (p && p.catch) p.catch(() => {});
   }
 
 
@@ -211,7 +212,7 @@
           if (micOn) enc.encode(f);
         } catch (e) { diag.errs.push('tx ' + e); }
         f.close();
-        const now = Date.now(); if (now - last >= 200) { last = now; flush(); }
+        const now = Date.now(); if (now - last >= 140) { last = now; flush(); }
       }
       try { reader.cancel(); if (enc) enc.close(); } catch (e) {}
     } catch (e) { diag.errs.push('relay tx: ' + e); }
@@ -227,7 +228,7 @@
       if (playCtx.state === 'suspended') playCtx.resume().catch(() => {});
       d = rxDec[p.from] = { ts: 0, dec: new AudioDecoder({ output: a => { try { const n = a.numberOfFrames, buf = playCtx.createBuffer(1, n, a.sampleRate), ar = new Float32Array(n); a.copyTo(ar, { planeIndex: 0, format: 'f32-planar' }); buf.copyToChannel(ar, 0); a.close();
         let m = 0; for (let i = 0; i < n; i += 8) m = Math.max(m, Math.abs(ar[i])); P.lvl = m;
-        const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(playCtx.destination); const now = playCtx.currentTime; if (playAt < now + 0.05) playAt = now + 0.2; src.start(playAt); playAt += buf.duration; diag.rx = (diag.rx || 0) + 1; } catch (e) { diag.errs.push('dec out ' + e); } }, error: e => diag.errs.push('dec ' + e) }) };
+        const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(pg()); const now = playCtx.currentTime; if (playAt < now + 0.05 || playAt > now + 0.6) playAt = now + 0.12; src.start(playAt); playAt += buf.duration; diag.rx = (diag.rx || 0) + 1; } catch (e) { diag.errs.push('dec out ' + e); } }, error: e => diag.errs.push('dec ' + e) }) };
       d.dec.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
     }
     try {
@@ -236,6 +237,21 @@
     } catch (e) { diag.errs.push('rx ' + e); }
   }
 
+
+
+  /* 🔊 بلندیِ صدای اتاق (۰ تا ۱۰۰٪) برای همهٔ مسیرها؛ ذخیره می‌شه */
+  let vol = 1; try { const v = parseFloat(localStorage.getItem('vc_vol')); if (v >= 0 && v <= 1) vol = v; } catch (e) {}
+  const pg = () => { playCtx = playCtx || new (window.AudioContext || window.webkitAudioContext)(); if (!playGain) { playGain = playCtx.createGain(); playGain.gain.value = vol; playGain.connect(playCtx.destination); } return playGain; };
+  function applyVol() {
+    document.querySelectorAll('#vcAudios audio').forEach(a => { try { a.volume = vol; } catch (e) {} });
+    if (playGain) playGain.gain.value = vol;
+    const r = $('vcVolR'), l = $('vcVolL'); if (r && +r.value !== Math.round(vol * 100)) r.value = Math.round(vol * 100); if (l) l.textContent = fa(Math.round(vol * 100)) + '٪';
+  }
+  function bindVol() {
+    const r = $('vcVolR'); if (!r || r.dataset.b) return; r.dataset.b = 1;
+    r.addEventListener('input', () => { vol = Math.max(0, Math.min(1, r.value / 100)); try { localStorage.setItem('vc_vol', String(vol)); } catch (e) {} applyVol(); });
+    applyVol();
+  }
 
   /* ⏪ ادامهٔ صدای از‌دست‌رفته: هر کس صدای خودش رو ۲ دقیقه آخر (فشرده) نگه می‌داره. وقتی تماس بعد از قطعی برگشت، طرف مقابل می‌گه «از کجا نشنیدم» و
      همون قسمت (کمی سریع‌تر) براش پخش می‌شه تا به صدای زنده برسه — بدون تغییر در Supabase، از همون کانال‌ها */
@@ -278,7 +294,7 @@
       playCtx = playCtx || new (window.AudioContext || window.webkitAudioContext)(); if (playCtx.state === 'suspended') playCtx.resume().catch(() => {});
       if (!R.dec) {
         R.dec = new AudioDecoder({ output: a => { try { const n = a.numberOfFrames, buf = playCtx.createBuffer(1, n, a.sampleRate), ar = new Float32Array(n); a.copyTo(ar, { planeIndex: 0, format: 'f32-planar' }); buf.copyToChannel(ar, 0); a.close();
-          const src = playCtx.createBufferSource(); src.buffer = buf; src.playbackRate.value = CU_RATE; src.connect(playCtx.destination); const now = playCtx.currentTime; if (R.playAt < now + 0.05) R.playAt = now + 0.15; src.start(R.playAt); R.playAt += buf.duration / CU_RATE; diag.cu = (diag.cu || 0) + 1; } catch (e) { diag.errs.push('cu out ' + e); } }, error: e => diag.errs.push('cu dec ' + e) });
+          const src = playCtx.createBufferSource(); src.buffer = buf; src.playbackRate.value = CU_RATE; src.connect(pg()); const now = playCtx.currentTime; if (R.playAt < now + 0.05) R.playAt = now + 0.15; src.start(R.playAt); R.playAt += buf.duration / CU_RATE; diag.cu = (diag.cu || 0) + 1; } catch (e) { diag.errs.push('cu out ' + e); } }, error: e => diag.errs.push('cu dec ' + e) });
         R.dec.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
       }
       if (!R.started) { R.started = true; cuLive(id, true); say('⏪ دارم صدایی که قطع شده بود رو برات ادامه می‌دم…'); blip('up'); }
