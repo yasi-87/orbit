@@ -486,16 +486,19 @@
   function dayLabel(ts) { try { return Recur.fmtJalaliLong(Recur.epochToWall(ts).iso); } catch (e) { return ''; } }
   /* جهت متن: هر پیامی که حتی یک حرف فارسی/عربی داره راست‌به‌چپه (انگلیسی‌هاش وسط جمله درست می‌شینن)؛ فقط پیام کاملاً انگلیسی چپ‌به‌راسته */
   const txDir = t => { t = String(t || ''); return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(t) || !/[A-Za-z]/.test(t) ? 'rtl' : 'ltr'; };
+  /* 🎨 هر نفر یه رنگ ثابت برای اسمش (روی همهٔ دستگاه‌ها یکسانه) */
+  const NAME_PAL = ['#7cc7ff', '#ff9ec7', '#9df0b0', '#ffc47a', '#c9a8ff', '#7ae8e0', '#ff9a8a', '#e6e07a'];
+  const nameColor = n => { n = String(n || ''); if (n === BOT) return '#ffd27a'; if (/عرشیا|arshia/i.test(n)) return NAME_PAL[0]; if (/یسنا|یاسنا|یاسی|yasna|yasi/i.test(n)) return NAME_PAL[1]; let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0; return NAME_PAL[2 + (h % 6)]; };
   /* ⚡ رندر سریع چت: فقط ۱۰۰ پیام آخر توی صفحه‌ست، HTML هر پیام کش می‌شه و اگه فقط پیام تازه اومده باشه، همونو ته لیست اضافه می‌کنیم (نه ساختن دوبارهٔ کل لیست) */
   let shownN = 100, prevTotal = 0, lastKeys = [], msgCache = new Map(), dayMemo = new Map(), firstPaint = true;
   const dayOf = ts => { let d = dayMemo.get(ts); if (d === undefined) { d = dayLabel(ts); if (dayMemo.size > 4000) dayMemo.clear(); dayMemo.set(ts, d); } return d; };
   function msgHtml(m) {
     const sig = [m.text, m.edited ? 1 : 0, m.img || '', moreOpen.has(m.id) ? 1 : 0, isMine(m.name) ? tick(m) : '', m.reply ? m.reply.id : ''].join('\u0001');
     const c = msgCache.get(m.id); if (c && c.sig === sig) return c;
-    const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b>${esc(m.reply.name)}</b><span dir="${txDir(m.reply.text)}">${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
+    const rp = m.reply ? `<div class="vc-rp" data-goto="${esc(m.reply.id)}"><b style="color:${nameColor(m.reply.name)}">${esc(m.reply.name)}</b><span dir="${txDir(m.reply.text)}">${esc((m.reply.text || '').slice(0, 80))}</span></div>` : '';
     const im = m.img ? `<img class="vc-img" src="${esc(m.img)}" alt="تصویر" loading="lazy" decoding="async" data-zoom="${esc(m.img)}">` : '';
     const bc = m.name === BOT ? botCut(m.text) : null, shown = bc && !moreOpen.has(m.id) ? bc.head + '…' : m.text;
-      const html = `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b>${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${linkify(shown)}</span>` : ''}${bc ? `<button type="button" class="vc-more" data-more="${esc(m.id)}">${moreOpen.has(m.id) ? 'کمتر ▴' : 'ادامه ▾ (' + fa(bc.rest) + ' حرف دیگه)'}</button>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
+      const html = `<div class="vc-msg${isMine(m.name) ? ' me' : ''}${m.name === BOT ? ' bot' : ''}" data-mid="${esc(m.id)}"><b style="color:${nameColor(m.name)}">${m.name === BOT ? '🧸 ' : ''}${esc(m.name)}</b>${rp}${im}${m.text ? `<span class="vc-tx" dir="${txDir(m.text)}">${linkify(shown)}</span>` : ''}${bc ? `<button type="button" class="vc-more" data-more="${esc(m.id)}">${moreOpen.has(m.id) ? 'کمتر ▴' : 'ادامه ▾ (' + fa(bc.rest) + ' حرف دیگه)'}</button>` : ''}<i>${esc(fa(Recur.epochToWall(m.ts).hhmm))}${m.edited ? ' <small class="vc-ed">ویرایش‌شده</small>' : ''}${tick(m)}<button type="button" class="vc-re" data-reply="${esc(m.id)}" title="ریپلای" aria-label="ریپلای">↩︎</button>${isMine(m.name) && m.text ? `<button type="button" class="vc-re" data-edit="${esc(m.id)}" title="ویرایش" aria-label="ویرایش">✏️</button>` : ''}${isMine(m.name) || m.name === BOT ? `<button type="button" class="vc-re" data-del="${esc(m.id)}" title="حذف" aria-label="حذف">🗑️</button>` : ''}</i></div>`;
     if (msgCache.size > 600) msgCache.clear();
     const o = { sig, html }; msgCache.set(m.id, o); return o;
   }
@@ -572,7 +575,7 @@
     const box = $('vcSrRes'); if (!box) return; const q = srchQ.trim();
     if (!q) { box.innerHTML = '<div class="vc-sr-hint">یه کلمه بنویس تا توی همهٔ پیام‌هامون بگردم 🔍</div>'; return; }
     const res = srchLocal(q); srchIds = res.map(m => m.id); if (srchIdx >= srchIds.length) srchIdx = -1;
-    const rows = res.map((m, ri) => { let w = ''; try { const x = Recur.epochToWall(m.ts); w = Recur.fmtJalaliShort(x.iso) + ' · ' + fa(x.hhmm); } catch (e) {} return `<button type="button" class="vc-sr-i${ri === srchIdx ? ' cur' : ''}" data-sr="${esc(m.id)}"><span class="vc-sr-m"><b>${esc(m.name)}</b><i>${esc(w)}</i></span><span class="vc-sr-t" dir="${txDir(m.text)}">${m.text ? snip(m.text, q) : '📷 تصویر'}</span></button>`; }).join('');
+    const rows = res.map((m, ri) => { let w = ''; try { const x = Recur.epochToWall(m.ts); w = Recur.fmtJalaliShort(x.iso) + ' · ' + fa(x.hhmm); } catch (e) {} return `<button type="button" class="vc-sr-i${ri === srchIdx ? ' cur' : ''}" data-sr="${esc(m.id)}"><span class="vc-sr-m"><b style="color:${nameColor(m.name)}">${esc(m.name)}</b><i>${esc(w)}</i></span><span class="vc-sr-t" dir="${txDir(m.text)}">${m.text ? snip(m.text, q) : '📷 تصویر'}</span></button>`; }).join('');
     const keepT = box.scrollTop; box.innerHTML = '<div class="vc-sr-n">' + (res.length ? fa(res.length) + (res.length >= 80 ? '+' : '') + ' نتیجه' : 'چیزی پیدا نشد') + '</div>' + rows +
       (srchDb ? '<div class="vc-sr-hint">⏳ دارم توی تاریخچهٔ کامل می‌گردم…</div>' : '<button type="button" class="vc-sr-db" id="vcSrDb">🗂️ جستجو توی تاریخچهٔ کامل</button>');
   }
