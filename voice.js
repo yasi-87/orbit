@@ -1097,6 +1097,17 @@
     /* 📱 موبایل: دکمه‌ها فوکوس رو از کادر نمی‌دزدن (کیبورد نمی‌پره و صفحه تکون نمی‌خوره) */
     ['vcEmoji', 'vcEmoFav', 'vcChatForm'].forEach(id => { const el = $(id); if (el) el.addEventListener('mousedown', e => { if (e.target.closest('button') && !e.target.closest('#vcEmoBtn,#vcImgBtn')) e.preventDefault(); }); });
     const gb = $('bgBtn'); if (gb) gb.addEventListener('click', toggleBgPop); applyBg();
+    const fb = $('fsBtn'), dk = document.getElementById('chatDock');
+    if (fb && dk && !fb.dataset.b) {
+      fb.dataset.b = 1; let viaApi = false;
+      const setFull = on => { dk.classList.toggle('full', on); fb.textContent = on ? '🗗' : '⛶'; fb.title = on ? 'برگشت به حالت عادی' : 'تمام‌صفحه'; try { localStorage.setItem('chat_full', on ? '1' : ''); } catch (e) {} const l = $('vcChatList'); if (l) requestAnimationFrame(() => { l.scrollTop = l.scrollHeight; }); };
+      fb.addEventListener('click', () => {
+        const on = !dk.classList.contains('full'); setFull(on);
+        try { if (on && dk.requestFullscreen) { viaApi = true; dk.requestFullscreen({ navigationUI: 'hide' }).catch(() => { viaApi = false; }); } else if (!on && document.fullscreenElement) { viaApi = false; document.exitFullscreen(); } } catch (e) {}
+      });
+      document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && viaApi) { viaApi = false; setFull(false); } });
+      try { if (localStorage.getItem('chat_full') === '1') setFull(true); } catch (e) {}
+    }
     const bb = $('vcBot'); if (bb) bb.addEventListener('click', e => { const b = e.target.closest('[data-bot]'); if (!b) return; const i = $('vcChatInput'); if (i) { i.value = 'پفیلا، ' + b.dataset.bot; sendChat(); } });
     const pk = $('vcImgPick'); if (pk) pk.addEventListener('change', () => { const fl = pk.files && pk.files[0]; pk.value = ''; pickImage(fl); });
     const imgOf = dt => { const it = dt && dt.items ? Array.from(dt.items).find(i => i.kind === 'file' && /^image\//.test(i.type)) : null; const f = it ? it.getAsFile() : (dt && dt.files ? Array.from(dt.files).find(x => /^image\//.test(x.type)) : null); return f || null; };
