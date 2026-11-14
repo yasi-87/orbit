@@ -76,6 +76,7 @@
       <p class="vc-note">برای صحبت، مرورگر اجازهٔ میکروفون می‌خواد؛ ولی اجباری نیست، بدونش هم می‌تونی گوش بدی و توی چت بنویسی. بهتره هدفون بزنید تا صدا برگشت نخوره.</p></div>`;
     if (html !== lastHtml) { lastHtml = html; box.innerHTML = html; }
     const vb = $('vcVolBar'); if (vb) { vb.style.display = joined ? 'flex' : 'none'; bindVol(); }
+    renderPeerVols();
     const nb = document.querySelector('.nav-btn[data-screen="voice"]'); if (nb) nb.textContent = joined ? '🎙️ در تماس' : '🎙️ اتاق صحبت';
   }
 
@@ -169,13 +170,13 @@
     const P = peers[id]; if (!P) return;
     clearTimeout(P.rt);
     try { P.pc.onconnectionstatechange = null; P.pc.close(); } catch (e) {}
-    const a = $('vcA_' + id); if (a) a.remove();
+    const a = $('vcA_' + id); if (a) a.remove(); dropBoost(id); try { peerGain[id] && peerGain[id].disconnect(); } catch (e) {} delete peerGain[id];
     delete peers[id]; stopTxIfIdle(); trackCall();
   }
   function attachAudio(id, stream) {
     let a = $('vcA_' + id);
     if (!a) { a = document.createElement('audio'); a.id = 'vcA_' + id; a.autoplay = true; a.setAttribute('playsinline', ''); ($('vcAudios') || document.body).appendChild(a); }
-    a.srcObject = stream; a.muted = deaf; try { a.volume = vol; } catch (e) {} const p = a.play(); if (p && p.catch) p.catch(() => {});
+    a.srcObject = stream; a.muted = deaf; const p = a.play(); if (p && p.catch) p.catch(() => {}); setTimeout(() => applyPeerVol(id), 0);
   }
 
 
@@ -228,7 +229,7 @@
       if (playCtx.state === 'suspended') playCtx.resume().catch(() => {});
       d = rxDec[p.from] = { ts: 0, dec: new AudioDecoder({ output: a => { try { const n = a.numberOfFrames, buf = playCtx.createBuffer(1, n, a.sampleRate), ar = new Float32Array(n); a.copyTo(ar, { planeIndex: 0, format: 'f32-planar' }); buf.copyToChannel(ar, 0); a.close();
         let m = 0; for (let i = 0; i < n; i += 8) m = Math.max(m, Math.abs(ar[i])); P.lvl = m;
-        const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(pg()); const now = playCtx.currentTime; if (playAt < now + 0.05 || playAt > now + 0.6) playAt = now + 0.12; src.start(playAt); playAt += buf.duration; diag.rx = (diag.rx || 0) + 1; } catch (e) { diag.errs.push('dec out ' + e); } }, error: e => diag.errs.push('dec ' + e) }) };
+        const src = playCtx.createBufferSource(); src.buffer = buf; src.connect(pgp(p.from)); const now = playCtx.currentTime; if (playAt < now + 0.05 || playAt > now + 0.6) playAt = now + 0.12; src.start(playAt); playAt += buf.duration; diag.rx = (diag.rx || 0) + 1; } catch (e) { diag.errs.push('dec out ' + e); } }, error: e => diag.errs.push('dec ' + e) }) };
       d.dec.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
     }
     try {
@@ -242,8 +243,31 @@
   /* 🔊 بلندیِ صدای اتاق (۰ تا ۱۰۰٪) برای همهٔ مسیرها؛ ذخیره می‌شه */
   let vol = 1; try { const v = parseFloat(localStorage.getItem('vc_vol')); if (v >= 0 && v <= 1) vol = v; } catch (e) {}
   const pg = () => { playCtx = playCtx || new (window.AudioContext || window.webkitAudioContext)(); if (!playGain) { playGain = playCtx.createGain(); playGain.gain.value = vol; playGain.connect(playCtx.destination); } return playGain; };
+  /* 🎧 بلندی صدای هر نفر جدا (۰ تا ۲۰۰٪، با اسم ذخیره می‌شه). بالای ۱۰۰٪ با یه مسیر کمکی اضافه می‌شه تا صدای اصلی دست‌نخورده بمونه */
+  let pvol = {}; try { pvol = JSON.parse(localStorage.getItem('vc_pvol') || '{}') || {}; } catch (e) {}
+  const pv = id => { const v = pvol[(peers[id] || {}).name]; return typeof v === 'number' && v >= 0 && v <= 2 ? v : 1; };
+  const peerGain = {}, boost = {};
+  function pgp(id) { pg(); if (!peerGain[id]) { const g = playCtx.createGain(); g.connect(playGain); peerGain[id] = g; } peerGain[id].gain.value = pv(id); return peerGain[id]; }
+  function dropBoost(id) { const b = boost[id]; if (b) { try { b.src.disconnect(); b.g.disconnect(); } catch (e) {} delete boost[id]; } }
+  function applyPeerVol(id) {
+    const P = peers[id], a = $('vcA_' + id), e = vol * pv(id);
+    if (a) try { a.volume = Math.min(1, e); } catch (x) {}
+    let b = boost[id]; if (b && (!P || b.stream !== P.stream)) { dropBoost(id); b = null; }
+    if (e > 1.001 && P && P.stream && !b) { try { playCtx = playCtx || new (window.AudioContext || window.webkitAudioContext)(); if (playCtx.state === 'suspended') playCtx.resume().catch(() => {}); const src = playCtx.createMediaStreamSource(P.stream), g = playCtx.createGain(); src.connect(g); g.connect(playCtx.destination); b = boost[id] = { src, g, stream: P.stream }; } catch (x) {} }
+    if (b) b.g.gain.value = deaf ? 0 : Math.max(0, e - 1);
+    if (peerGain[id]) peerGain[id].gain.value = pv(id);
+  }
+  let pvKey = '';
+  function renderPeerVols() {
+    const box = $('vcPeerVols'); if (!box) return;
+    const ids = joined ? Object.keys(peers) : [], key = ids.map(i => i + ':' + peers[i].name).join('|');
+    if (key === pvKey) return; pvKey = key;
+    box.style.display = ids.length ? 'flex' : 'none';
+    box.innerHTML = ids.length ? '<div class="vc-pv-h">🎧 بلندی صدای هر نفر</div>' + ids.map(i => { const v = Math.round(pv(i) * 100); return `<div class="vc-pv"><span>${esc(peers[i].name)}</span><input type="range" min="0" max="200" step="5" value="${v}" data-pv="${esc(i)}" aria-label="بلندی صدای ${esc(peers[i].name)}" /><b>${fa(v)}٪</b></div>`; }).join('') : '';
+    if (!box.dataset.b) { box.dataset.b = 1; box.addEventListener('input', e => { const r = e.target.closest('[data-pv]'); if (!r) return; const id = r.dataset.pv, P = peers[id]; if (!P) return; pvol[P.name] = Math.max(0, Math.min(2, r.value / 100)); try { localStorage.setItem('vc_pvol', JSON.stringify(pvol)); } catch (x) {} const b = r.parentNode.querySelector('b'); if (b) b.textContent = fa(+r.value) + '٪'; applyPeerVol(id); }); }
+  }
   function applyVol() {
-    document.querySelectorAll('#vcAudios audio').forEach(a => { try { a.volume = vol; } catch (e) {} });
+    Object.keys(peers).forEach(applyPeerVol);
     if (playGain) playGain.gain.value = vol;
     const r = $('vcVolR'), l = $('vcVolL'); if (r && +r.value !== Math.round(vol * 100)) r.value = Math.round(vol * 100); if (l) l.textContent = fa(Math.round(vol * 100)) + '٪';
   }
@@ -294,7 +318,7 @@
       playCtx = playCtx || new (window.AudioContext || window.webkitAudioContext)(); if (playCtx.state === 'suspended') playCtx.resume().catch(() => {});
       if (!R.dec) {
         R.dec = new AudioDecoder({ output: a => { try { const n = a.numberOfFrames, buf = playCtx.createBuffer(1, n, a.sampleRate), ar = new Float32Array(n); a.copyTo(ar, { planeIndex: 0, format: 'f32-planar' }); buf.copyToChannel(ar, 0); a.close();
-          const src = playCtx.createBufferSource(); src.buffer = buf; src.playbackRate.value = CU_RATE; src.connect(pg()); const now = playCtx.currentTime; if (R.playAt < now + 0.05) R.playAt = now + 0.15; src.start(R.playAt); R.playAt += buf.duration / CU_RATE; diag.cu = (diag.cu || 0) + 1; } catch (e) { diag.errs.push('cu out ' + e); } }, error: e => diag.errs.push('cu dec ' + e) });
+          const src = playCtx.createBufferSource(); src.buffer = buf; src.playbackRate.value = CU_RATE; src.connect(pgp(id)); const now = playCtx.currentTime; if (R.playAt < now + 0.05) R.playAt = now + 0.15; src.start(R.playAt); R.playAt += buf.duration / CU_RATE; diag.cu = (diag.cu || 0) + 1; } catch (e) { diag.errs.push('cu out ' + e); } }, error: e => diag.errs.push('cu dec ' + e) });
         R.dec.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
       }
       if (!R.started) { R.started = true; cuLive(id, true); say('⏪ دارم صدایی که قطع شده بود رو برات ادامه می‌دم…'); blip('up'); }
@@ -367,7 +391,7 @@
     render();
   }
   function toggleMic() { if (noMic) return; micOn = !micOn; if (local) local.getAudioTracks().forEach(t => { t.enabled = micOn; }); render(); }
-  function toggleDeaf() { deaf = !deaf; document.querySelectorAll('#vcAudios audio').forEach(a => { a.muted = deaf; }); render(); }
+  function toggleDeaf() { deaf = !deaf; document.querySelectorAll('#vcAudios audio').forEach(a => { a.muted = deaf; }); Object.keys(boost).forEach(applyPeerVol); render(); }
 
   /* ---------- 📞 تاریخچهٔ تماس‌ها ---------- */
   const fa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
@@ -1098,6 +1122,6 @@
     render(); renderChat();
     setInterval(() => { const d = $('vcDiag'), box = $('vcDiagBox'); if (d && box && box.open) d.textContent = diagText(); }, 1000);
   }
-  window.Voice = { _cu: { id: () => ID, ring: () => ring, build: cuBuild, rx: onCu, start: id => { cuRx[id] = { started: false, playAt: 0, ts: 0, lag: 0, last: Date.now(), t0: Date.now(), dec: null }; }, state: () => cuRx, compact: cuCompact }, _setRelayDelay: ms => { relayDelay = ms; }, _diag: diagText, busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
+  window.Voice = { _cu: { peers: () => peers, renderPV: () => { pvKey = ''; renderPeerVols(); }, boost: () => boost, id: () => ID, ring: () => ring, build: cuBuild, rx: onCu, start: id => { cuRx[id] = { started: false, playAt: 0, ts: 0, lag: 0, last: Date.now(), t0: Date.now(), dec: null }; }, state: () => cuRx, compact: cuCompact }, _setRelayDelay: ms => { relayDelay = ms; }, _diag: diagText, busy: () => joined || (typeof currentScreen !== 'undefined' && currentScreen === 'voice'), _calls: () => callRows, _fmt: fmtDur, _peers: () => peers, load, join, leave, init, _state: () => ({ joined, micOn, deaf, id: ID, peers: Object.keys(peers).map(k => [k, peers[k].state]), sending }) };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

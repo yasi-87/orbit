@@ -1627,6 +1627,7 @@ body.reading-mode .reading-content {
 .vc-ctl .btn.danger{background:#c0392b;color:#fff;border-color:transparent}
 .vc-out{font-size:.9rem;color:var(--muted)}
 .vc-vol{align-items:center;gap:10px;margin:10px 0 0;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(212,165,255,.22)}.vc-vol input{flex:1;min-width:0;accent-color:#d4a5ff;height:28px}.vc-vol b{min-width:42px;text-align:center;font-size:.8rem;color:var(--gold)}
+.vc-pvols{flex-direction:column;gap:6px;margin:8px 0 0;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(212,165,255,.22)}.vc-pv-h{font-size:.8rem;color:var(--muted)}.vc-pv{display:flex;align-items:center;gap:10px}.vc-pv span{min-width:64px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem}.vc-pv input{flex:1;min-width:0;accent-color:#ffb6d9;height:28px}.vc-pv b{min-width:46px;text-align:center;font-size:.78rem;color:var(--gold)}
 .vc-meter{height:5px;border-radius:4px;background:rgba(255,255,255,.12);margin-top:8px;overflow:hidden}.vc-meter i{display:block;height:100%;width:0;background:#7CFC9A;transition:width .1s}
 .vc-chat{max-width:520px;margin:14px auto 0;border:1px solid rgba(212,165,255,.25);border-radius:16px;background:rgba(255,255,255,.03);overflow:hidden}
 .vc-chat-h{padding:10px 14px;border-bottom:1px solid rgba(212,165,255,.2);font-weight:600}
@@ -2194,7 +2195,7 @@ body.guest #app{padding-left:0 !important}
   <div class="container screen" id="screen-voice">
     <div class="chapters-header"><h2>🎙️ اتاق صحبتِ ما</h2></div>
     <div class="vc-layout">
-    <div class="vc-area-room"><div id="voiceBox"></div><div class="vc-vol" id="vcVolBar" style="display:none"><span>🔈</span><input type="range" id="vcVolR" min="0" max="100" step="1" value="100" aria-label="بلندی صدای اتاق" /><span>🔊</span><b id="vcVolL">۱۰۰٪</b></div></div>
+    <div class="vc-area-room"><div id="voiceBox"></div><div class="vc-vol" id="vcVolBar" style="display:none"><span>🔈</span><input type="range" id="vcVolR" min="0" max="100" step="1" value="100" aria-label="بلندی صدای اتاق" /><span>🔊</span><b id="vcVolL">۱۰۰٪</b></div><div class="vc-pvols" id="vcPeerVols" style="display:none"></div></div>
     <div id="vcAudios"></div>
     <div class="vc-chat vc-area-share" id="shareBox"></div>
     <div class="vc-chat vc-hist vc-area-hist" id="vcHistory"></div>
@@ -2766,8 +2767,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-12a';
+const SITE_VERSION = '2026-11-14a';
 const SITE_CHANGES = [
+  '🎧 اتاق تماس: بلندی صدای هر نفر جدا (۰ تا ۲۰۰٪) با نوار مخصوص خودش، علاوه بر بلندی کل اتاق.',
   '🎙️ اتاق تماس: وصل‌شدن سریع‌تر، تأخیر صدا کمتر، و نوار بلندی صدای اتاق (۰ تا ۱۰۰٪) وقتی توی تماسی.',
   '⏪ اتاق تماس: اگه صدا قطع بشه، بعد از وصل شدن دوباره، قسمتی که شنیده نشده از همون‌جا (کمی سریع‌تر) پخش می‌شه تا به صدای زنده برسه.',
   '🔍 جستجوی چت حالا ادامه‌دار شد: بعد از رفتن به یه نتیجه، نوار «نتیجهٔ ۳ از ۷» با فلش قبلی/بعدی و برگشت به لیست می‌مونه و جستجو پاک نمی‌شه.',
