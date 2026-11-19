@@ -49,12 +49,12 @@ async function sliceRange(res, range) {
   if (s > e) return new Response(null, { status: 416, headers: { 'Content-Range': 'bytes */' + size } });
   return new Response(blob.slice(s, e + 1), { status: 206, headers: { 'Content-Type': res.headers.get('Content-Type') || 'audio/mpeg', 'Content-Range': 'bytes ' + s + '-' + e + '/' + size, 'Content-Length': String(e - s + 1), 'Accept-Ranges': 'bytes' } });
 }
-async function fillAudio(key) {
+async function fillAudio(key, maxBytes) {
   if (filling.has(key)) return; filling.add(key);
   try {
     const res = await fetch(key, { mode: 'cors', credentials: 'omit' });
     const len = Number(res.headers.get('content-length')) || 0;
-    if (res.status !== 200 || (len && len > MAX_AUDIO_BYTES)) return;
+    if (res.status !== 200 || (len && len > (maxBytes || MAX_AUDIO_BYTES))) return;
     const cache = await caches.open(AUDIO_CACHE);
     await cache.put(key, res);
     const keys = await cache.keys();
@@ -76,7 +76,29 @@ self.addEventListener('fetch', e => {
   if (r.method !== 'GET' || r.destination !== 'audio') return;
   e.respondWith(handleAudio(r));
 });
+/* ⬇️ دانلود تدریجی آهنگ‌ها وقتی وارد پلی‌لیست می‌شیم: یکی‌یکی، با فاصله، تا اینترنت و گوشی درگیر نشن */
+let warmQ = [], warming = false;
+async function warmLoop() {
+  if (warming) return; warming = true;
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    while (warmQ.length) {
+      const key = warmQ.shift();
+      try {
+        if ((await cache.keys()).length >= MAX_AUDIO_FILES - 4) break;
+        if (navigator.storage && navigator.storage.estimate) { const q = await navigator.storage.estimate(); if (q.quota && q.usage / q.quota > 0.6) break; }
+        if (await cache.match(key)) continue;
+        await fillAudio(key, 30 * 1024 * 1024);
+      } catch (e) {}
+      await new Promise(r => setTimeout(r, 2500));
+    }
+  } finally { warming = false; }
+}
 self.addEventListener('message', e => {
   const d = e.data || {};
+  if (d.type === 'warm-audio' && Array.isArray(d.urls)) {
+    d.urls.slice(0, 60).forEach(u => { const k = keyOf(u); if (/^https?:/.test(k) && !warmQ.includes(k)) warmQ.push(k); });
+    e.waitUntil(warmLoop());
+  }
   if (d.type === 'forget-audio' && d.url) e.waitUntil(caches.open(AUDIO_CACHE).then(c => c.delete(keyOf(d.url))));
 });

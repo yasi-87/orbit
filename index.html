@@ -2759,8 +2759,9 @@ window.__gateReady = true; if (window.__gatePending) { window.__gatePending = fa
 if (!gateOpen()) showGate();
 
 /* «سایت آپدیت شد» + لیست چیزهای جدید (برای هر نفر فقط یک بار) */
-const SITE_VERSION = '2026-11-17b';
+const SITE_VERSION = '2026-11-19a';
 const SITE_CHANGES = [
+  '⬇️ پلی‌لیست: با وارد شدن به پلی‌لیست، آهنگ‌ها کم‌کم توی پس‌زمینه دانلود می‌شن تا بعداً سریع (و حتی بدون اینترنت) پخش بشن.',
   '😊 چت: چند صد ایموجی جدید و چهار دستهٔ تازه (هوا و آسمان، لباس و آدم‌ها، وسایل، نمادها).',
   '🫀 ضربان قلب پروفایل حالا هر روز بین ۶۰ تا ۸۰ در دقیقه حساب می‌شه و عدد نهایی بازمحاسبه شد. 🎨 هشت پک استیکر جدید توی بوم نقاشی.',
   '🎨 چت: اسم هر نفر بالای پیام‌هاش یه رنگ مخصوص خودش داره (عرشیا آبی، یسنا صورتی).',
@@ -3972,6 +3973,21 @@ async function loadPlaylist() {
   if (changed || !playlistLoaded || !document.getElementById('playlistList').children.length) renderPlaylist();
   playlistLoaded = true;
   backfillCovers();
+  warmSongs();
+}
+
+/* ⬇️ ورود به پلی‌لیست = دانلود تدریجی آهنگ‌ها توی پس‌زمینه (اول آهنگ در حال پخش و بعد بقیه)؛ با دیتای همراه محدود یا «صرفه‌جویی داده» انجام نمی‌شه */
+let warmSent = '';
+function warmSongs() {
+  try {
+    const c = navigator.connection || {};
+    if (c.saveData || c.type === 'cellular' || /(^|-)2g$/.test(c.effectiveType || '')) return;
+    const ctl = navigator.serviceWorker && navigator.serviceWorker.controller; if (!ctl) return;
+    const urls = playlist.map(s => s.storage_url).filter(Boolean);
+    if (currentSong && currentSong.storage_url) { const i = urls.indexOf(currentSong.storage_url); if (i > 0) { urls.splice(i, 1); urls.unshift(currentSong.storage_url); } }
+    const key = urls.join('|'); if (!urls.length || key === warmSent) return; warmSent = key;
+    ctl.postMessage({ type: 'warm-audio', urls });
+  } catch (e) {}
 }
 
 /* آهنگ‌هایی که قبلاً آپلود شدن و cover_url ندارن: کاورِ داخل فایلشون رو یک بار درمیاریم */
